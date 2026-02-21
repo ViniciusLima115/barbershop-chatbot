@@ -14,7 +14,7 @@ class Agendamento(Base):
 
     data_hora_inicio = Column(DateTime, nullable=False)
     data_hora_fim = Column(DateTime, nullable=False)
-    status = Column(String(50), default="confirmado")
+    status = Column(String(50), nullable=False, default="pendente")
 
     cliente = relationship("Cliente")
     barbeiro = relationship("Barbeiro")

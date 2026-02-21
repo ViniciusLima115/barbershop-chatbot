@@ -41,6 +41,7 @@ def criar_agendamento(db: Session, dados):
         servico_id=dados.servico_id,
         data_hora_inicio=dados.data_hora_inicio,
         data_hora_fim=fim,
+        status=dados.status,
     )
 
     db.add(novo)
@@ -56,4 +57,25 @@ def criar_agendamento(db: Session, dados):
         "data_hora_inicio": novo.data_hora_inicio,
         "data_hora_fim": novo.data_hora_fim,
         "status": novo.status,
+    }
+
+
+def atualizar_status_agendamento(db: Session, agendamento_id: int, status: str):
+    agendamento = db.query(Agendamento).filter(Agendamento.id == agendamento_id).first()
+    if not agendamento:
+        raise ValueError("Agendamento não encontrado")
+
+    agendamento.status = status
+    db.commit()
+    db.refresh(agendamento)
+
+    return {
+        "id": agendamento.id,
+        "cliente_nome": agendamento.cliente.nome,
+        "telefone": agendamento.cliente.telefone,
+        "barbeiro_nome": agendamento.barbeiro.nome,
+        "servico_nome": agendamento.servico.nome,
+        "data_hora_inicio": agendamento.data_hora_inicio,
+        "data_hora_fim": agendamento.data_hora_fim,
+        "status": agendamento.status,
     }

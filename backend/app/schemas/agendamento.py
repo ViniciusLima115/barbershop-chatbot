@@ -1,5 +1,11 @@
+from typing import Literal
+
 from pydantic import BaseModel
 from datetime import datetime
+
+
+StatusAgendamento = Literal["pendente", "confirmado", "cancelado"]
+
 
 class AgendamentoCreate(BaseModel):
     telefone: str
@@ -7,6 +13,11 @@ class AgendamentoCreate(BaseModel):
     barbeiro_id: int
     servico_id: int
     data_hora_inicio: datetime
+    status: StatusAgendamento = "pendente"
+
+
+class AgendamentoStatusUpdate(BaseModel):
+    status: StatusAgendamento
 
 class AgendamentoResponse(BaseModel):
     id: int
@@ -19,7 +30,7 @@ class AgendamentoResponse(BaseModel):
 
     data_hora_inicio: datetime
     data_hora_fim: datetime
-    status: str
+    status: StatusAgendamento
 
     class Config:
         from_attributes = True
