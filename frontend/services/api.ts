@@ -73,7 +73,7 @@ async function parseOrThrow(res: Response, fallbackMessage: string) {
 }
 
 export async function listClientes(): Promise<Cliente[]> {
-  const res = await fetch(`${API_URL}/clientes`, { cache: "no-store" });
+  const res = await fetch(`${API_URL}/clientes/`, { cache: "no-store" });
   return parseOrThrow(res, "Falha ao carregar clientes.");
 }
 
@@ -108,7 +108,7 @@ export async function deleteCliente(id: number): Promise<void> {
 }
 
 export async function listServicos(): Promise<Servico[]> {
-  const res = await fetch(`${API_URL}/servicos`, { cache: "no-store" });
+  const res = await fetch(`${API_URL}/servicos/`, { cache: "no-store" });
   return parseOrThrow(res, "Falha ao carregar serviços.");
 }
 
@@ -143,7 +143,7 @@ export async function deleteServico(id: number): Promise<void> {
 }
 
 export async function listBarbeiros(): Promise<Barbeiro[]> {
-  const res = await fetch(`${API_URL}/barbeiros`, { cache: "no-store" });
+  const res = await fetch(`${API_URL}/barbeiros/`, { cache: "no-store" });
   return parseOrThrow(res, "Falha ao carregar barbeiros.");
 }
 
