@@ -4,13 +4,39 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import AgendaGrid, { SelectedAgendamento } from "../components/AgendaGrid";
 import { AgendaDiaResponse, getAgendaDia } from "@/services/api";
+import Alert from "../components/Alert";
+import Loading from "../components/Loading";
+import StatCard from "../components/StatCard";
+import Card from "../components/Card";
+import Modal from "../components/Modal";
+import { Calendar, Users, Clock, TrendingUp } from "lucide-react";
+
+function getLocalISODate(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function calcularDuracaoEmMinutos(inicio?: string, fim?: string): string {
+  if (!inicio || !fim) return "Nao informado";
+
+  const inicioDate = new Date(inicio);
+  const fimDate = new Date(fim);
+  const diffMs = fimDate.getTime() - inicioDate.getTime();
+
+  if (Number.isNaN(diffMs) || diffMs <= 0) return "Nao informado";
+
+  const minutos = Math.round(diffMs / 60000);
+  return `${minutos} min`;
+}
 
 export default function AgendaPage() {
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [selectedDate, setSelectedDate] = useState(getLocalISODate());
   const [data, setData] = useState<AgendaDiaResponse | null>(null);
   const [selected, setSelected] = useState<SelectedAgendamento | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,10 +49,12 @@ export default function AgendaPage() {
         const resposta = await getAgendaDia(selectedDate);
         setData(resposta);
         setSelected(null);
+        setIsDetailsOpen(false);
       } catch (err) {
         setData(null);
         setSelected(null);
-        setError("Falha ao buscar agenda. Confirme se o backend está acessível em http://34.121.162.107.");
+        setIsDetailsOpen(false);
+        setError("Falha ao buscar agenda. Confirme se o backend esta acessivel.");
         console.error(err);
       } finally {
         setLoading(false);
@@ -44,136 +72,161 @@ export default function AgendaPage() {
   const totalLivres = Math.max(totalSlots - totalOcupados, 0);
   const taxaOcupacao = totalSlots > 0 ? Math.round((totalOcupados / totalSlots) * 100) : 0;
 
+  const abrirDetalhes = (item: SelectedAgendamento) => {
+    setSelected(item);
+    setIsDetailsOpen(true);
+  };
+
   return (
-    <div className="px-4 py-6 md:px-8 md:py-8">
-      <div className="mx-auto max-w-7xl space-y-5">
-        <section className="glass-panel fade-up rounded-2xl p-6 md:p-8">
-          <div className="flex flex-wrap items-end justify-between gap-5">
+    <main className="min-h-screen bg-gray-50">
+      <div className="py-8">
+        <div className="app-container space-y-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-                Painel Operacional
-              </p>
-              <h1 className="mt-2 text-3xl font-black uppercase tracking-tight md:text-4xl">
-                Agenda da Barbearia
-              </h1>
-              <p className="mt-2 text-sm text-zinc-600">
-                Visualize horários, ocupação diária e detalhes de atendimento em um só lugar.
+              <h1 className="text-3xl font-bold text-gray-900">Agenda</h1>
+              <p className="mt-1 text-gray-600">
+                Visualize e gerencie os agendamentos da barbearia
               </p>
             </div>
-
-            <div className="min-w-[220px] space-y-2 text-sm">
-              <span className="block text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                Data de consulta
-              </span>
+            <div className="flex gap-3">
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full rounded-xl border border-[var(--line-strong)] bg-[var(--surface)] px-3 py-2 font-semibold outline-none transition focus:border-[var(--accent)]"
+                className="input"
               />
-              <Link
-                href="/gestao"
-                className="inline-flex rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold"
-              >
-                Ir para Gestão
+              <Link href="/gestao">
+                <button className="btn btn-secondary">Ir para Gestao</button>
               </Link>
             </div>
           </div>
-        </section>
 
-        <section className="grid gap-3 md:grid-cols-4">
-          <article className="glass-panel fade-up rounded-xl p-4" style={{ animationDelay: "0.03s" }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Slots do dia
-            </p>
-            <p className="mt-1 text-2xl font-black">{totalSlots}</p>
-          </article>
-          <article className="glass-panel fade-up rounded-xl p-4" style={{ animationDelay: "0.07s" }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Ocupados
-            </p>
-            <p className="mt-1 text-2xl font-black text-[var(--ok)]">{totalOcupados}</p>
-          </article>
-          <article className="glass-panel fade-up rounded-xl p-4" style={{ animationDelay: "0.11s" }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Livres
-            </p>
-            <p className="mt-1 text-2xl font-black">{totalLivres}</p>
-          </article>
-          <article className="glass-panel fade-up rounded-xl p-4" style={{ animationDelay: "0.15s" }}>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500">
-              Ocupação
-            </p>
-            <p className="mt-1 text-2xl font-black">{taxaOcupacao}%</p>
-          </article>
-        </section>
+          {data && !loading && (
+            <div className="grid gap-4 md:grid-cols-4">
+              <StatCard
+                label="Total de Slots"
+                value={totalSlots}
+                icon={<Calendar size={24} />}
+                color="blue"
+              />
+              <StatCard
+                label="Ocupados"
+                value={totalOcupados}
+                icon={<Users size={24} />}
+                color="green"
+              />
+              <StatCard
+                label="Livres"
+                value={totalLivres}
+                icon={<Clock size={24} />}
+                color="amber"
+              />
+              <StatCard
+                label="Taxa de Ocupacao"
+                value={`${taxaOcupacao}%`}
+                icon={<TrendingUp size={24} />}
+                color="blue"
+                trend={taxaOcupacao > 70 ? "up" : "down"}
+              />
+            </div>
+          )}
 
-        {loading && (
-          <div className="glass-panel fade-up rounded-xl p-4 text-sm text-zinc-600">
-            Carregando agenda...
-          </div>
-        )}
-        {error && (
-          <div className="fade-up rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-[var(--danger)]">
-            {error}
-          </div>
-        )}
+          {error && (
+            <Alert type="error" message={error} onClose={() => setError(null)} />
+          )}
 
-        {!loading && !error && data && (
-          <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
-            <div className="fade-up" style={{ animationDelay: "0.18s" }}>
+          {loading && <Loading />}
+
+          {!loading && !error && data && (
+            <Card
+              title="Grade de Agendamentos"
+              subtitle={`Verde: agendamento confirmado. Data: ${new Date(selectedDate).toLocaleDateString("pt-BR", {
+                weekday: "long",
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}`}
+            >
               <AgendaGrid
                 data={data}
                 selectedKey={selectedKey}
-                onSelect={setSelected}
+                onSelect={abrirDetalhes}
               />
+            </Card>
+          )}
+        </div>
+      </div>
+
+      <Modal
+        isOpen={isDetailsOpen}
+        onClose={() => setIsDetailsOpen(false)}
+        title="Detalhes"
+        size="md"
+      >
+        {!selected && (
+          <p className="text-sm text-gray-600">Selecione um horario para ver os detalhes.</p>
+        )}
+
+        {selected && (
+          <div className="space-y-4">
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="mb-1 text-xs font-semibold uppercase text-gray-600">Profissional</p>
+              <p className="text-lg font-bold text-gray-900">{selected.barbeiroNome}</p>
             </div>
 
-            <aside className="glass-panel fade-up h-fit rounded-2xl p-5" style={{ animationDelay: "0.22s" }}>
-              <h2 className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-                Detalhes do Slot
-              </h2>
+            <div className="rounded-lg bg-gray-50 p-4">
+              <p className="mb-1 text-xs font-semibold uppercase text-gray-600">Horario</p>
+              <p className="text-lg font-bold text-gray-900">{selected.hora}</p>
+            </div>
 
-              {!selected && (
-                <p className="mt-3 text-sm text-zinc-600">
-                  Selecione um horário na grade para abrir os dados completos do atendimento.
-                </p>
-              )}
+            {!selected.agendamento && (
+              <div className="rounded-lg border border-gray-200 bg-white p-4">
+                <p className="mb-1 text-xs font-semibold uppercase text-gray-600">Status</p>
+                <p className="font-bold text-gray-900">Livre para novo agendamento</p>
+              </div>
+            )}
 
-              {selected && (
-                <div className="mt-4 space-y-3 text-sm">
-                  <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Profissional</p>
-                    <p className="mt-1 font-bold">{selected.barbeiroNome}</p>
-                  </div>
-                  <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Horário</p>
-                    <p className="mt-1 font-bold">{selected.hora}</p>
-                  </div>
+            {selected.agendamento && (
+              <div className="space-y-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Cliente</p>
+                  <p className="font-bold text-gray-900">{selected.agendamento.cliente}</p>
                 </div>
-              )}
-
-              {selected && !selected.agendamento && (
-                <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Status</p>
-                  <p className="mt-1 font-bold text-zinc-700">Livre para novo agendamento</p>
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Telefone</p>
+                  <p className="font-bold text-gray-900">
+                    {selected.agendamento.telefone || "Nao informado"}
+                  </p>
                 </div>
-              )}
-
-              {selected?.agendamento && (
-                <div className="mt-4 space-y-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-sm">
-                  <p><strong>Status:</strong> {selected.agendamento.status ?? "Agendado"}</p>
-                  <p><strong>Cliente:</strong> {selected.agendamento.cliente}</p>
-                  <p><strong>Telefone:</strong> {selected.agendamento.telefone ?? "Não informado"}</p>
-                  <p><strong>Serviço:</strong> {selected.agendamento.servico}</p>
-                  <p><strong>Início:</strong> {selected.agendamento.inicio ?? selected.hora}</p>
-                  <p><strong>Fim:</strong> {selected.agendamento.fim ?? "Não informado"}</p>
+                <div>
+                  <p className="text-xs font-semibold uppercase text-blue-700">Servico</p>
+                  <p className="font-bold text-gray-900">{selected.agendamento.servico}</p>
                 </div>
-              )}
-            </aside>
+                <div className="border-t border-blue-200 pt-2">
+                  <p className="text-xs font-semibold uppercase text-blue-700">Duracao</p>
+                  <p className="font-bold text-gray-900">
+                    {calcularDuracaoEmMinutos(
+                      selected.agendamento.inicio,
+                      selected.agendamento.fim
+                    )}
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <span
+                    className={`inline-block rounded-full px-3 py-1 text-xs font-bold ${
+                      selected.agendamento.status === "confirmado"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {selected.agendamento.status === "confirmado" ? "Confirmado" : "Agendado"}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         )}
-      </div>
-    </div>
+      </Modal>
+    </main>
   );
 }
