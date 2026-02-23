@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ComponentType, FormEvent, useEffect, useMemo, useState } from "react";
 import {
   Agendamento,
   Barbeiro,
@@ -20,25 +20,34 @@ import {
   updateCliente,
   updateServico,
 } from "@/services/api";
+import Alert from "../components/Alert";
+import Loading from "../components/Loading";
+import Card from "../components/Card";
+import Button from "../components/Button";
+import FormInput from "../components/FormInput";
+import Modal from "../components/Modal";
+import Badge from "../components/Badge";
+import { Trash2, Edit2, Plus, RefreshCw, CalendarDays, Users, Scissors } from "lucide-react";
 
 type Tab = "agendamentos" | "clientes" | "servicos";
 
 const initialCliente = { nome: "", telefone: "" };
 const initialServico = { nome: "", duracao_minutos: 40, preco: 40 };
+const tabs: Array<{ key: Tab; label: string; icon: ComponentType<{ size?: number }> }> = [
+  { key: "agendamentos", label: "Agendamentos", icon: CalendarDays },
+  { key: "clientes", label: "Clientes", icon: Users },
+  { key: "servicos", label: "Servicos", icon: Scissors },
+];
 
 function toBackendDateTime(localValue: string): string {
-  // Mantem horário local selecionado no input datetime-local, sem converter para UTC.
   return `${localValue}:00`;
 }
 
 function toDateTimeLocalInput(value: string): string {
-  const date = new Date(value);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  const h = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${d}T${h}:${min}`;
+  const normalized = value.trim().replace(" ", "T");
+  const [datePart, timePart = ""] = normalized.split("T");
+  const hhmm = timePart.slice(0, 5);
+  return `${datePart}T${hhmm}`;
 }
 
 export default function GestaoPage() {
@@ -46,6 +55,11 @@ export default function GestaoPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // Modal states
+  const [showClienteModal, setShowClienteModal] = useState(false);
+  const [showServicoModal, setShowServicoModal] = useState(false);
+  const [showAgendamentoModal, setShowAgendamentoModal] = useState(false);
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -94,7 +108,7 @@ export default function GestaoPage() {
 
   useEffect(() => {
     if (!success) return;
-    const t = setTimeout(() => setSuccess(null), 3000);
+    const t = setTimeout(() => setSuccess(null), 4000);
     return () => clearTimeout(t);
   }, [success]);
 
@@ -108,44 +122,75 @@ export default function GestaoPage() {
     setSuccess(null);
   };
 
+  // CLIENTE HANDLERS
   async function submitCliente(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
     try {
       if (editClienteId) {
         await updateCliente(editClienteId, { ...novoCliente, etapa_atual: "menu" });
-        setSuccess("Cliente atualizado.");
+        setSuccess("Cliente atualizado com sucesso!");
       } else {
         await createCliente({ ...novoCliente, etapa_atual: "menu" });
-        setSuccess("Cliente criado.");
+        setSuccess("Cliente criado com sucesso!");
       }
       setNovoCliente(initialCliente);
       setEditClienteId(null);
+      setShowClienteModal(false);
       await carregarTudo();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao salvar cliente.");
     }
   }
 
+  function abrirModalCliente(cliente?: Cliente) {
+    if (cliente) {
+      setEditClienteId(cliente.id);
+      setNovoCliente({ nome: cliente.nome, telefone: cliente.telefone });
+    } else {
+      setEditClienteId(null);
+      setNovoCliente(initialCliente);
+    }
+    setShowClienteModal(true);
+  }
+
+  // SERVIÇO HANDLERS
   async function submitServico(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
     try {
       if (editServicoId) {
         await updateServico(editServicoId, novoServico);
-        setSuccess("Serviço atualizado.");
+        setSuccess("Serviço atualizado com sucesso!");
       } else {
         await createServico(novoServico);
-        setSuccess("Serviço criado.");
+        setSuccess("Serviço criado com sucesso!");
       }
       setNovoServico(initialServico);
       setEditServicoId(null);
+      setShowServicoModal(false);
       await carregarTudo();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao salvar serviço.");
     }
   }
 
+  function abrirModalServico(servico?: Servico) {
+    if (servico) {
+      setEditServicoId(servico.id);
+      setNovoServico({
+        nome: servico.nome,
+        duracao_minutos: servico.duracao_minutos,
+        preco: servico.preco,
+      });
+    } else {
+      setEditServicoId(null);
+      setNovoServico(initialServico);
+    }
+    setShowServicoModal(true);
+  }
+
+  // AGENDAMENTO HANDLERS
   async function submitAgendamento(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
@@ -164,7 +209,7 @@ export default function GestaoPage() {
           data_hora_inicio: toBackendDateTime(formAgendamento.dataHora),
           status: formAgendamento.status,
         });
-        setSuccess("Agendamento atualizado.");
+        setSuccess("Agendamento atualizado com sucesso!");
       } else {
         await createAgendamento({
           telefone: cliente.telefone,
@@ -174,7 +219,7 @@ export default function GestaoPage() {
           data_hora_inicio: toBackendDateTime(formAgendamento.dataHora),
           status: formAgendamento.status,
         });
-        setSuccess("Agendamento criado.");
+        setSuccess("Agendamento criado com sucesso!");
       }
       setFormAgendamento({
         clienteId: "",
@@ -184,412 +229,598 @@ export default function GestaoPage() {
         status: "confirmado",
       });
       setEditAgendamentoId(null);
+      setShowAgendamentoModal(false);
       await carregarTudo();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro ao salvar agendamento.");
     }
   }
 
+  function abrirModalAgendamento(agendamento?: Agendamento) {
+    if (agendamento) {
+      const cliente = clientes.find((c) => c.telefone === agendamento.telefone);
+      const barbeiro = barbeiros.find((b) => b.nome === agendamento.barbeiro_nome);
+      const servico = servicos.find((s) => s.nome === agendamento.servico_nome);
+      setEditAgendamentoId(agendamento.id);
+      setFormAgendamento({
+        clienteId: cliente ? String(cliente.id) : "",
+        barbeiroId: barbeiro ? String(barbeiro.id) : "",
+        servicoId: servico ? String(servico.id) : "",
+        dataHora: toDateTimeLocalInput(agendamento.data_hora_inicio),
+        status: agendamento.status,
+      });
+    } else {
+      setEditAgendamentoId(null);
+      setFormAgendamento({
+        clienteId: "",
+        barbeiroId: "",
+        servicoId: "",
+        dataHora: "",
+        status: "confirmado",
+      });
+    }
+    setShowAgendamentoModal(true);
+  }
+
+  // DELETE HANDLERS
+  const deleteClienteHandler = async (id: number) => {
+    if (!confirm("Tem certeza que deseja remover este cliente?")) return;
+    try {
+      limparMensagens();
+      await deleteCliente(id);
+      setSuccess("Cliente removido com sucesso!");
+      await carregarTudo();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao remover cliente.");
+    }
+  };
+
+  const deleteServicoHandler = async (id: number) => {
+    if (!confirm("Tem certeza que deseja remover este serviço?")) return;
+    try {
+      limparMensagens();
+      await deleteServico(id);
+      setSuccess("Serviço removido com sucesso!");
+      await carregarTudo();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao remover serviço.");
+    }
+  };
+
+  const deleteAgendamentoHandler = async (id: number) => {
+    if (!confirm("Tem certeza que deseja remover este agendamento?")) return;
+    try {
+      limparMensagens();
+      await deleteAgendamento(id);
+      setSuccess("Agendamento removido com sucesso!");
+      await carregarTudo();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao remover agendamento.");
+    }
+  };
+
   return (
-    <main className="px-4 py-6 md:px-8">
-      <section className="glass-panel mx-auto max-w-7xl rounded-2xl p-6 md:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">Administração</p>
-            <h1 className="mt-2 text-3xl font-black uppercase tracking-tight">Gestão da Barbearia</h1>
-            <p className="mt-2 text-sm text-zinc-600">Cadastre, edite e remova agendamentos, clientes e serviços em um único painel.</p>
-          </div>
-          <button
-            type="button"
-            onClick={carregarTudo}
-            className="rounded-xl border border-[var(--line-strong)] bg-[var(--surface)] px-4 py-2 text-sm font-semibold"
-          >
-            Atualizar dados
-          </button>
-        </div>
-
-        <div className="mt-6 flex flex-wrap gap-2">
-          {([
-            ["agendamentos", "Agendamentos"],
-            ["clientes", "Clientes"],
-            ["servicos", "Serviços"],
-          ] as const).map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                tab === key
-                  ? "bg-[var(--accent)] text-white"
-                  : "border border-[var(--line)] bg-[var(--surface)]"
-              }`}
+    <main className="min-h-screen bg-gray-50">
+      <div className="py-8">
+        <div className="app-container space-y-6">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Gestão</h1>
+              <p className="mt-1 text-gray-600">
+                Administre clientes, serviços e agendamentos
+              </p>
+            </div>
+            <Button
+              onClick={carregarTudo}
+              variant="secondary"
+              size="md"
             >
-              {label}
-            </button>
-          ))}
+              <RefreshCw size={18} />
+              Atualizar Dados
+            </Button>
+          </div>
+
+          {/* Alerts */}
+          {error && (
+            <Alert
+              type="error"
+              message={error}
+              onClose={() => setError(null)}
+            />
+          )}
+          {success && (
+            <Alert
+              type="success"
+              message={success}
+              onClose={() => setSuccess(null)}
+            />
+          )}
+
+          {/* Tab Navigation */}
+          <nav
+            className="rounded-2xl border border-gray-200 bg-gradient-to-r from-slate-100 to-gray-100 p-3"
+            aria-label="Abas da gestao"
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+              {tabs.map((item) => {
+                const isActive = tab === item.key;
+                const Icon = item.icon;
+
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setTab(item.key)}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold shadow-sm transition sm:h-14 sm:flex-1 sm:gap-2 sm:rounded-xl sm:px-6 sm:text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      isActive
+                        ? "border-blue-700 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
+                        : "border-gray-300 bg-white text-gray-800 hover:-translate-y-0.5 hover:border-gray-400 hover:bg-gray-50"
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+
+          {/* Content */}
+          {loading ? (
+            <Loading />
+          ) : (
+            <>
+              {/* CLIENTES TAB */}
+              {tab === "clientes" && (
+                <div className="space-y-6">
+                  <div>
+                    <Button variant="primary" onClick={() => abrirModalCliente()}>
+                      <Plus size={18} />
+                      Novo Cliente
+                    </Button>
+                  </div>
+
+                  <Card title="Lista de Clientes">
+                    {clientes.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-600">Nenhum cliente cadastrado</p>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => abrirModalCliente()}
+                          className="mt-4"
+                        >
+                          Criar Primeiro Cliente
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="table-wrapper">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>Nome</th>
+                              <th>Telefone</th>
+                              <th className="text-right">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {clientes.map((c) => (
+                              <tr key={c.id}>
+                                <td className="font-medium">{c.nome}</td>
+                                <td>{c.telefone}</td>
+                                <td className="text-right">
+                                  <div className="flex gap-2 justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirModalCliente(c)}
+                                      className="btn btn-secondary btn-sm"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteClienteHandler(c.id)}
+                                      className="btn btn-danger btn-sm"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
+                </div>
+              )}
+
+              {/* SERVIÇOS TAB */}
+              {tab === "servicos" && (
+                <div className="space-y-6">
+                  <div>
+                    <Button variant="primary" onClick={() => abrirModalServico()}>
+                      <Plus size={18} />
+                      Novo Serviço
+                    </Button>
+                  </div>
+
+                  <Card title="Lista de Serviços">
+                    {servicos.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-600">Nenhum serviço cadastrado</p>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => abrirModalServico()}
+                          className="mt-4"
+                        >
+                          Criar Primeiro Serviço
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="table-wrapper">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>Nome</th>
+                              <th>Duração</th>
+                              <th>Preço</th>
+                              <th className="text-right">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {servicos.map((s) => (
+                              <tr key={s.id}>
+                                <td className="font-medium">{s.nome}</td>
+                                <td>{s.duracao_minutos} min</td>
+                                <td className="text-green-600 font-semibold">
+                                  R$ {s.preco.toFixed(2)}
+                                </td>
+                                <td className="text-right">
+                                  <div className="flex gap-2 justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => abrirModalServico(s)}
+                                      className="btn btn-secondary btn-sm"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => deleteServicoHandler(s.id)}
+                                      className="btn btn-danger btn-sm"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
+                </div>
+              )}
+
+              {/* AGENDAMENTOS TAB */}
+              {tab === "agendamentos" && (
+                <div className="space-y-6">
+                  <div>
+                    <Button
+                      variant="primary"
+                      onClick={() => abrirModalAgendamento()}
+                      disabled={clientes.length === 0 || servicos.length === 0}
+                    >
+                      <Plus size={18} />
+                      Novo Agendamento
+                    </Button>
+                    {(clientes.length === 0 || servicos.length === 0) && (
+                      <p className="mt-2 text-sm text-amber-600">
+                        ⚠️ Você precisa cadastrar clientes e serviços antes de fazer agendamentos
+                      </p>
+                    )}
+                  </div>
+
+                  <Card title="Lista de Agendamentos">
+                    {agendamentos.length === 0 ? (
+                      <div className="text-center py-8">
+                        <p className="text-gray-600">Nenhum agendamento cadastrado</p>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => abrirModalAgendamento()}
+                          className="mt-4"
+                          disabled={clientes.length === 0 || servicos.length === 0}
+                        >
+                          Criar Primeiro Agendamento
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="table-wrapper">
+                        <table className="table">
+                          <thead>
+                            <tr>
+                              <th>Cliente</th>
+                              <th>Serviço</th>
+                              <th>Horário</th>
+                              <th>Status</th>
+                              <th className="text-right">Ações</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {agendamentos.map((a) => (
+                              <tr key={a.id}>
+                                <td className="font-medium">{a.cliente_nome}</td>
+                                <td>{a.servico_nome}</td>
+                                <td>
+                                  {new Date(
+                                    a.data_hora_inicio
+                                  ).toLocaleString("pt-BR")}
+                                </td>
+                                <td>
+                                  <Badge
+                                    status={
+                                      a.status as
+                                        | "confirmado"
+                                        | "pendente"
+                                        | "cancelado"
+                                    }
+                                  />
+                                </td>
+                                <td className="text-right">
+                                  <div className="flex gap-2 justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        abrirModalAgendamento(a)
+                                      }
+                                      className="btn btn-secondary btn-sm"
+                                    >
+                                      <Edit2 size={16} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        deleteAgendamentoHandler(a.id)
+                                      }
+                                      className="btn btn-danger btn-sm"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </Card>
+                </div>
+              )}
+            </>
+          )}
         </div>
+      </div>
 
-        {loading && <p className="mt-4 text-sm text-zinc-600">Carregando...</p>}
-        {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-[var(--danger)]">{error}</p>}
-        {success && <p className="mt-4 rounded-lg bg-emerald-50 p-3 text-sm text-[var(--ok)]">{success}</p>}
+      {/* MODALS */}
 
-        {tab === "clientes" && (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[360px_1fr]">
-            <form onSubmit={submitCliente} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3">
-              <h2 className="text-sm font-bold uppercase">{editClienteId ? "Editar cliente" : "Novo cliente"}</h2>
-              <input
-                required
-                placeholder="Nome"
-                value={novoCliente.nome}
-                onChange={(e) => setNovoCliente((p) => ({ ...p, nome: e.target.value }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              />
-              <input
-                required
-                placeholder="Telefone"
-                value={novoCliente.telefone}
-                onChange={(e) => setNovoCliente((p) => ({ ...p, telefone: e.target.value }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              />
-              <div className="flex gap-2">
-                <button type="submit" className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white">
-                  {editClienteId ? "Salvar" : "Adicionar"}
-                </button>
-                {editClienteId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditClienteId(null);
-                      setNovoCliente(initialCliente);
-                    }}
-                    className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm"
-                  >
-                    Cancelar
-                  </button>
-                )}
-              </div>
-            </form>
-
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
-              <h3 className="text-sm font-bold uppercase">Clientes</h3>
-              <div className="mt-3 overflow-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-zinc-500">
-                      <th className="pb-2">Nome</th>
-                      <th className="pb-2">Telefone</th>
-                      <th className="pb-2">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clientes.map((c) => (
-                      <tr key={c.id} className="border-t border-[var(--line)]">
-                        <td className="py-2">{c.nome}</td>
-                        <td className="py-2">{c.telefone}</td>
-                        <td className="py-2">
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditClienteId(c.id);
-                                setNovoCliente({ nome: c.nome, telefone: c.telefone });
-                              }}
-                              className="rounded-md border border-[var(--line)] px-2 py-1 text-xs"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                try {
-                                  limparMensagens();
-                                  await deleteCliente(c.id);
-                                  setSuccess("Cliente removido.");
-                                  await carregarTudo();
-                                } catch (e) {
-                                  setError(e instanceof Error ? e.message : "Erro ao remover cliente.");
-                                }
-                              }}
-                              className="rounded-md bg-red-100 px-2 py-1 text-xs text-[var(--danger)]"
-                            >
-                              Remover
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      {/* Cliente Modal */}
+      <Modal
+        isOpen={showClienteModal}
+        onClose={() => setShowClienteModal(false)}
+        title={editClienteId ? "Editar Cliente" : "Novo Cliente"}
+      >
+        <form onSubmit={submitCliente} className="space-y-4">
+          <FormInput
+            label="Nome do Cliente"
+            placeholder="Ex: João Silva"
+            value={novoCliente.nome}
+            onChange={(e) =>
+              setNovoCliente((p) => ({ ...p, nome: e.target.value }))
+            }
+            required
+          />
+          <FormInput
+            label="Telefone"
+            placeholder="Ex: (11) 98765-4321"
+            value={novoCliente.telefone}
+            onChange={(e) =>
+              setNovoCliente((p) => ({ ...p, telefone: e.target.value }))
+            }
+            required
+          />
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <Button
+              variant="secondary"
+              onClick={() => setShowClienteModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit">
+              {editClienteId ? "Atualizar" : "Criar"} Cliente
+            </Button>
           </div>
-        )}
+        </form>
+      </Modal>
 
-        {tab === "servicos" && (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[360px_1fr]">
-            <form onSubmit={submitServico} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3">
-              <h2 className="text-sm font-bold uppercase">{editServicoId ? "Editar serviço" : "Novo serviço"}</h2>
-              <input
-                required
-                placeholder="Nome"
-                value={novoServico.nome}
-                onChange={(e) => setNovoServico((p) => ({ ...p, nome: e.target.value }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              />
-              <input
-                required
-                type="number"
-                placeholder="Duração (min)"
-                value={novoServico.duracao_minutos}
-                onChange={(e) => setNovoServico((p) => ({ ...p, duracao_minutos: Number(e.target.value) }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              />
-              <input
-                required
-                type="number"
-                step="0.01"
-                placeholder="Preço"
-                value={novoServico.preco}
-                onChange={(e) => setNovoServico((p) => ({ ...p, preco: Number(e.target.value) }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              />
-              <div className="flex gap-2">
-                <button type="submit" className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white">
-                  {editServicoId ? "Salvar" : "Adicionar"}
-                </button>
-                {editServicoId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditServicoId(null);
-                      setNovoServico(initialServico);
-                    }}
-                    className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm"
-                  >
-                    Cancelar
-                  </button>
-                )}
-              </div>
-            </form>
-
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
-              <h3 className="text-sm font-bold uppercase">Serviços</h3>
-              <div className="mt-3 overflow-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-zinc-500">
-                      <th className="pb-2">Nome</th>
-                      <th className="pb-2">Duração</th>
-                      <th className="pb-2">Preço</th>
-                      <th className="pb-2">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {servicos.map((s) => (
-                      <tr key={s.id} className="border-t border-[var(--line)]">
-                        <td className="py-2">{s.nome}</td>
-                        <td className="py-2">{s.duracao_minutos} min</td>
-                        <td className="py-2">R$ {s.preco.toFixed(2)}</td>
-                        <td className="py-2">
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditServicoId(s.id);
-                                setNovoServico({
-                                  nome: s.nome,
-                                  duracao_minutos: s.duracao_minutos,
-                                  preco: s.preco,
-                                });
-                              }}
-                              className="rounded-md border border-[var(--line)] px-2 py-1 text-xs"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                try {
-                                  limparMensagens();
-                                  await deleteServico(s.id);
-                                  setSuccess("Serviço removido.");
-                                  await carregarTudo();
-                                } catch (e) {
-                                  setError(e instanceof Error ? e.message : "Erro ao remover serviço.");
-                                }
-                              }}
-                              className="rounded-md bg-red-100 px-2 py-1 text-xs text-[var(--danger)]"
-                            >
-                              Remover
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+      {/* Serviço Modal */}
+      <Modal
+        isOpen={showServicoModal}
+        onClose={() => setShowServicoModal(false)}
+        title={editServicoId ? "Editar Serviço" : "Novo Serviço"}
+      >
+        <form onSubmit={submitServico} className="space-y-4">
+          <FormInput
+            label="Nome do Serviço"
+            placeholder="Ex: Corte Básico"
+            value={novoServico.nome}
+            onChange={(e) =>
+              setNovoServico((p) => ({ ...p, nome: e.target.value }))
+            }
+            required
+          />
+          <FormInput
+            label="Duração (minutos)"
+            type="number"
+            placeholder="Ex: 40"
+            value={novoServico.duracao_minutos}
+            onChange={(e) =>
+              setNovoServico((p) => ({
+                ...p,
+                duracao_minutos: Number(e.target.value),
+              }))
+            }
+            required
+          />
+          <FormInput
+            label="Preço (R$)"
+            type="number"
+            step="0.01"
+            placeholder="Ex: 40.00"
+            value={novoServico.preco}
+            onChange={(e) =>
+              setNovoServico((p) => ({
+                ...p,
+                preco: Number(e.target.value),
+              }))
+            }
+            required
+          />
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <Button
+              variant="secondary"
+              onClick={() => setShowServicoModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit">
+              {editServicoId ? "Atualizar" : "Criar"} Serviço
+            </Button>
           </div>
-        )}
+        </form>
+      </Modal>
 
-        {tab === "agendamentos" && (
-          <div className="mt-6 grid gap-6 lg:grid-cols-[420px_1fr]">
-            <form onSubmit={submitAgendamento} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3">
-              <h2 className="text-sm font-bold uppercase">{editAgendamentoId ? "Editar agendamento" : "Novo agendamento"}</h2>
-              <select
-                required
-                value={formAgendamento.clienteId}
-                onChange={(e) => setFormAgendamento((p) => ({ ...p, clienteId: e.target.value }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              >
-                <option value="">Selecione o cliente</option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome} ({c.telefone})
-                  </option>
-                ))}
-              </select>
-              <select
-                required
-                value={formAgendamento.barbeiroId}
-                onChange={(e) => setFormAgendamento((p) => ({ ...p, barbeiroId: e.target.value }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              >
-                <option value="">Selecione o barbeiro</option>
-                {barbeiros.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.nome}
-                  </option>
-                ))}
-              </select>
-              <select
-                required
-                value={formAgendamento.servicoId}
-                onChange={(e) => setFormAgendamento((p) => ({ ...p, servicoId: e.target.value }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              >
-                <option value="">Selecione o serviço</option>
-                {servicos.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nome}
-                  </option>
-                ))}
-              </select>
-              <input
-                required
-                type="datetime-local"
-                value={formAgendamento.dataHora}
-                onChange={(e) => setFormAgendamento((p) => ({ ...p, dataHora: e.target.value }))}
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              />
-              <select
-                value={formAgendamento.status}
-                onChange={(e) =>
-                  setFormAgendamento((p) => ({
-                    ...p,
-                    status: e.target.value as "pendente" | "confirmado" | "cancelado",
-                  }))
-                }
-                className="w-full rounded-lg border border-[var(--line)] px-3 py-2"
-              >
-                <option value="confirmado">Confirmado</option>
-                <option value="pendente">Pendente</option>
-                <option value="cancelado">Cancelado</option>
-              </select>
-              <div className="flex gap-2">
-                <button type="submit" className="rounded-lg bg-[var(--accent)] px-4 py-2 text-sm font-semibold text-white">
-                  {editAgendamentoId ? "Salvar" : "Adicionar"}
-                </button>
-                {editAgendamentoId && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditAgendamentoId(null);
-                      setFormAgendamento({
-                        clienteId: "",
-                        barbeiroId: "",
-                        servicoId: "",
-                        dataHora: "",
-                        status: "confirmado",
-                      });
-                    }}
-                    className="rounded-lg border border-[var(--line)] px-4 py-2 text-sm"
-                  >
-                    Cancelar
-                  </button>
-                )}
-              </div>
-            </form>
+      {/* Agendamento Modal */}
+      <Modal
+        isOpen={showAgendamentoModal}
+        onClose={() => setShowAgendamentoModal(false)}
+        title={editAgendamentoId ? "Editar Agendamento" : "Novo Agendamento"}
+        size="lg"
+      >
+        <form onSubmit={submitAgendamento} className="space-y-4">
+          <FormInput
+            label="Cliente"
+            as="select"
+            value={formAgendamento.clienteId}
+            onChange={(e) =>
+              setFormAgendamento((p) => ({
+                ...p,
+                clienteId: e.target.value,
+              }))
+            }
+            required
+          >
+            <option value="">Selecione um cliente</option>
+            {clientes.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nome} ({c.telefone})
+              </option>
+            ))}
+          </FormInput>
 
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4">
-              <h3 className="text-sm font-bold uppercase">Agendamentos</h3>
-              <div className="mt-3 overflow-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="text-zinc-500">
-                      <th className="pb-2">Cliente</th>
-                      <th className="pb-2">Serviço</th>
-                      <th className="pb-2">Horário</th>
-                      <th className="pb-2">Status</th>
-                      <th className="pb-2">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {agendamentos.map((a) => (
-                      <tr key={a.id} className="border-t border-[var(--line)]">
-                        <td className="py-2">{a.cliente_nome}</td>
-                        <td className="py-2">{a.servico_nome}</td>
-                        <td className="py-2">{new Date(a.data_hora_inicio).toLocaleString("pt-BR")}</td>
-                        <td className="py-2 capitalize">{a.status}</td>
-                        <td className="py-2">
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const cliente = clientes.find((c) => c.telefone === a.telefone);
-                                const barbeiro = barbeiros.find((b) => b.nome === a.barbeiro_nome);
-                                const servico = servicos.find((s) => s.nome === a.servico_nome);
-                                setEditAgendamentoId(a.id);
-                                setFormAgendamento({
-                                  clienteId: cliente ? String(cliente.id) : "",
-                                  barbeiroId: barbeiro ? String(barbeiro.id) : "",
-                                  servicoId: servico ? String(servico.id) : "",
-                                  dataHora: toDateTimeLocalInput(a.data_hora_inicio),
-                                  status: a.status,
-                                });
-                              }}
-                              className="rounded-md border border-[var(--line)] px-2 py-1 text-xs"
-                            >
-                              Editar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                try {
-                                  limparMensagens();
-                                  await deleteAgendamento(a.id);
-                                  setSuccess("Agendamento removido.");
-                                  await carregarTudo();
-                                } catch (e) {
-                                  setError(e instanceof Error ? e.message : "Erro ao remover agendamento.");
-                                }
-                              }}
-                              className="rounded-md bg-red-100 px-2 py-1 text-xs text-[var(--danger)]"
-                            >
-                              Remover
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+          <FormInput
+            label="Barbeiro"
+            as="select"
+            value={formAgendamento.barbeiroId}
+            onChange={(e) =>
+              setFormAgendamento((p) => ({
+                ...p,
+                barbeiroId: e.target.value,
+              }))
+            }
+            required
+          >
+            <option value="">Selecione um barbeiro</option>
+            {barbeiros.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.nome}
+              </option>
+            ))}
+          </FormInput>
+
+          <FormInput
+            label="Serviço"
+            as="select"
+            value={formAgendamento.servicoId}
+            onChange={(e) =>
+              setFormAgendamento((p) => ({
+                ...p,
+                servicoId: e.target.value,
+              }))
+            }
+            required
+          >
+            <option value="">Selecione um serviço</option>
+            {servicos.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nome} ({s.duracao_minutos} min - R$ {s.preco.toFixed(2)})
+              </option>
+            ))}
+          </FormInput>
+
+          <FormInput
+            label="Data e Hora"
+            type="datetime-local"
+            value={formAgendamento.dataHora}
+            onChange={(e) =>
+              setFormAgendamento((p) => ({
+                ...p,
+                dataHora: e.target.value,
+              }))
+            }
+            required
+          />
+
+          <FormInput
+            label="Status"
+            as="select"
+            value={formAgendamento.status}
+            onChange={(e) =>
+              setFormAgendamento((p) => ({
+                ...p,
+                status: e.target.value as
+                  | "pendente"
+                  | "confirmado"
+                  | "cancelado",
+              }))
+            }
+          >
+            <option value="confirmado">✓ Confirmado</option>
+            <option value="pendente">⏳ Pendente</option>
+            <option value="cancelado">✗ Cancelado</option>
+          </FormInput>
+
+          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+            <Button
+              variant="secondary"
+              onClick={() => setShowAgendamentoModal(false)}
+            >
+              Cancelar
+            </Button>
+            <Button variant="primary" type="submit">
+              {editAgendamentoId ? "Atualizar" : "Criar"} Agendamento
+            </Button>
           </div>
-        )}
-      </section>
+        </form>
+      </Modal>
     </main>
   );
 }
+

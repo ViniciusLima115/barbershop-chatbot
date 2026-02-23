@@ -14,62 +14,42 @@ type AgendaGridProps = {
   onSelect: (item: SelectedAgendamento) => void;
 };
 
-export default function AgendaGrid({
-  data,
-  selectedKey,
-  onSelect,
-}: AgendaGridProps) {
+export default function AgendaGrid({ data, selectedKey, onSelect }: AgendaGridProps) {
   return (
-    <div className="glass-panel overflow-hidden rounded-2xl">
-      <div
-        className="grid gap-2 overflow-auto p-4"
-        style={{
-          gridTemplateColumns: `110px repeat(${data.barbeiros.length}, minmax(210px, 1fr))`,
-        }}
-      >
-        <div className="sticky left-0 top-0 z-20 rounded-lg bg-[var(--surface)] px-2 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500">
-          Horário
-        </div>
-        {data.barbeiros.map((b) => (
-          <div
-            key={b.id}
-            className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-3 text-center text-sm font-bold uppercase tracking-wide text-[var(--foreground)]"
-          >
-            {b.nome}
-          </div>
-        ))}
+    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      {data.barbeiros.map((barbeiro) => (
+        <section
+          key={barbeiro.id}
+          className="rounded-xl border border-gray-200 bg-white p-4"
+        >
+          <h3 className="mb-3 text-base font-bold text-gray-900">{barbeiro.nome}</h3>
 
-        {data.horarios.map((hora) => (
-          <div key={hora} className="contents">
-            <div className="sticky left-0 z-10 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-3 text-sm font-semibold text-zinc-700">
-              {hora}
-            </div>
-
-            {data.barbeiros.map((b) => {
-              const ag = b.agendamentos.find((a) => a.hora === hora);
-              const key = `${b.id}-${hora}`;
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {data.horarios.map((hora) => {
+              const agendamento = barbeiro.agendamentos.find((a) => a.hora === hora);
+              const key = `${barbeiro.id}-${hora}`;
 
               return (
                 <AgendaCell
                   key={key}
                   hora={hora}
-                  barbeiroNome={b.nome}
-                  agendamento={ag}
+                  barbeiroNome={barbeiro.nome}
+                  agendamento={agendamento}
                   isSelected={selectedKey === key}
                   onSelect={() =>
                     onSelect({
                       hora,
-                      barbeiroId: b.id,
-                      barbeiroNome: b.nome,
-                      agendamento: ag,
+                      barbeiroId: barbeiro.id,
+                      barbeiroNome: barbeiro.nome,
+                      agendamento,
                     })
                   }
                 />
               );
             })}
           </div>
-        ))}
-      </div>
+        </section>
+      ))}
     </div>
   );
 }

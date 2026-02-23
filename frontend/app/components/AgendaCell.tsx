@@ -15,37 +15,37 @@ export default function AgendaCell({
   isSelected = false,
   onSelect,
 }: AgendaCellProps) {
-  const ocupado = Boolean(agendamento);
+  const confirmado = agendamento?.status === "confirmado";
 
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={[
-        "h-24 w-full rounded-xl border p-3 text-left transition-all duration-200",
-        "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-800",
-        ocupado
-          ? "border-[var(--line-strong)] bg-[var(--surface-muted)] hover:-translate-y-0.5 hover:shadow-md"
-          : "border-[var(--line)] bg-[var(--surface)] hover:-translate-y-0.5 hover:border-[var(--line-strong)]",
-        isSelected ? "ring-2 ring-[var(--accent)]" : "",
-      ].join(" ")}
-      aria-label={`${barbeiroNome} às ${hora}`}
+      className={`relative aspect-square w-full rounded-lg border p-2 text-left transition-all ${
+        confirmado
+          ? "border-green-400 bg-green-100 text-green-900 hover:bg-green-200"
+          : "border-gray-300 bg-white text-gray-900 hover:border-gray-400 hover:bg-gray-50"
+      } ${isSelected ? "ring-2 ring-blue-500 ring-offset-1" : ""} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500`}
+      aria-label={`${barbeiroNome} as ${hora}`}
     >
-      {ocupado ? (
-        <div className="flex h-full flex-col justify-between">
-          <p className="truncate text-sm font-semibold text-[var(--foreground)]">
-            {agendamento?.cliente}
+      <div className="flex h-full flex-col justify-between">
+        <p className="text-sm font-bold">{hora}</p>
+
+        {agendamento ? (
+          <div>
+            <p className="line-clamp-2 text-xs font-semibold">
+              {agendamento.cliente}
+            </p>
+            <p className="mt-1 text-[11px] font-medium uppercase opacity-80">
+              {confirmado ? "Confirmado" : "Agendado"}
+            </p>
+          </div>
+        ) : (
+          <p className="text-[11px] font-medium uppercase text-gray-500">
+            Livre
           </p>
-          <p className="truncate text-xs text-zinc-600">{agendamento?.servico}</p>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ok)]">
-            Ocupado
-          </p>
-        </div>
-      ) : (
-        <div className="flex h-full items-end">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">Livre</p>
-        </div>
-      )}
+        )}
+      </div>
     </button>
   );
 }
