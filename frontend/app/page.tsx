@@ -57,8 +57,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <div className="px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="py-8">
+        <div className="app-container space-y-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Painel Operacional</h1>
             <p className="mt-1 text-gray-600">
