@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Header from "./components/Header";
+import AppShell from "./components/AppShell";
 
 export const metadata: Metadata = {
   title: "Painel da Barbearia",
@@ -15,8 +15,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className="antialiased" suppressHydrationWarning>
-        <Header />
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

@@ -44,9 +44,8 @@ export default function Home() {
           totalServicos: servicos.length,
           agendamentosConfirmados: agendamentos.filter((a) => a.status === "confirmado").length,
         });
-      } catch (err) {
+      } catch {
         setError("Nao foi possivel carregar os indicadores. Verifique a conexao com a API.");
-        console.error(err);
       } finally {
         setLoading(false);
       }

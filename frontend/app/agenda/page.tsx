@@ -50,12 +50,11 @@ export default function AgendaPage() {
         setData(resposta);
         setSelected(null);
         setIsDetailsOpen(false);
-      } catch (err) {
+      } catch {
         setData(null);
         setSelected(null);
         setIsDetailsOpen(false);
         setError("Falha ao buscar agenda. Confirme se o backend esta acessivel.");
-        console.error(err);
       } finally {
         setLoading(false);
       }

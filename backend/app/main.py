@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_db
-from app.routes import barbeiros, servicos, agendamentos, agenda, chatbot, whatsapp, clientes
+from app.routes import barbeiros, servicos, agendamentos, agenda, chatbot, whatsapp, clientes, auth
 import secrets
 import os
 from fastapi import Depends, HTTPException, status
@@ -68,6 +68,7 @@ app.include_router(servicos.router)
 app.include_router(agenda.router)
 app.include_router(chatbot.router)
 app.include_router(whatsapp.router, prefix="/whatsapp")
+app.include_router(auth.router)
 
 @app.get("/")
 def home():
