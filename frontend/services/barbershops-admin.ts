@@ -1,9 +1,11 @@
+import { API_URL } from "./api";
+
 export type PlanoBarbearia = "basico" | "premium";
 export type StatusManualBarbearia = "ativo" | "inativo";
 export type StatusAssinaturaBarbearia = "ativo" | "trial" | "bloqueado_atraso" | "inativo";
 
 export type BarbeariaAdmin = {
-  id: string;
+  id: number;
   nome: string;
   login: string;
   senha: string;
@@ -17,15 +19,20 @@ export type BarbeariaAdmin = {
   criadoEm: string;
 };
 
-const STORAGE_KEY = "barbershop_admin_records";
-
-function isPlanoValido(value: unknown): value is PlanoBarbearia {
-  return value === "basico" || value === "premium";
-}
-
-function isStatusManualValido(value: unknown): value is StatusManualBarbearia {
-  return value === "ativo" || value === "inativo";
-}
+type BarbeariaApi = {
+  id: number;
+  nome: string;
+  login: string | null;
+  senha: string | null;
+  plano: PlanoBarbearia | null;
+  status_manual: StatusManualBarbearia | null;
+  vencimento_em: string | null;
+  trial_ativo: boolean;
+  trial_fim_em: string | null;
+  ultimo_acesso_em: string | null;
+  pagamento_recusado: boolean;
+  criado_em: string;
+};
 
 function toISODateOnly(value: Date): string {
   const year = value.getFullYear();
@@ -40,56 +47,36 @@ function plusDays(days: number): string {
   return toISODateOnly(date);
 }
 
-function normalizeRow(item: Partial<BarbeariaAdmin>): BarbeariaAdmin | null {
-  if (!item.id || !item.nome || !item.login || !item.senha || !item.criadoEm) return null;
-  if (!isPlanoValido(item.plano)) return null;
-
+function toUi(item: BarbeariaApi): BarbeariaAdmin {
   return {
     id: item.id,
     nome: item.nome,
-    login: item.login,
-    senha: item.senha,
-    plano: item.plano,
-    statusManual: isStatusManualValido(item.statusManual) ? item.statusManual : "ativo",
-    vencimentoEm: item.vencimentoEm ?? plusDays(30),
-    trialAtivo: Boolean(item.trialAtivo),
-    trialFimEm: item.trialFimEm ?? null,
-    ultimoAcessoEm: item.ultimoAcessoEm ?? null,
-    pagamentoRecusado: Boolean(item.pagamentoRecusado),
-    criadoEm: item.criadoEm,
+    login: item.login ?? "",
+    senha: item.senha ?? "",
+    plano: item.plano ?? "basico",
+    statusManual: item.status_manual ?? "ativo",
+    vencimentoEm: item.vencimento_em ?? plusDays(30),
+    trialAtivo: Boolean(item.trial_ativo),
+    trialFimEm: item.trial_fim_em,
+    ultimoAcessoEm: item.ultimo_acesso_em,
+    pagamentoRecusado: Boolean(item.pagamento_recusado),
+    criadoEm: item.criado_em,
   };
 }
 
-function parseStorage(raw: string | null): BarbeariaAdmin[] {
-  if (!raw) return [];
-
-  try {
-    const data = JSON.parse(raw) as unknown;
-    if (!Array.isArray(data)) return [];
-
-    return data
-      .map((item) => {
-        if (!item || typeof item !== "object") return null;
-        return normalizeRow(item as Partial<BarbeariaAdmin>);
-      })
-      .filter((item): item is BarbeariaAdmin => Boolean(item));
-  } catch {
-    return [];
-  }
+async function parseOrThrow(res: Response, fallback: string) {
+  if (res.ok) return res.status === 204 ? null : res.json();
+  const body = await res.json().catch(() => ({}));
+  throw new Error(body?.detail || fallback);
 }
 
-function saveAll(barbearias: BarbeariaAdmin[]): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(barbearias));
+export async function listBarbeariasAdmin(): Promise<BarbeariaAdmin[]> {
+  const res = await fetch(`${API_URL}/barbearias/`, { cache: "no-store" });
+  const data = (await parseOrThrow(res, "Falha ao carregar barbearias.")) as BarbeariaApi[];
+  return data.map(toUi);
 }
 
-export function listBarbeariasAdmin(): BarbeariaAdmin[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  return parseStorage(raw).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
-}
-
-export function createBarbeariaAdmin(payload: {
+export async function createBarbeariaAdmin(payload: {
   nome: string;
   login: string;
   senha: string;
@@ -98,54 +85,31 @@ export function createBarbeariaAdmin(payload: {
   trialAtivo: boolean;
   trialFimEm?: string | null;
   pagamentoRecusado?: boolean;
-}): BarbeariaAdmin {
-  const current = listBarbeariasAdmin();
-  const normalizedLogin = payload.login.trim().toLowerCase();
-
-  const loginExiste = current.some((item) => item.login.trim().toLowerCase() === normalizedLogin);
-  if (loginExiste) {
-    throw new Error("Ja existe uma barbearia com esse login.");
-  }
-
-  const nova: BarbeariaAdmin = {
-    id: crypto.randomUUID(),
-    nome: payload.nome.trim(),
-    login: payload.login.trim(),
-    senha: payload.senha,
-    plano: payload.plano,
-    statusManual: "ativo",
-    vencimentoEm: payload.vencimentoEm,
-    trialAtivo: payload.trialAtivo,
-    trialFimEm: payload.trialAtivo ? payload.trialFimEm ?? null : null,
-    ultimoAcessoEm: null,
-    pagamentoRecusado: Boolean(payload.pagamentoRecusado),
-    criadoEm: new Date().toISOString(),
-  };
-
-  saveAll([nova, ...current]);
-  return nova;
-}
-
-export function updateBarbeariaSenhaAdmin(id: string, novaSenha: string): BarbeariaAdmin {
-  const current = listBarbeariasAdmin();
-  let updated: BarbeariaAdmin | null = null;
-
-  const next = current.map((item) => {
-    if (item.id !== id) return item;
-    updated = { ...item, senha: novaSenha };
-    return updated;
+}): Promise<BarbeariaAdmin> {
+  const res = await fetch(`${API_URL}/barbearias/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nome: payload.nome.trim(),
+      login: payload.login.trim(),
+      senha: payload.senha,
+      plano: payload.plano,
+      status_manual: "ativo",
+      vencimento_em: payload.vencimentoEm,
+      trial_ativo: payload.trialAtivo,
+      trial_fim_em: payload.trialAtivo ? payload.trialFimEm ?? null : null,
+      ultimo_acesso_em: null,
+      pagamento_recusado: Boolean(payload.pagamentoRecusado),
+      endereco: "",
+    }),
   });
 
-  if (!updated) {
-    throw new Error("Barbearia nao encontrada.");
-  }
-
-  saveAll(next);
-  return updated;
+  const data = (await parseOrThrow(res, "Falha ao cadastrar barbearia.")) as BarbeariaApi;
+  return toUi(data);
 }
 
-export function updateBarbeariaAdmin(
-  id: string,
+export async function updateBarbeariaAdmin(
+  id: number,
   payload: {
     nome: string;
     login: string;
@@ -158,56 +122,32 @@ export function updateBarbeariaAdmin(
     ultimoAcessoEm: string | null;
     pagamentoRecusado: boolean;
   }
-): BarbeariaAdmin {
-  const current = listBarbeariasAdmin();
-  const normalizedLogin = payload.login.trim().toLowerCase();
-
-  const conflitoLogin = current.some(
-    (item) => item.id !== id && item.login.trim().toLowerCase() === normalizedLogin
-  );
-  if (conflitoLogin) {
-    throw new Error("Ja existe outra barbearia com esse login.");
-  }
-
-  let updated: BarbeariaAdmin | null = null;
-
-  const next = current.map((item) => {
-    if (item.id !== id) return item;
-
-    updated = {
-      ...item,
+): Promise<BarbeariaAdmin> {
+  const res = await fetch(`${API_URL}/barbearias/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
       nome: payload.nome.trim(),
       login: payload.login.trim(),
       senha: payload.senha,
       plano: payload.plano,
-      statusManual: payload.statusManual,
-      vencimentoEm: payload.vencimentoEm,
-      trialAtivo: payload.trialAtivo,
-      trialFimEm: payload.trialAtivo ? payload.trialFimEm : null,
-      ultimoAcessoEm: payload.ultimoAcessoEm,
-      pagamentoRecusado: payload.pagamentoRecusado,
-    };
-
-    return updated;
+      status_manual: payload.statusManual,
+      vencimento_em: payload.vencimentoEm,
+      trial_ativo: payload.trialAtivo,
+      trial_fim_em: payload.trialAtivo ? payload.trialFimEm : null,
+      ultimo_acesso_em: payload.ultimoAcessoEm,
+      pagamento_recusado: payload.pagamentoRecusado,
+      endereco: "",
+    }),
   });
 
-  if (!updated) {
-    throw new Error("Barbearia nao encontrada.");
-  }
-
-  saveAll(next);
-  return updated;
+  const data = (await parseOrThrow(res, "Falha ao atualizar barbearia.")) as BarbeariaApi;
+  return toUi(data);
 }
 
-export function deleteBarbeariaAdmin(id: string): void {
-  const current = listBarbeariasAdmin();
-  const next = current.filter((item) => item.id !== id);
-
-  if (next.length === current.length) {
-    throw new Error("Barbearia nao encontrada.");
-  }
-
-  saveAll(next);
+export async function deleteBarbeariaAdmin(id: number): Promise<void> {
+  const res = await fetch(`${API_URL}/barbearias/${id}`, { method: "DELETE" });
+  await parseOrThrow(res, "Falha ao excluir barbearia.");
 }
 
 export function getStatusAssinaturaBarbearia(item: BarbeariaAdmin): StatusAssinaturaBarbearia {

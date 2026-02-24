@@ -28,6 +28,7 @@ def init_db():
     )
     Base.metadata.create_all(bind=engine)
     _ensure_clientes_contexto_column()
+    _ensure_barbearias_admin_columns()
 
 
 def _ensure_clientes_contexto_column():
@@ -38,3 +39,26 @@ def _ensure_clientes_contexto_column():
     except Exception:
         # Ignore if the column already exists or if DB dialect does not support JSON ALTER syntax.
         pass
+
+
+def _ensure_barbearias_admin_columns():
+    alter_statements = [
+        "ALTER TABLE barbearias ADD COLUMN login VARCHAR(255) NULL UNIQUE",
+        "ALTER TABLE barbearias ADD COLUMN senha VARCHAR(255) NULL",
+        "ALTER TABLE barbearias ADD COLUMN plano VARCHAR(50) NULL DEFAULT 'basico'",
+        "ALTER TABLE barbearias ADD COLUMN status_manual VARCHAR(50) NULL DEFAULT 'ativo'",
+        "ALTER TABLE barbearias ADD COLUMN vencimento_em DATE NULL",
+        "ALTER TABLE barbearias ADD COLUMN trial_ativo BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE barbearias ADD COLUMN trial_fim_em DATE NULL",
+        "ALTER TABLE barbearias ADD COLUMN ultimo_acesso_em DATETIME NULL",
+        "ALTER TABLE barbearias ADD COLUMN pagamento_recusado BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE barbearias ADD COLUMN criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP",
+    ]
+
+    for sql in alter_statements:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(sql))
+        except Exception:
+            # Ignore when column already exists or DB dialect has different ALTER semantics.
+            pass

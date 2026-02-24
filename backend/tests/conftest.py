@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base, get_db
 from app.models import Barbearia, Barbeiro, Servico
-from app.routes import agenda, agendamentos, chatbot, barbeiros, clientes, servicos, whatsapp
+from app.routes import agenda, agendamentos, chatbot, barbeiros, clientes, servicos, whatsapp, barbearias
 
 
 @pytest.fixture
@@ -51,6 +51,7 @@ def app(session_factory):
     test_app.include_router(chatbot.router)
     test_app.include_router(barbeiros.router)
     test_app.include_router(clientes.router)
+    test_app.include_router(barbearias.router)
     test_app.include_router(servicos.router)
     test_app.include_router(whatsapp.router, prefix="/whatsapp")
 

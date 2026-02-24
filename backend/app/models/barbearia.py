@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Integer, String
+from datetime import datetime
+
+from sqlalchemy import Boolean, Column, Date, DateTime, Integer, String
 from app.database import Base
 
 
@@ -7,4 +9,16 @@ class Barbearia(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(255), nullable=False)
-    endereco = Column(String(255), nullable=False)
+    endereco = Column(String(255), nullable=True, default="")
+
+    # Campos administrativos usados pelo painel /admin.
+    login = Column(String(255), nullable=True, unique=True)
+    senha = Column(String(255), nullable=True)
+    plano = Column(String(50), nullable=True, default="basico")
+    status_manual = Column(String(50), nullable=True, default="ativo")
+    vencimento_em = Column(Date, nullable=True)
+    trial_ativo = Column(Boolean, nullable=False, default=False)
+    trial_fim_em = Column(Date, nullable=True)
+    ultimo_acesso_em = Column(DateTime, nullable=True)
+    pagamento_recusado = Column(Boolean, nullable=False, default=False)
+    criado_em = Column(DateTime, nullable=False, default=datetime.utcnow)

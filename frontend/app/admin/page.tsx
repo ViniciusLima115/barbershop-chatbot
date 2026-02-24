@@ -57,7 +57,8 @@ const initialFiltros = {
 };
 
 export default function AdminPage() {
-  const [barbearias, setBarbearias] = useState<BarbeariaAdmin[]>(() => listBarbeariasAdmin());
+  const [barbearias, setBarbearias] = useState<BarbeariaAdmin[]>([]);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(initialForm);
   const [filtros, setFiltros] = useState(initialFiltros);
   const [showPasswords, setShowPasswords] = useState(false);
@@ -77,9 +78,21 @@ export default function AdminPage() {
     pagamentoRecusado: false,
   });
 
-  function recarregar() {
-    setBarbearias(listBarbeariasAdmin());
+  async function recarregar() {
+    try {
+      setLoading(true);
+      const items = await listBarbeariasAdmin();
+      setBarbearias(items);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Falha ao carregar barbearias.");
+    } finally {
+      setLoading(false);
+    }
   }
+
+  useEffect(() => {
+    recarregar();
+  }, []);
 
   useEffect(() => {
     if (!success) return;
@@ -207,7 +220,7 @@ export default function AdminPage() {
     setSuccess(null);
   }
 
-  function submitCadastro(e: FormEvent) {
+  async function submitCadastro(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
 
@@ -225,10 +238,10 @@ export default function AdminPage() {
     }
 
     try {
-      createBarbeariaAdmin(form);
+      await createBarbeariaAdmin(form);
       setSuccess("Barbearia cadastrada com sucesso!");
       setForm(initialForm);
-      recarregar();
+      await recarregar();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao cadastrar barbearia.");
     }
@@ -251,7 +264,7 @@ export default function AdminPage() {
     limparMensagens();
   }
 
-  function salvarNovaSenha(e: FormEvent) {
+  async function salvarNovaSenha(e: FormEvent) {
     e.preventDefault();
     if (!selected) return;
     if (!editForm.nome.trim() || !editForm.login.trim() || !editForm.senha.trim()) {
@@ -268,7 +281,7 @@ export default function AdminPage() {
     }
 
     try {
-      updateBarbeariaAdmin(selected.id, {
+      await updateBarbeariaAdmin(selected.id, {
         nome: editForm.nome.trim(),
         login: editForm.login.trim(),
         senha: editForm.senha,
@@ -282,13 +295,13 @@ export default function AdminPage() {
       });
       setSuccess(`Barbearia "${selected.nome}" atualizada com sucesso.`);
       setSelected(null);
-      recarregar();
+      await recarregar();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao atualizar barbearia.");
     }
   }
 
-  function excluirBarbearia(item: BarbeariaAdmin) {
+  async function excluirBarbearia(item: BarbeariaAdmin) {
     limparMensagens();
     const confirmar = window.confirm(
       `Tem certeza que deseja excluir a barbearia "${item.nome}"? Essa acao nao pode ser desfeita.`
@@ -296,9 +309,9 @@ export default function AdminPage() {
     if (!confirmar) return;
 
     try {
-      deleteBarbeariaAdmin(item.id);
+      await deleteBarbeariaAdmin(item.id);
       setSuccess(`Barbearia "${item.nome}" excluida com sucesso.`);
-      recarregar();
+      await recarregar();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao excluir barbearia.");
     }
@@ -325,6 +338,12 @@ export default function AdminPage() {
 
           {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
           {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}
+
+          {loading && (
+            <Card title="Carregando" subtitle="Buscando barbearias no backend">
+              <p className="text-sm text-gray-600">Aguarde...</p>
+            </Card>
+          )}
 
           <Card
             title="Notificacoes Automaticas"
