@@ -26,20 +26,30 @@ def test_barbeiros_exige_header_tenant(client):
     assert criar.json()["detail"] == "X-Barbearia-Id obrigatorio."
 
 
-def test_barbeiros_bloqueia_plano_basico(client, db_session):
+def test_barbeiros_basico_permite_um_e_bloqueia_mais_com_upgrade(client, db_session):
     from app.models.barbearia import Barbearia
 
     basico = Barbearia(nome="Barbearia Basica", plano="basico")
     db_session.add(basico)
     db_session.commit()
 
-    criar = client.post(
+    criar_primeiro = client.post(
         "/barbeiros/",
         json={"nome": "Carlos"},
         headers={"X-Barbearia-Id": str(basico.id)},
     )
-    assert criar.status_code == 403
-    assert criar.json()["detail"] == "Gestao de barbeiros disponivel apenas para plano premium."
+    assert criar_primeiro.status_code == 200
+
+    criar_segundo = client.post(
+        "/barbeiros/",
+        json={"nome": "Andre"},
+        headers={"X-Barbearia-Id": str(basico.id)},
+    )
+    assert criar_segundo.status_code == 403
+    assert (
+        criar_segundo.json()["detail"]
+        == "Deseja adicionar mais barbeiros? Faca o upgrade para o plano premium."
+    )
 
 
 def test_barbeiros_premium_limite_edicao_e_exclusao(client, db_session):
