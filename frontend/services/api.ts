@@ -42,7 +42,8 @@ export type Servico = {
 export type Barbeiro = {
   id: number;
   nome: string;
-  barbearia_id: number;
+  barbershop_id?: number;
+  barbearia_id?: number;
 };
 
 export type Agendamento = {

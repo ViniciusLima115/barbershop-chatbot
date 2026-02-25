@@ -39,6 +39,7 @@ const initialCliente = { nome: "", telefone: "" };
 const initialServico = { nome: "", duracao_minutos: 40, preco: 40 };
 const initialBarbeiro = { nome: "" };
 const MAX_BARBEIROS_PREMIUM = 3;
+const MAX_BARBEIROS_BASICO = 1;
 const tabs: Array<{ key: Tab; label: string; icon: ComponentType<{ size?: number }> }> = [
   { key: "agendamentos", label: "Agendamentos", icon: CalendarDays },
   { key: "clientes", label: "Clientes", icon: Users },
@@ -92,7 +93,8 @@ export default function GestaoPage() {
   });
   const [editAgendamentoId, setEditAgendamentoId] = useState<number | null>(null);
 
-  const limiteBarbeirosAtingido = barbeiros.length >= MAX_BARBEIROS_PREMIUM;
+  const limiteBarbeiros = isPremiumPlan ? MAX_BARBEIROS_PREMIUM : MAX_BARBEIROS_BASICO;
+  const limiteBarbeirosAtingido = barbeiros.length >= limiteBarbeiros;
 
   async function carregarTudo() {
     setLoading(true);
@@ -117,7 +119,7 @@ export default function GestaoPage() {
 
   useEffect(() => {
     carregarTudo();
-  }, []);
+  }, [authSession?.tenantId]);
 
   useEffect(() => {
     if (!success) return;
@@ -208,20 +210,11 @@ export default function GestaoPage() {
     e.preventDefault();
     limparMensagens();
 
-    if (!isPremiumPlan) {
-      setError("Gestao de barbeiros disponivel apenas para plano premium.");
-      return;
-    }
-
     try {
       if (editBarbeiroId) {
         await updateBarbeiro(editBarbeiroId, novoBarbeiro);
         setSuccess("Barbeiro atualizado com sucesso!");
       } else {
-        if (limiteBarbeirosAtingido) {
-          setError("Limite de 3 barbeiros ativos atingido.");
-          return;
-        }
         await createBarbeiro(novoBarbeiro);
         setSuccess("Barbeiro criado com sucesso!");
       }
@@ -236,11 +229,6 @@ export default function GestaoPage() {
   }
 
   function abrirModalBarbeiro(barbeiro?: Barbeiro) {
-    if (!isPremiumPlan) {
-      setError("Gestao de barbeiros disponivel apenas para plano premium.");
-      return;
-    }
-
     if (barbeiro) {
       setEditBarbeiroId(barbeiro.id);
       setNovoBarbeiro({ nome: barbeiro.nome });
@@ -362,10 +350,6 @@ export default function GestaoPage() {
   };
 
   const deleteBarbeiroHandler = async (id: number) => {
-    if (!isPremiumPlan) {
-      setError("Gestao de barbeiros disponivel apenas para plano premium.");
-      return;
-    }
     if (!confirm("Tem certeza que deseja remover este barbeiro?")) return;
 
     try {
@@ -591,76 +575,72 @@ export default function GestaoPage() {
               {tab === "agendamentos" && (
                 <div className="space-y-6">
                   <Card
-                    title="Gestao de Barbeiros (Plano Premium)"
+                    title="Gestao de Barbeiros"
                     subtitle="Crie, edite e exclua barbeiros ativos diretamente neste painel"
                   >
-                    {!isPremiumPlan ? (
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-                        Somente usuarios com Plano Premium possuem acesso a gestao de barbeiros.
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-gray-600">
+                          Ativos: <strong>{barbeiros.length}</strong> / {limiteBarbeiros}
+                        </p>
+                        <Button variant="primary" onClick={() => abrirModalBarbeiro()}>
+                          <Plus size={18} />
+                          Adicionar Barbeiro
+                        </Button>
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm text-gray-600">
-                            Ativos: <strong>{barbeiros.length}</strong> / {MAX_BARBEIROS_PREMIUM}
-                          </p>
-                          <Button
-                            variant="primary"
-                            onClick={() => abrirModalBarbeiro()}
-                            disabled={limiteBarbeirosAtingido}
-                          >
-                            <Plus size={18} />
-                            Adicionar Barbeiro
-                          </Button>
-                        </div>
 
-                        {limiteBarbeirosAtingido && (
-                          <p className="text-sm text-amber-600">
-                            Limite de 3 barbeiros ativos atingido.
-                          </p>
-                        )}
+                      {!isPremiumPlan && limiteBarbeirosAtingido && (
+                        <p className="text-sm text-amber-600">
+                          Deseja adicionar mais barbeiros? Faca o upgrade para o plano premium.
+                        </p>
+                      )}
 
-                        {barbeiros.length === 0 ? (
-                          <p className="text-sm text-gray-600">Nenhum barbeiro cadastrado.</p>
-                        ) : (
-                          <div className="table-wrapper">
-                            <table className="table">
-                              <thead>
-                                <tr>
-                                  <th>Nome</th>
-                                  <th className="text-right">Acoes</th>
+                      {isPremiumPlan && limiteBarbeirosAtingido && (
+                        <p className="text-sm text-amber-600">
+                          Limite de 3 barbeiros ativos atingido.
+                        </p>
+                      )}
+
+                      {barbeiros.length === 0 ? (
+                        <p className="text-sm text-gray-600">Nenhum barbeiro cadastrado.</p>
+                      ) : (
+                        <div className="table-wrapper">
+                          <table className="table">
+                            <thead>
+                              <tr>
+                                <th>Nome</th>
+                                <th className="text-right">Acoes</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {barbeiros.map((barbeiro) => (
+                                <tr key={barbeiro.id}>
+                                  <td className="font-medium">{barbeiro.nome}</td>
+                                  <td className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => abrirModalBarbeiro(barbeiro)}
+                                        className="btn btn-secondary btn-sm"
+                                      >
+                                        <Edit2 size={16} />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => deleteBarbeiroHandler(barbeiro.id)}
+                                        className="btn btn-danger btn-sm"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {barbeiros.map((barbeiro) => (
-                                  <tr key={barbeiro.id}>
-                                    <td className="font-medium">{barbeiro.nome}</td>
-                                    <td className="text-right">
-                                      <div className="flex justify-end gap-2">
-                                        <button
-                                          type="button"
-                                          onClick={() => abrirModalBarbeiro(barbeiro)}
-                                          className="btn btn-secondary btn-sm"
-                                        >
-                                          <Edit2 size={16} />
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => deleteBarbeiroHandler(barbeiro.id)}
-                                          className="btn btn-danger btn-sm"
-                                        >
-                                          <Trash2 size={16} />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
                   </Card>
 
                   <div>
