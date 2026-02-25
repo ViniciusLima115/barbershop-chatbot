@@ -29,6 +29,7 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     _ensure_clientes_contexto_column()
     _ensure_barbearias_admin_columns()
+    _ensure_barbeiros_barbershop_column()
 
 
 def _ensure_clientes_contexto_column():
@@ -61,4 +62,20 @@ def _ensure_barbearias_admin_columns():
                 conn.execute(text(sql))
         except Exception:
             # Ignore when column already exists or DB dialect has different ALTER semantics.
+            pass
+
+
+def _ensure_barbeiros_barbershop_column():
+    statements = [
+        "ALTER TABLE barbeiros ADD COLUMN barbershop_id INTEGER NULL",
+        "UPDATE barbeiros SET barbershop_id = barbearia_id WHERE barbershop_id IS NULL",
+        "CREATE INDEX ix_barbeiros_barbershop_id ON barbeiros (barbershop_id)",
+    ]
+
+    for sql in statements:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(sql))
+        except Exception:
+            # Ignore when column/index already exists or if SQL dialect differs.
             pass

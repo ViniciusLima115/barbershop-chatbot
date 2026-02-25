@@ -39,11 +39,11 @@ def criar(dados: BarbeiroCreate, request: Request, db: Session = Depends(get_db)
     tenant_id = _tenant_id_from_header(request)
     _ensure_premium(db, tenant_id)
 
-    total = db.query(Barbeiro).filter(Barbeiro.barbearia_id == tenant_id).count()
+    total = db.query(Barbeiro).filter(Barbeiro.barbershop_id == tenant_id).count()
     if total >= MAX_BARBEIROS_PREMIUM:
         raise HTTPException(status_code=400, detail="Limite de 3 barbeiros ativos atingido.")
 
-    payload = {"nome": dados.nome.strip(), "barbearia_id": tenant_id}
+    payload = {"nome": dados.nome.strip(), "barbershop_id": tenant_id}
 
     barbeiro = Barbeiro(**payload)
 
@@ -58,7 +58,7 @@ def criar(dados: BarbeiroCreate, request: Request, db: Session = Depends(get_db)
 def listar(request: Request, db: Session = Depends(get_db)):
     tenant_id = _tenant_id_from_header(request)
     _ensure_premium(db, tenant_id)
-    query = db.query(Barbeiro).filter(Barbeiro.barbearia_id == tenant_id)
+    query = db.query(Barbeiro).filter(Barbeiro.barbershop_id == tenant_id)
     return query.order_by(Barbeiro.id.asc()).all()
 
 
@@ -71,7 +71,7 @@ def atualizar(
 ):
     tenant_id = _tenant_id_from_header(request)
     _ensure_premium(db, tenant_id)
-    query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.barbearia_id == tenant_id)
+    query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.barbershop_id == tenant_id)
 
     barbeiro = query.first()
     if not barbeiro:
@@ -88,7 +88,7 @@ def atualizar(
 def remover(barbeiro_id: int, request: Request, db: Session = Depends(get_db)):
     tenant_id = _tenant_id_from_header(request)
     _ensure_premium(db, tenant_id)
-    query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.barbearia_id == tenant_id)
+    query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.barbershop_id == tenant_id)
 
     barbeiro = query.first()
     if not barbeiro:

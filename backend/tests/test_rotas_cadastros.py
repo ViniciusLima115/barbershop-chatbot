@@ -10,14 +10,14 @@ def test_barbeiros_criar_e_listar(client, db_session):
     criar = client.post("/barbeiros/", json={"nome": "Carlos"}, headers=db_headers)
     assert criar.status_code == 200
     assert criar.json()["nome"] == "Carlos"
-    assert criar.json()["barbearia_id"] == premium.id
+    assert criar.json()["barbershop_id"] == premium.id
 
     listar = client.get("/barbeiros/", headers=db_headers)
     assert listar.status_code == 200
     body = listar.json()
     assert len(body) == 1
     assert body[0]["nome"] == "Carlos"
-    assert body[0]["barbearia_id"] == premium.id
+    assert body[0]["barbershop_id"] == premium.id
 
 
 def test_barbeiros_exige_header_tenant(client):

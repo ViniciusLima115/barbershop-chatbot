@@ -13,7 +13,7 @@ def test_main_home_e_startup(monkeypatch):
 
     monkeypatch.setattr(main_module, "init_db", fake_init_db)
 
-    # Cobre o corpo da função de startup explicitamente.
+    # Cobre o corpo da funcao de startup explicitamente.
     main_module.startup()
     assert chamado["ok"] is True
 
@@ -39,21 +39,31 @@ def test_database_get_db_yield():
 def test_database_init_db_chama_create_all(monkeypatch):
     from app import database
 
-    chamadas = {"create_all": False, "ensure": False}
+    chamadas = {"create_all": False, "clientes": False, "barbearias": False, "barbeiros": False}
 
     def fake_create_all(bind):
         chamadas["create_all"] = True
         assert bind is database.engine
 
-    def fake_ensure():
-        chamadas["ensure"] = True
+    def fake_ensure_clientes():
+        chamadas["clientes"] = True
+
+    def fake_ensure_barbearias():
+        chamadas["barbearias"] = True
+
+    def fake_ensure_barbeiros():
+        chamadas["barbeiros"] = True
 
     monkeypatch.setattr(database.Base.metadata, "create_all", fake_create_all)
-    monkeypatch.setattr(database, "_ensure_clientes_contexto_column", fake_ensure)
+    monkeypatch.setattr(database, "_ensure_clientes_contexto_column", fake_ensure_clientes)
+    monkeypatch.setattr(database, "_ensure_barbearias_admin_columns", fake_ensure_barbearias)
+    monkeypatch.setattr(database, "_ensure_barbeiros_barbershop_column", fake_ensure_barbeiros)
 
     database.init_db()
     assert chamadas["create_all"] is True
-    assert chamadas["ensure"] is True
+    assert chamadas["clientes"] is True
+    assert chamadas["barbearias"] is True
+    assert chamadas["barbeiros"] is True
 
 
 def test_database_ensure_clientes_contexto_column_sucesso(monkeypatch):
@@ -86,5 +96,39 @@ def test_database_ensure_clientes_contexto_column_ignora_excecao(monkeypatch):
         yield
 
     monkeypatch.setattr(database.engine, "begin", fake_begin_com_erro)
-    # Não deve levantar exceção.
+    # Nao deve levantar excecao.
     database._ensure_clientes_contexto_column()
+
+
+def test_database_ensure_barbeiros_barbershop_column_sucesso(monkeypatch):
+    from app import database
+
+    chamadas = {"begin": 0, "execute": 0}
+
+    class DummyConn:
+        def execute(self, _sql):
+            chamadas["execute"] += 1
+
+    @contextmanager
+    def fake_begin():
+        chamadas["begin"] += 1
+        yield DummyConn()
+
+    monkeypatch.setattr(database.engine, "begin", fake_begin)
+    database._ensure_barbeiros_barbershop_column()
+
+    assert chamadas["begin"] == 3
+    assert chamadas["execute"] == 3
+
+
+def test_database_ensure_barbeiros_barbershop_column_ignora_excecao(monkeypatch):
+    from app import database
+
+    @contextmanager
+    def fake_begin_com_erro():
+        raise RuntimeError("erro proposital")
+        yield
+
+    monkeypatch.setattr(database.engine, "begin", fake_begin_com_erro)
+    # Nao deve levantar excecao.
+    database._ensure_barbeiros_barbershop_column()
