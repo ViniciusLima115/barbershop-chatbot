@@ -181,7 +181,7 @@ export default function AgendaPage() {
                   className="input"
                 >
                   <option value="all">Todos os barbeiros</option>
-                  {data.barbeiros.map((barbeiro) => (
+                  {data && data.barbeiros.map((barbeiro) => (
                     <option key={barbeiro.id} value={String(barbeiro.id)}>
                       {barbeiro.nome}
                     </option>
