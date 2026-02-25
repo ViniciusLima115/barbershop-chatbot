@@ -9,6 +9,7 @@ from app.models.barbearia import Barbearia
 from app.schemas.barbeiro import BarbeiroCreate, BarbeiroResponse, BarbeiroUpdate
 
 router = APIRouter(prefix="/barbeiros")
+MAX_BARBEIROS_BASICO = 1
 MAX_BARBEIROS_PREMIUM = 3
 
 
@@ -21,17 +22,10 @@ def _tenant_id_from_header(x_barbearia_id: Annotated[str | None, Header(alias="X
         raise HTTPException(status_code=400, detail="X-Barbearia-Id invalido.") from exc
 
 
-def _ensure_premium(db: Session, tenant_id: int) -> Barbearia:
+def _get_barbearia(db: Session, tenant_id: int) -> Barbearia:
     barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
     if not barbearia:
         raise HTTPException(status_code=404, detail="Barbearia nao encontrada.")
-
-    if (barbearia.plano or "basico").lower() != "premium":
-        raise HTTPException(
-            status_code=403,
-            detail="Gestao de barbeiros disponivel apenas para plano premium.",
-        )
-
     return barbearia
 
 
@@ -41,10 +35,19 @@ def criar(
     tenant_id: int = Depends(_tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
-    _ensure_premium(db, tenant_id)
+    barbearia = _get_barbearia(db, tenant_id)
 
     total = db.query(Barbeiro).filter(Barbeiro.barbershop_id == tenant_id).count()
-    if total >= MAX_BARBEIROS_PREMIUM:
+    plano = (barbearia.plano or "basico").lower()
+    limite = MAX_BARBEIROS_PREMIUM if plano == "premium" else MAX_BARBEIROS_BASICO
+
+    if total >= limite and plano != "premium":
+        raise HTTPException(
+            status_code=403,
+            detail="Deseja adicionar mais barbeiros? Faca o upgrade para o plano premium.",
+        )
+
+    if total >= limite and plano == "premium":
         raise HTTPException(status_code=400, detail="Limite de 3 barbeiros ativos atingido.")
 
     payload = {"nome": dados.nome.strip(), "barbershop_id": tenant_id}
@@ -60,7 +63,7 @@ def criar(
 
 @router.get("/", response_model=list[BarbeiroResponse])
 def listar(tenant_id: int = Depends(_tenant_id_from_header), db: Session = Depends(get_db)):
-    _ensure_premium(db, tenant_id)
+    _get_barbearia(db, tenant_id)
     query = db.query(Barbeiro).filter(Barbeiro.barbershop_id == tenant_id)
     return query.order_by(Barbeiro.id.asc()).all()
 
@@ -72,7 +75,7 @@ def atualizar(
     tenant_id: int = Depends(_tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
-    _ensure_premium(db, tenant_id)
+    _get_barbearia(db, tenant_id)
     query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.barbershop_id == tenant_id)
 
     barbeiro = query.first()
@@ -92,7 +95,7 @@ def remover(
     tenant_id: int = Depends(_tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
-    _ensure_premium(db, tenant_id)
+    _get_barbearia(db, tenant_id)
     query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.barbershop_id == tenant_id)
 
     barbeiro = query.first()
