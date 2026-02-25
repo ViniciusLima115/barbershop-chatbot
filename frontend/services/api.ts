@@ -69,7 +69,9 @@ export type LoginResponse = {
 };
 
 function getTenantId(): string | null {
-  return getAuthSession()?.tenantId ?? null;
+  const tenantId = getAuthSession()?.tenantId ?? null;
+  if (!tenantId) return null;
+  return /^\d+$/.test(tenantId) ? tenantId : null;
 }
 
 async function apiFetch(path: string, init?: RequestInit): Promise<Response> {

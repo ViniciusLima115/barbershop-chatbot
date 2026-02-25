@@ -9,7 +9,7 @@ class Cliente(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(255), nullable=False)
-    telefone = Column(String(20), unique=True, nullable=False)
+    telefone = Column(String(20), nullable=False, index=True)
     etapa_atual = Column(String(100), nullable=False, default="inicio")
     contexto = Column(JSON, nullable=True)
     data_criacao = Column(DateTime, nullable=False, default=datetime.utcnow)

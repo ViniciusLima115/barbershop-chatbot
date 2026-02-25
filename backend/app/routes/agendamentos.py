@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.routes.deps import tenant_id_from_header
 from app.schemas.agendamento import (
     AgendamentoCreate,
     AgendamentoResponse,
@@ -20,26 +21,31 @@ router = APIRouter(prefix="/agendamentos")
 
 
 @router.post("/", response_model=AgendamentoResponse)
-def criar(dados: AgendamentoCreate, db: Session = Depends(get_db)):
+def criar(
+    dados: AgendamentoCreate,
+    tenant_id: int = Depends(tenant_id_from_header),
+    db: Session = Depends(get_db),
+):
     try:
-        return criar_agendamento(db, dados)
+        return criar_agendamento(db, dados, tenant_id=tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.get("/", response_model=list[AgendamentoResponse])
-def listar(db: Session = Depends(get_db)):
-    return listar_agendamentos(db)
+def listar(tenant_id: int = Depends(tenant_id_from_header), db: Session = Depends(get_db)):
+    return listar_agendamentos(db, tenant_id=tenant_id)
 
 
 @router.put("/{agendamento_id}", response_model=AgendamentoResponse)
 def atualizar(
     agendamento_id: int,
     dados: AgendamentoUpdate,
+    tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
     try:
-        return atualizar_agendamento(db, agendamento_id, dados)
+        return atualizar_agendamento(db, agendamento_id, dados, tenant_id=tenant_id)
     except ValueError as exc:
         mensagem = str(exc)
         status_code = 404 if "não encontrado" in mensagem.lower() else 400
@@ -50,17 +56,22 @@ def atualizar(
 def atualizar_status(
     agendamento_id: int,
     dados: AgendamentoStatusUpdate,
+    tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
     try:
-        return atualizar_status_agendamento(db, agendamento_id, dados.status)
+        return atualizar_status_agendamento(db, agendamento_id, dados.status, tenant_id=tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.delete("/{agendamento_id}", status_code=204)
-def remover(agendamento_id: int, db: Session = Depends(get_db)):
+def remover(
+    agendamento_id: int,
+    tenant_id: int = Depends(tenant_id_from_header),
+    db: Session = Depends(get_db),
+):
     try:
-        remover_agendamento(db, agendamento_id)
+        remover_agendamento(db, agendamento_id, tenant_id=tenant_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -1,25 +1,15 @@
-from typing import Annotated
-
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.barbeiro import Barbeiro
 from app.models.barbearia import Barbearia
+from app.routes.deps import tenant_id_from_header
 from app.schemas.barbeiro import BarbeiroCreate, BarbeiroResponse, BarbeiroUpdate
 
 router = APIRouter(prefix="/barbeiros")
 MAX_BARBEIROS_BASICO = 1
 MAX_BARBEIROS_PREMIUM = 3
-
-
-def _tenant_id_from_header(x_barbearia_id: Annotated[str | None, Header(alias="X-Barbearia-Id")] = None) -> int:
-    if not x_barbearia_id:
-        raise HTTPException(status_code=400, detail="X-Barbearia-Id obrigatorio.")
-    try:
-        return int(x_barbearia_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="X-Barbearia-Id invalido.") from exc
 
 
 def _get_barbearia(db: Session, tenant_id: int) -> Barbearia:
@@ -32,7 +22,7 @@ def _get_barbearia(db: Session, tenant_id: int) -> Barbearia:
 @router.post("/", response_model=BarbeiroResponse)
 def criar(
     dados: BarbeiroCreate,
-    tenant_id: int = Depends(_tenant_id_from_header),
+    tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
     barbearia = _get_barbearia(db, tenant_id)
@@ -62,7 +52,7 @@ def criar(
 
 
 @router.get("/", response_model=list[BarbeiroResponse])
-def listar(tenant_id: int = Depends(_tenant_id_from_header), db: Session = Depends(get_db)):
+def listar(tenant_id: int = Depends(tenant_id_from_header), db: Session = Depends(get_db)):
     _get_barbearia(db, tenant_id)
     query = db.query(Barbeiro).filter(Barbeiro.barbershop_id == tenant_id)
     return query.order_by(Barbeiro.id.asc()).all()
@@ -72,7 +62,7 @@ def listar(tenant_id: int = Depends(_tenant_id_from_header), db: Session = Depen
 def atualizar(
     barbeiro_id: int,
     dados: BarbeiroUpdate,
-    tenant_id: int = Depends(_tenant_id_from_header),
+    tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
     _get_barbearia(db, tenant_id)
@@ -92,7 +82,7 @@ def atualizar(
 @router.delete("/{barbeiro_id}", status_code=204)
 def remover(
     barbeiro_id: int,
-    tenant_id: int = Depends(_tenant_id_from_header),
+    tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
     _get_barbearia(db, tenant_id)

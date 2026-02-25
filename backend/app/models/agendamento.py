@@ -11,6 +11,7 @@ class Agendamento(Base):
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
     barbeiro_id = Column(Integer, ForeignKey("barbeiros.id"), nullable=False)
     servico_id = Column(Integer, ForeignKey("servicos.id"), nullable=False)
+    barbearia_id = Column(Integer, ForeignKey("barbearias.id"), nullable=True, index=True)
 
     data_hora_inicio = Column(DateTime, nullable=False)
     data_hora_fim = Column(DateTime, nullable=False)

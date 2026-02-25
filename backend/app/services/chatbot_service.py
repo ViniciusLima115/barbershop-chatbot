@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.models.agendamento import Agendamento
+from app.models.barbeiro import Barbeiro
 from app.models.cliente import Cliente
 from app.models.servico import Servico
 from app.services.agenda_service import gerar_horarios_disponiveis
@@ -66,8 +67,22 @@ def _normalizar_nome(nome: str) -> str:
     return " ".join(normalizadas)
 
 
-def _listar_servicos(db: Session) -> list[Servico]:
-    return db.query(Servico).order_by(Servico.id.asc()).all()
+def _listar_servicos(db: Session, tenant_id: int) -> list[Servico]:
+    return (
+        db.query(Servico)
+        .filter(Servico.barbearia_id == tenant_id)
+        .order_by(Servico.id.asc())
+        .all()
+    )
+
+
+def _obter_barbeiro_padrao(db: Session, tenant_id: int) -> Barbeiro | None:
+    return (
+        db.query(Barbeiro)
+        .filter(Barbeiro.barbershop_id == tenant_id)
+        .order_by(Barbeiro.id.asc())
+        .first()
+    )
 
 
 def _mensagem_menu(nome_cliente: str) -> str:
@@ -82,8 +97,8 @@ def _mensagem_menu(nome_cliente: str) -> str:
     )
 
 
-def _mensagem_servicos(db: Session) -> str:
-    servicos = _listar_servicos(db)
+def _mensagem_servicos(db: Session, tenant_id: int) -> str:
+    servicos = _listar_servicos(db, tenant_id)
     if not servicos:
         return "Ainda não temos serviços cadastrados."
 
@@ -93,8 +108,8 @@ def _mensagem_servicos(db: Session) -> str:
     return "\n".join(linhas)
 
 
-def _mensagem_servicos_com_instrucao(db: Session) -> str:
-    base = _mensagem_servicos(db)
+def _mensagem_servicos_com_instrucao(db: Session, tenant_id: int) -> str:
+    base = _mensagem_servicos(db, tenant_id)
     if base == "Ainda não temos serviços cadastrados.":
         return base
     return (
@@ -104,11 +119,12 @@ def _mensagem_servicos_com_instrucao(db: Session) -> str:
     )
 
 
-def _agendamentos_futuros_cliente(db: Session, cliente_id: int) -> list[Agendamento]:
+def _agendamentos_futuros_cliente(db: Session, cliente_id: int, tenant_id: int) -> list[Agendamento]:
     return (
         db.query(Agendamento)
         .filter(
             Agendamento.cliente_id == cliente_id,
+            Agendamento.barbearia_id == tenant_id,
             Agendamento.status.in_(["pendente", "confirmado"]),
             Agendamento.data_hora_inicio >= datetime.now(),
         )
@@ -135,6 +151,7 @@ def _datas_disponiveis_por_periodo(
     barbeiro_id: int,
     servico_id: int,
     periodo: str,
+    tenant_id: int,
     dias_busca: int = 14,
     limite_datas: int = 7,
 ) -> list[str]:
@@ -149,6 +166,7 @@ def _datas_disponiveis_por_periodo(
             servico_id=servico_id,
             data=data,
             periodo=periodo,
+            tenant_id=tenant_id,
         )
         if horarios:
             datas.append(data.strftime("%d/%m/%Y"))
@@ -158,8 +176,12 @@ def _datas_disponiveis_por_periodo(
     return datas
 
 
-def _buscar_ou_criar_cliente(db: Session, telefone: str) -> Cliente:
-    cliente = db.query(Cliente).filter(Cliente.telefone == telefone).first()
+def _buscar_ou_criar_cliente(db: Session, telefone: str, tenant_id: int) -> Cliente:
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.telefone == telefone, Cliente.barbearia_id == tenant_id)
+        .first()
+    )
     if cliente:
         return cliente
 
@@ -168,6 +190,7 @@ def _buscar_ou_criar_cliente(db: Session, telefone: str) -> Cliente:
         nome="Cliente",
         etapa_atual="aguardando_nome",
         contexto=None,
+        barbearia_id=tenant_id,
     )
     db.add(cliente)
     db.commit()
@@ -188,10 +211,14 @@ def _atualizar_contexto(db: Session, cliente: Cliente, **campos):
     db.commit()
 
 
-def responder_mensagem(db: Session, telefone, mensagem):
+def responder_mensagem(db: Session, telefone, mensagem, tenant_id: int):
     msg = _normalizar_texto(mensagem)
     telefone = _normalizar_telefone(telefone)
-    cliente = _buscar_ou_criar_cliente(db, telefone)
+    cliente = _buscar_ou_criar_cliente(db, telefone, tenant_id)
+    barbeiro_padrao = _obter_barbeiro_padrao(db, tenant_id)
+
+    if not barbeiro_padrao:
+        return "Nao ha barbeiros cadastrados para esta barbearia."
 
     print("========== DEBUG ==========")
     print("TELEFONE:", telefone)
@@ -218,14 +245,14 @@ def responder_mensagem(db: Session, telefone, mensagem):
         cliente.contexto = None
         db.commit()
         _salvar_etapa(db, cliente, "escolhendo_servico")
-        return _mensagem_servicos(db)
+        return _mensagem_servicos(db, tenant_id)
 
     if cliente.etapa_atual == "menu" and msg.startswith("2"):
         _salvar_etapa(db, cliente, "vendo_servicos")
-        return _mensagem_servicos_com_instrucao(db)
+        return _mensagem_servicos_com_instrucao(db, tenant_id)
 
     if cliente.etapa_atual == "menu" and msg.startswith("3"):
-        agendamentos = _agendamentos_futuros_cliente(db, cliente.id)
+        agendamentos = _agendamentos_futuros_cliente(db, cliente.id, tenant_id)
 
         if not agendamentos:
             _salvar_etapa(db, cliente, "menu")
@@ -258,7 +285,7 @@ def responder_mensagem(db: Session, telefone, mensagem):
             _salvar_etapa(db, cliente, "menu")
             return _mensagem_menu(cliente.nome)
 
-        servicos = _listar_servicos(db)
+        servicos = _listar_servicos(db, tenant_id)
         try:
             indice = int(msg) - 1
             servico = servicos[indice]
@@ -302,6 +329,7 @@ def responder_mensagem(db: Session, telefone, mensagem):
                 .filter(
                     Agendamento.id == cliente.contexto["agendamento_id_gestao"],
                     Agendamento.cliente_id == cliente.id,
+                    Agendamento.barbearia_id == tenant_id,
                 )
                 .first()
             )
@@ -334,6 +362,7 @@ def responder_mensagem(db: Session, telefone, mensagem):
                     db,
                     cliente.contexto["agendamento_id_gestao"],
                     "cancelado",
+                    tenant_id=tenant_id,
                 )
             except Exception as e:
                 return f"Não consegui cancelar agora: {str(e)}"
@@ -356,7 +385,7 @@ def responder_mensagem(db: Session, telefone, mensagem):
         return "Escolha uma opção válida:\n1️⃣ Remarcar\n2️⃣ Cancelar\n3️⃣ Voltar ao menu"
 
     if cliente.etapa_atual == "escolhendo_servico":
-        servicos = _listar_servicos(db)
+        servicos = _listar_servicos(db, tenant_id)
 
         try:
             indice = int(msg) - 1
@@ -381,9 +410,10 @@ def responder_mensagem(db: Session, telefone, mensagem):
 
         datas = _datas_disponiveis_por_periodo(
             db=db,
-            barbeiro_id=1,
+            barbeiro_id=barbeiro_padrao.id,
             servico_id=cliente.contexto["servico_id"],
             periodo=periodo,
+            tenant_id=tenant_id,
         )
 
         if not datas:
@@ -422,10 +452,11 @@ def responder_mensagem(db: Session, telefone, mensagem):
 
         horarios = gerar_horarios_disponiveis(
             db=db,
-            barbeiro_id=1,
+            barbeiro_id=barbeiro_padrao.id,
             servico_id=cliente.contexto["servico_id"],
             data=data,
             periodo=cliente.contexto["periodo"],
+            tenant_id=tenant_id,
         )
 
         if not horarios:
@@ -480,6 +511,7 @@ def responder_mensagem(db: Session, telefone, mensagem):
                     db,
                     cliente.contexto["agendamento_id_remarcacao"],
                     data_hora,
+                    tenant_id=tenant_id,
                 )
                 mensagem_confirmacao = (
                     f"Remarcação confirmada para "
@@ -491,11 +523,12 @@ def responder_mensagem(db: Session, telefone, mensagem):
                     AgendamentoCreate(
                         telefone=cliente.telefone,
                         nome_cliente=cliente.nome,
-                        barbeiro_id=1,
+                        barbeiro_id=barbeiro_padrao.id,
                         servico_id=cliente.contexto["servico_id"],
                         data_hora_inicio=data_hora,
                         status="confirmado",
                     ),
+                    tenant_id=tenant_id,
                 )
                 mensagem_confirmacao = (
                     f"Agendamento confirmado para "

@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.config import HORARIO_ABERTURA, HORARIO_FECHAMENTO, INTERVALO_MINUTOS
 from app.models.agendamento import Agendamento
+from app.models.barbeiro import Barbeiro
 from app.models.servico import Servico
 
 
@@ -26,9 +27,20 @@ def gerar_horarios_disponiveis(
     servico_id: int,
     data: datetime,
     periodo: str | None = None,
+    tenant_id: int | None = None,
 ):
-    servico = db.query(Servico).filter(Servico.id == servico_id).first()
+    servico_query = db.query(Servico).filter(Servico.id == servico_id)
+    if tenant_id is not None:
+        servico_query = servico_query.filter(Servico.barbearia_id == tenant_id)
+    servico = servico_query.first()
     if not servico:
+        return []
+
+    barbeiro_query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id)
+    if tenant_id is not None:
+        barbeiro_query = barbeiro_query.filter(Barbeiro.barbershop_id == tenant_id)
+    barbeiro = barbeiro_query.first()
+    if not barbeiro:
         return []
 
     duracao = servico.duracao_minutos
@@ -43,15 +55,14 @@ def gerar_horarios_disponiveis(
         horarios.append(atual)
         atual += timedelta(minutes=INTERVALO_MINUTOS)
 
-    agendamentos = (
-        db.query(Agendamento)
-        .filter(
-            Agendamento.barbeiro_id == barbeiro_id,
-            Agendamento.data_hora_inicio >= inicio_dia,
-            Agendamento.data_hora_inicio < fim_dia,
-        )
-        .all()
+    agendamentos_query = db.query(Agendamento).filter(
+        Agendamento.barbeiro_id == barbeiro_id,
+        Agendamento.data_hora_inicio >= inicio_dia,
+        Agendamento.data_hora_inicio < fim_dia,
     )
+    if tenant_id is not None:
+        agendamentos_query = agendamentos_query.filter(Agendamento.barbearia_id == tenant_id)
+    agendamentos = agendamentos_query.all()
 
     livres = []
 

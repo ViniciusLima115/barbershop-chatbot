@@ -98,3 +98,8 @@ def dados_base(db_session):
         "agora": datetime.now(),
         "amanha": datetime.now() + timedelta(days=1),
     }
+
+
+@pytest.fixture
+def tenant_headers(dados_base):
+    return {"X-Barbearia-Id": str(dados_base["barbearia"].id)}

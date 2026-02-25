@@ -118,25 +118,26 @@ def test_barbeiro_nao_pode_ser_acessado_por_outra_barbearia(client, db_session):
     assert remover_b.status_code == 404
 
 
-def test_servicos_criar_e_listar(client):
+def test_servicos_criar_e_listar(client, tenant_headers):
     criar = client.post(
         "/servicos/",
         json={"nome": "Barba", "duracao_minutos": 30, "preco": 25.0},
+        headers=tenant_headers,
     )
     assert criar.status_code == 200
     assert criar.json()["nome"] == "Barba"
 
-    listar = client.get("/servicos/")
+    listar = client.get("/servicos/", headers=tenant_headers)
     assert listar.status_code == 200
     body = listar.json()
-    assert len(body) == 1
-    assert body[0]["duracao_minutos"] == 30
+    assert any(item["nome"] == "Barba" and item["duracao_minutos"] == 30 for item in body)
 
 
-def test_clientes_criar_listar_e_duplicado(client):
+def test_clientes_criar_listar_e_duplicado(client, tenant_headers):
     criar = client.post(
         "/clientes/",
         json={"telefone": "5582980000000", "nome": "Cliente A"},
+        headers=tenant_headers,
     )
     assert criar.status_code == 200
     assert criar.json()["telefone"] == "5582980000000"
@@ -144,11 +145,12 @@ def test_clientes_criar_listar_e_duplicado(client):
     duplicado = client.post(
         "/clientes/",
         json={"telefone": "5582980000000", "nome": "Cliente B"},
+        headers=tenant_headers,
     )
     assert duplicado.status_code == 400
     assert duplicado.json()["detail"] == "Telefone já cadastrado"
 
-    listar = client.get("/clientes/")
+    listar = client.get("/clientes/", headers=tenant_headers)
     assert listar.status_code == 200
     body = listar.json()
     assert len(body) == 1

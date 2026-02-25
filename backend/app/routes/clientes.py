@@ -3,18 +3,27 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.cliente import Cliente
+from app.routes.deps import tenant_id_from_header
 from app.schemas.cliente import ClienteCreate, ClienteResponse, ClienteUpdate
 
 router = APIRouter(prefix="/clientes")
 
 
 @router.post("/", response_model=ClienteResponse)
-def criar(dados: ClienteCreate, db: Session = Depends(get_db)):
-    cliente_existente = db.query(Cliente).filter(Cliente.telefone == dados.telefone).first()
+def criar(
+    dados: ClienteCreate,
+    tenant_id: int = Depends(tenant_id_from_header),
+    db: Session = Depends(get_db),
+):
+    cliente_existente = (
+        db.query(Cliente)
+        .filter(Cliente.telefone == dados.telefone, Cliente.barbearia_id == tenant_id)
+        .first()
+    )
     if cliente_existente:
         raise HTTPException(status_code=400, detail="Telefone já cadastrado")
 
-    cliente = Cliente(**dados.model_dump())
+    cliente = Cliente(**dados.model_dump(), barbearia_id=tenant_id)
     db.add(cliente)
     db.commit()
     db.refresh(cliente)
@@ -23,19 +32,37 @@ def criar(dados: ClienteCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[ClienteResponse])
-def listar(db: Session = Depends(get_db)):
-    return db.query(Cliente).order_by(Cliente.id.asc()).all()
+def listar(tenant_id: int = Depends(tenant_id_from_header), db: Session = Depends(get_db)):
+    return (
+        db.query(Cliente)
+        .filter(Cliente.barbearia_id == tenant_id)
+        .order_by(Cliente.id.asc())
+        .all()
+    )
 
 
 @router.put("/{cliente_id}", response_model=ClienteResponse)
-def atualizar(cliente_id: int, dados: ClienteUpdate, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+def atualizar(
+    cliente_id: int,
+    dados: ClienteUpdate,
+    tenant_id: int = Depends(tenant_id_from_header),
+    db: Session = Depends(get_db),
+):
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.barbearia_id == tenant_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
     conflito_telefone = (
         db.query(Cliente)
-        .filter(Cliente.telefone == dados.telefone, Cliente.id != cliente_id)
+        .filter(
+            Cliente.telefone == dados.telefone,
+            Cliente.id != cliente_id,
+            Cliente.barbearia_id == tenant_id,
+        )
         .first()
     )
     if conflito_telefone:
@@ -51,8 +78,16 @@ def atualizar(cliente_id: int, dados: ClienteUpdate, db: Session = Depends(get_d
 
 
 @router.delete("/{cliente_id}", status_code=204)
-def remover(cliente_id: int, db: Session = Depends(get_db)):
-    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+def remover(
+    cliente_id: int,
+    tenant_id: int = Depends(tenant_id_from_header),
+    db: Session = Depends(get_db),
+):
+    cliente = (
+        db.query(Cliente)
+        .filter(Cliente.id == cliente_id, Cliente.barbearia_id == tenant_id)
+        .first()
+    )
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente não encontrado")
 
