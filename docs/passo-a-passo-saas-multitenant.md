@@ -20,6 +20,12 @@ JWT_SECRET=<segredo-forte-unico-por-ambiente>
 JWT_EXPIRES_MINUTES=480
 ADMIN_USUARIO=<usuario-admin>
 ADMIN_SENHA=<senha-admin-forte>
+
+# Seguranca do webhook externo (MegaAPI/n8n -> backend)
+MEGAAPI_WEBHOOK_TOKEN=<token-compartilhado-no-header>
+MEGAAPI_WEBHOOK_SECRET=<opcional-hmac-sha256>
+MEGAAPI_WEBHOOK_ALLOW_UNSIGNED=false
+MEGAAPI_WEBHOOK_MAX_SKEW_SECONDS=300
 ```
 
 Depois de atualizar, reinicie o backend.
@@ -132,11 +138,23 @@ Regras:
 - Se o `X-Barbearia-Id` nao bater com o tenant do token: `403`.
 - Se tenant nao existir: `404`.
 
+Observacao importante:
+
+- O n8n/MegaAPI nao deve chamar `/chatbot/mensagem` diretamente.
+- Para entrada externa de mensagens, use `POST /webhooks/megaapi`.
+
 ## 6) Como o webhook decide o tenant
 
-No recebimento em `POST /whatsapp/webhook`, o backend resolve tenant nesta ordem:
+No recebimento em `POST /webhooks/megaapi`, o backend:
 
-1. `instance_key` do payload (preferencial).
+1. Valida autenticacao do webhook (`X-Webhook-Token` ou assinatura HMAC).
+2. Recebe o `instance_key`.
+3. Resolve tenant no banco.
+4. Executa chatbot internamente.
+
+Resolucao de tenant:
+
+1. `instance_key` do payload (preferencial e recomendado).
 2. `whatsapp_number` da metadata (fallback controlado).
 3. Se nao achar tenant: webhook retorna `{"status":"ignored"}`.
 
@@ -160,7 +178,8 @@ Confirme:
 ## 7.2 Enviar webhook de teste com a instance certa
 
 ```bash
-curl -X POST http://SEU_BACKEND/whatsapp/webhook \
+curl -X POST http://SEU_BACKEND/webhooks/megaapi \
+  -H "X-Webhook-Token: SEU_MEGAAPI_WEBHOOK_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "instance_key":"instancia-centro-01",
@@ -200,6 +219,7 @@ Esperado:
 
 - `401 Autenticacao obrigatoria`: faltou `Authorization: Bearer`.
 - `403 Tenant do token difere do tenant da requisicao`: header `X-Barbearia-Id` nao bate com token.
+- `401 Assinatura do webhook invalida`: faltou `X-Webhook-Token` valido (ou assinatura HMAC valida).
 - `status ignored` no webhook: `instance_key`/`whatsapp_number` nao mapeados para nenhuma barbearia.
 
 ## 9) Checklist de deploy (staging e prod)

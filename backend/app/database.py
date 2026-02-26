@@ -24,7 +24,8 @@ def init_db():
         cliente,
         servico,
         agendamento,
-        conversa
+        conversa,
+        webhook_event,
     )
     Base.metadata.create_all(bind=engine)
     _ensure_clientes_contexto_column()

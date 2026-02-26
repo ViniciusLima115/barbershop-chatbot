@@ -4,6 +4,7 @@ from app.models.barbeiro import Barbeiro
 from app.models.cliente import Cliente
 from app.models.conversa import Conversa
 from app.models.servico import Servico
+from app.models.webhook_event import WebhookEvent
 
 __all__ = [
     "Agendamento",
@@ -12,4 +13,5 @@ __all__ = [
     "Cliente",
     "Conversa",
     "Servico",
+    "WebhookEvent",
 ]
