@@ -10,6 +10,7 @@ StatusManualBarbearia = Literal["ativo", "inativo"]
 
 class BarbeariaAdminCreate(BaseModel):
     nome: str
+    slug: str | None = None
     login: str
     senha: str
     mega_instance_key: str | None = None
@@ -27,6 +28,7 @@ class BarbeariaAdminCreate(BaseModel):
 
 class BarbeariaAdminUpdate(BaseModel):
     nome: str
+    slug: str | None = None
     login: str
     senha: str
     mega_instance_key: str | None = None
@@ -45,6 +47,7 @@ class BarbeariaAdminUpdate(BaseModel):
 class BarbeariaAdminResponse(BaseModel):
     id: int
     nome: str
+    slug: str | None = None
     login: str | None = None
     senha: str | None = None
     mega_instance_key: str | None = None

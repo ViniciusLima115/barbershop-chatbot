@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Float, ForeignKey, Integer, String
+from sqlalchemy.orm import synonym
 from app.database import Base
 
 
@@ -9,4 +10,5 @@ class Servico(Base):
     nome = Column(String(255), nullable=False)
     duracao_minutos = Column(Integer, nullable=False)
     preco = Column(Float, nullable=False)
-    barbearia_id = Column(Integer, ForeignKey("barbearias.id"), nullable=True)
+    barbearia_id = Column(Integer, ForeignKey("barbearias.id"), nullable=True, index=True)
+    tenant_id = synonym("barbearia_id")

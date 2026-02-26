@@ -111,3 +111,44 @@ def test_webhook_megaapi_ignora_sem_tenant(monkeypatch, client):
     assert resp.status_code == 200
     assert resp.json()["status"] == "ignored"
     assert resp.json()["reason"] == "tenant_nao_resolvido"
+
+
+def test_webhook_megaapi_retorna_link_publico_em_saudacao(monkeypatch, client, db_session):
+    import app.routes.webhooks as webhooks_module
+    from app.models.barbearia import Barbearia
+
+    barbearia = Barbearia(
+        nome="Barbearia Link",
+        slug="barbearia-link",
+        endereco="Rua C",
+        mega_instance_key="inst-link",
+    )
+    db_session.add(barbearia)
+    db_session.commit()
+    db_session.refresh(barbearia)
+
+    monkeypatch.setattr(webhooks_module, "MEGAAPI_WEBHOOK_ALLOW_UNSIGNED", False)
+    monkeypatch.setattr(webhooks_module, "MEGAAPI_WEBHOOK_TOKEN", "token-seguro")
+    monkeypatch.setattr(webhooks_module, "MEGAAPI_WEBHOOK_SECRET", None)
+    monkeypatch.setattr(
+        webhooks_module,
+        "responder_mensagem",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("nao deveria chamar chatbot legado")),
+    )
+
+    payload = {
+        "instance_key": "inst-link",
+        "data": {"from": "5582990000000", "text": "oi"},
+        "event_id": "evt-link-1",
+    }
+    resp = client.post(
+        "/webhooks/megaapi",
+        headers={"X-Webhook-Token": "token-seguro"},
+        json=payload,
+    )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["resposta"]["tipo"] == "link_agendamento"
+    assert "https://app.virtualbarber.shop/barbearia-link" in body["resposta"]["resposta"]

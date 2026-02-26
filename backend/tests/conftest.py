@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base, get_db
 from app.models import Barbearia, Barbeiro, Servico
-from app.routes import agenda, agendamentos, chatbot, barbeiros, clientes, servicos, whatsapp, barbearias, auth, webhooks
+from app.routes import agenda, agendamentos, chatbot, barbeiros, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal
 from app.security import create_access_token
 
 
@@ -56,6 +56,8 @@ def app(session_factory):
     test_app.include_router(servicos.router)
     test_app.include_router(whatsapp.router, prefix="/whatsapp")
     test_app.include_router(webhooks.router)
+    test_app.include_router(public.router)
+    test_app.include_router(internal.router)
     test_app.include_router(auth.router)
 
     def override_get_db():

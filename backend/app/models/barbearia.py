@@ -11,6 +11,7 @@ class Barbearia(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     nome = Column(String(255), nullable=False)
+    slug = Column(String(120), nullable=True, unique=True, index=True)
     endereco = Column(String(255), nullable=True, default="")
     mega_instance_key = Column(String(255), nullable=True, unique=True, index=True)
     mega_token = Column(String(255), nullable=True)

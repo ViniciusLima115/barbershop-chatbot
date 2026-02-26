@@ -1,3 +1,6 @@
+import re
+import unicodedata
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -20,6 +23,28 @@ def _normalizar_ou_none(valor: str | None) -> str | None:
     return texto or None
 
 
+def _slugify(texto: str) -> str:
+    base = unicodedata.normalize("NFKD", texto.strip().lower()).encode("ascii", "ignore").decode("ascii")
+    base = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
+    return base or "barbearia"
+
+
+def _gerar_slug_unico(db: Session, nome: str, slug_informado: str | None, *, excluir_id: int | None = None) -> str:
+    base = _slugify(slug_informado or nome)
+    slug = base
+    idx = 2
+
+    while True:
+        query = db.query(Barbearia).filter(Barbearia.slug == slug)
+        if excluir_id is not None:
+            query = query.filter(Barbearia.id != excluir_id)
+        conflito = query.first()
+        if not conflito:
+            return slug
+        slug = f"{base}-{idx}"
+        idx += 1
+
+
 @router.get("/", response_model=list[BarbeariaAdminResponse])
 def listar(db: Session = Depends(get_db)):
     return db.query(Barbearia).order_by(Barbearia.criado_em.desc(), Barbearia.id.desc()).all()
@@ -27,6 +52,7 @@ def listar(db: Session = Depends(get_db)):
 
 @router.post("/", response_model=BarbeariaAdminResponse)
 def criar(dados: BarbeariaAdminCreate, db: Session = Depends(get_db)):
+    slug = _gerar_slug_unico(db, dados.nome, dados.slug)
     login = dados.login.strip().lower()
     mega_instance_key = _normalizar_ou_none(dados.mega_instance_key)
     mega_token = _normalizar_ou_none(dados.mega_token)
@@ -56,6 +82,7 @@ def criar(dados: BarbeariaAdminCreate, db: Session = Depends(get_db)):
 
     barbearia = Barbearia(
         nome=dados.nome.strip(),
+        slug=slug,
         login=login,
         senha=dados.senha,
         mega_instance_key=mega_instance_key,
@@ -82,6 +109,7 @@ def atualizar(barbearia_id: int, dados: BarbeariaAdminUpdate, db: Session = Depe
     if not barbearia:
         raise HTTPException(status_code=404, detail="Barbearia nao encontrada.")
 
+    slug = _gerar_slug_unico(db, dados.nome, dados.slug, excluir_id=barbearia_id)
     login = dados.login.strip().lower()
     mega_instance_key = _normalizar_ou_none(dados.mega_instance_key)
     mega_token = _normalizar_ou_none(dados.mega_token)
@@ -120,6 +148,7 @@ def atualizar(barbearia_id: int, dados: BarbeariaAdminUpdate, db: Session = Depe
             raise HTTPException(status_code=400, detail="Ja existe outra barbearia com esse whatsapp_number.")
 
     barbearia.nome = dados.nome.strip()
+    barbearia.slug = slug
     barbearia.login = login
     barbearia.senha = dados.senha
     barbearia.mega_instance_key = mega_instance_key

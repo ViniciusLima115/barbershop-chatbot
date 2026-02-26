@@ -9,10 +9,12 @@ from app.models.servico import Servico
 
 
 def _serializar_agendamento(agendamento: Agendamento):
+    cliente_nome = agendamento.cliente_nome or (agendamento.cliente.nome if agendamento.cliente else "")
+    cliente_telefone = agendamento.cliente_telefone or (agendamento.cliente.telefone if agendamento.cliente else "")
     return {
         "id": agendamento.id,
-        "cliente_nome": agendamento.cliente.nome,
-        "telefone": agendamento.cliente.telefone,
+        "cliente_nome": cliente_nome,
+        "telefone": cliente_telefone,
         "barbeiro_nome": agendamento.barbeiro.nome,
         "servico_nome": agendamento.servico.nome,
         "data_hora_inicio": agendamento.data_hora_inicio,
@@ -72,6 +74,10 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
         barbeiro_id=dados.barbeiro_id,
         servico_id=dados.servico_id,
         barbearia_id=tenant_id,
+        cliente_nome=cliente.nome,
+        cliente_telefone=cliente.telefone,
+        data=dados.data_hora_inicio.date(),
+        hora_inicio=dados.data_hora_inicio.time().replace(microsecond=0),
         data_hora_inicio=dados.data_hora_inicio,
         data_hora_fim=fim,
         status=dados.status,
@@ -153,6 +159,8 @@ def remarcar_agendamento(
 
     agendamento.data_hora_inicio = nova_data_hora_inicio
     agendamento.data_hora_fim = nova_data_hora_fim
+    agendamento.data = nova_data_hora_inicio.date()
+    agendamento.hora_inicio = nova_data_hora_inicio.time().replace(microsecond=0)
     agendamento.status = "confirmado"
     db.commit()
     db.refresh(agendamento)
@@ -209,6 +217,8 @@ def atualizar_agendamento(
     agendamento.servico_id = dados.servico_id
     agendamento.data_hora_inicio = dados.data_hora_inicio
     agendamento.data_hora_fim = novo_fim
+    agendamento.data = dados.data_hora_inicio.date()
+    agendamento.hora_inicio = dados.data_hora_inicio.time().replace(microsecond=0)
     agendamento.status = dados.status
     agendamento.barbearia_id = tenant_id
     db.commit()

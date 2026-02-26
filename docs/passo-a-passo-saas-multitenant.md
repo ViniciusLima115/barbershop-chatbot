@@ -6,6 +6,7 @@ Este documento mostra o fluxo completo:
 2. Vinculo da instancia/numero de WhatsApp ao tenant correto.
 3. Login e uso da API com isolamento de tenant.
 4. Como validar que uma mensagem entrou na barbearia correta.
+5. Como funciona o fluxo publico por link de agendamento.
 
 ## 1) Variaveis de ambiente (staging e prod)
 
@@ -150,7 +151,8 @@ No recebimento em `POST /webhooks/megaapi`, o backend:
 1. Valida autenticacao do webhook (`X-Webhook-Token` ou assinatura HMAC).
 2. Recebe o `instance_key`.
 3. Resolve tenant no banco.
-4. Executa chatbot internamente.
+4. Para saudacoes/mensagens simples, responde com link publico (`https://app.virtualbarber.shop/{slug}`).
+5. Para demais mensagens, pode usar fallback para chatbot interno.
 
 Resolucao de tenant:
 
@@ -159,6 +161,21 @@ Resolucao de tenant:
 3. Se nao achar tenant: webhook retorna `{"status":"ignored"}`.
 
 Nao existe mais fallback para tenant fixo em `.env`.
+
+## 10) Fluxo publico de agendamento (modelo moderno)
+
+1. Cliente envia "oi" no WhatsApp.
+2. Webhook responde com link publico da barbearia.
+3. Frontend consulta `GET /public/barbearia/{slug}` para listar barbeiros ativos, servicos e horarios.
+4. Frontend confirma em `POST /public/agendamentos`.
+5. Backend grava no tenant correto, envia confirmacao por WhatsApp e agenda lembretes de 24h e 2h.
+
+Observacao operacional:
+
+- Lembretes sao colocados em fila (`reminder_jobs`).
+- Para processar envios pendentes, chame periodicamente:
+  - `POST /internal/reminders/process`
+  - Header opcional: `X-Internal-Token` (quando `INTERNAL_REMINDER_TOKEN` estiver configurado).
 
 ## 7) Como validar se o numero esta correto (checklist pratico)
 

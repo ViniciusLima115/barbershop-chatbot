@@ -1,7 +1,20 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_db
-from app.routes import barbeiros, servicos, agendamentos, agenda, chatbot, whatsapp, clientes, auth, barbearias, webhooks
+from app.routes import (
+    agenda,
+    agendamentos,
+    auth,
+    barbearias,
+    barbeiros,
+    chatbot,
+    clientes,
+    internal,
+    public,
+    servicos,
+    webhooks,
+    whatsapp,
+)
 import secrets
 import os
 from fastapi import Depends, HTTPException, status
@@ -70,6 +83,8 @@ app.include_router(agenda.router)
 app.include_router(chatbot.router)
 app.include_router(whatsapp.router, prefix="/whatsapp")
 app.include_router(webhooks.router)
+app.include_router(public.router)
+app.include_router(internal.router)
 app.include_router(auth.router)
 
 @app.get("/")

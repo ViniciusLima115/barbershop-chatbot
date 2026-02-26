@@ -57,9 +57,16 @@ HORARIO_ABERTURA=8
 HORARIO_FECHAMENTO=19
 INTERVALO_MINUTOS=40
 
-# Opcional (integração WhatsApp)
+# Opcional (integração WhatsApp / webhook MegaAPI)
 WHATSAPP_TOKEN=
 PHONE_NUMBER_ID=
+BOOKING_PUBLIC_BASE_URL=https://app.virtualbarber.shop
+MEGAAPI_WEBHOOK_TOKEN=
+MEGAAPI_WEBHOOK_SECRET=
+MEGAAPI_WEBHOOK_ALLOW_UNSIGNED=false
+MEGAAPI_WEBHOOK_MAX_SKEW_SECONDS=300
+MEGAAPI_SEND_URL=
+INTERNAL_REMINDER_TOKEN=
 ```
 
 Rode a API:
@@ -149,6 +156,10 @@ Depois abra `http://localhost:3000/agenda`.
 - `POST /agendamentos/`
 - `POST /chatbot/mensagem`
 - `GET /whatsapp/webhook` e `POST /whatsapp/webhook`
+- `POST /webhooks/megaapi`
+- `GET /public/barbearia/{slug}`
+- `POST /public/agendamentos`
+- `POST /internal/reminders/process` (usar `X-Internal-Token` quando configurado)
 
 ## Problemas comuns
 

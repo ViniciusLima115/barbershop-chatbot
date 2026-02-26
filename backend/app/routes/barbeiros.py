@@ -40,7 +40,12 @@ def criar(
     if total >= limite and plano == "premium":
         raise HTTPException(status_code=400, detail="Limite de 3 barbeiros ativos atingido.")
 
-    payload = {"nome": dados.nome.strip(), "barbershop_id": tenant_id}
+    payload = {
+        "nome": dados.nome.strip(),
+        "barbershop_id": tenant_id,
+        "ativo": dados.ativo,
+        "tempo_por_servico": dados.tempo_por_servico,
+    }
 
     barbeiro = Barbeiro(**payload)
 
@@ -73,6 +78,8 @@ def atualizar(
         raise HTTPException(status_code=404, detail="Barbeiro nao encontrado.")
 
     barbeiro.nome = dados.nome.strip()
+    barbeiro.ativo = dados.ativo
+    barbeiro.tempo_por_servico = dados.tempo_por_servico
     db.commit()
     db.refresh(barbeiro)
 
