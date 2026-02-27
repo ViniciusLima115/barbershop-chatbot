@@ -23,13 +23,14 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          ssh-keyscan -H 34.121.162.107 >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H api-staging.virtualbarber.shop >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -H api.virtualbarber.shop >> ~/.ssh/known_hosts 2>/dev/null || true
           chmod 600 ~/.ssh/known_hosts
 
       - name: Deploy Staging
         if: github.ref == 'refs/heads/develop'
         run: |
-          ssh -o StrictHostKeyChecking=no mankindbr@34.121.162.107 "
+          ssh -o StrictHostKeyChecking=no mankindbr@api-staging.virtualbarber.shop "
             cd ~/barbershop-chatbot &&
             git fetch origin &&
             git checkout develop &&
@@ -40,7 +41,7 @@ jobs:
       - name: Deploy Production
         if: github.ref == 'refs/heads/main'
         run: |
-          ssh -o StrictHostKeyChecking=no mankindbr@34.121.162.107 "
+          ssh -o StrictHostKeyChecking=no mankindbr@api.virtualbarber.shop "
             cd ~/barbershop-chatbot &&
             git fetch origin &&
             git checkout main &&

@@ -1,6 +1,6 @@
 import { getAuthSession } from "./auth";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://34.121.162.107";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://34.45.161.157";
 
 export type AgendaSlot = {
   hora: string;
