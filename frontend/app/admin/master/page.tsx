@@ -2,12 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, BellRing, Building2, KeyRound, Lock, Search, ShieldCheck, Trash2, UserRound } from "lucide-react";
-import Alert from "../components/Alert";
-import Button from "../components/Button";
-import Card from "../components/Card";
-import FormInput from "../components/FormInput";
-import Modal from "../components/Modal";
-import StatCard from "../components/StatCard";
+import Alert from "../../components/Alert";
+import Button from "../../components/Button";
+import Card from "../../components/Card";
+import FormInput from "../../components/FormInput";
+import Modal from "../../components/Modal";
+import StatCard from "../../components/StatCard";
 import {
   BarbeariaAdmin,
   PlanoBarbearia,
