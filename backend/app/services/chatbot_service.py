@@ -190,7 +190,7 @@ def _buscar_ou_criar_cliente(db: Session, telefone: str, tenant_id: int) -> Clie
     cliente = Cliente(
         telefone=telefone,
         nome="Cliente",
-        etapa_atual="aguardando_nome",
+        etapa_atual="aguardando_nome!",
         contexto=None,
         barbearia_id=tenant_id,
     )
