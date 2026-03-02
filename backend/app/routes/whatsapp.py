@@ -92,7 +92,7 @@ async def receive_message(request: Request):
         enviar_resposta_whatsapp(telefone, texto_resposta, phone_number_id=phone_number_id)
 
     except Exception:
-        logger.exception("Erro ao processar webhook do WhatsApp.")
+        logger.exception("Erro ao processar webhook do WhatsApp!")
 
     return {"status": "ok"}
 
