@@ -158,30 +158,30 @@ export default function PublicBookingByIdPage() {
   }
 
   return (
-    <main className="min-h-screen bg-blue-50 flex items-center justify-center py-10 px-4">
-      <div className="w-full max-w-5xl grid gap-6 grid-cols-1 items-start p-1">
+    <main className="min-h-screen bg-blue-50 flex items-center justify-center px-3 py-6 sm:px-4 sm:py-10">
+      <div className="w-full max-w-5xl grid grid-cols-1 items-start gap-4 sm:gap-6">
         {/* Left - Hero / Summary */}
-        <aside className="order-1 rounded-2xl bg-white p-4 shadow-md border border-blue-50">
-          <div className="flex items-center justify-between gap-4">
+        <aside className="order-1 rounded-2xl border border-blue-50 bg-white p-4 shadow-md sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <div>
               <p className="text-xs text-blue-500 uppercase tracking-wide">Agendamento</p>
               <h2 className="mt-1 text-lg font-bold text-blue-800">{lookup.nome}</h2>
               <p className="mt-1 text-sm text-slate-500">{servicoSelecionado ? `${servicoSelecionado.nome} • ${moedaBRL(servicoSelecionado.preco)}` : "Escolha um serviço"}</p>
             </div>
-            <div className="text-right">
+            <div className="text-left sm:text-right">
               <p className="text-sm font-semibold text-blue-700">{servicoSelecionado ? moedaBRL(servicoSelecionado.preco) : ""}</p>
             </div>
           </div>
         </aside>
 
         {/* Form abaixo da seção AGENDAMENTO ONLINE */}
-        <section className="order-2 rounded-2xl bg-white p-6 shadow-lg">
-          <form className="space-y-4" onSubmit={onSubmit}>
+        <section className="order-2 rounded-2xl bg-white p-4 shadow-lg sm:p-6">
+          <form className="space-y-5 sm:space-y-6" onSubmit={onSubmit}>
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-semibold">1</div>
               <h3 className="text-sm font-medium text-blue-800">Dados</h3>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-blue-700">Nome</span>
                 <input
@@ -209,7 +209,7 @@ export default function PublicBookingByIdPage() {
               <h3 className="text-sm font-medium text-blue-800">Serviço / Barbeiro</h3>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-3">
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-blue-700">Barbeiro</span>
                 <select
@@ -270,7 +270,7 @@ export default function PublicBookingByIdPage() {
                 </div>
                 <span className="text-xs text-slate-500"></span>
               </div>
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
+              <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                 {lookup.horarios_grade.map((slot) => {
                   const selected = horaInicio === slot.hora;
                   return (
@@ -303,7 +303,7 @@ export default function PublicBookingByIdPage() {
             {sucesso && <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">{sucesso}</p>}
 
             <div className="pt-2">
-              <div className="mb-2 flex items-center gap-3">
+              <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <div className="flex-1">
                   <button
                     className="w-full h-12 rounded-[14px] bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 disabled:opacity-60"
@@ -313,7 +313,7 @@ export default function PublicBookingByIdPage() {
                     {submitting ? "Agendando..." : "Confirmar agendamento"}
                   </button>
                 </div>
-                <div className="flex items-center">
+                <div className="flex items-center sm:justify-end">
                   <button
                     type="button"
                     onClick={() => {
@@ -326,7 +326,7 @@ export default function PublicBookingByIdPage() {
                       setErro(null);
                       setSucesso(null);
                     }}
-                    className="h-10 rounded-md border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 ml-3"
+                    className="h-10 rounded-md border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 sm:ml-3"
                   >
                     Limpar
                   </button>
