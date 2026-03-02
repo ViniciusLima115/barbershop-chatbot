@@ -139,9 +139,9 @@ export default function PublicBookingByIdPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-100 px-4 py-10">
-        <div className="mx-auto max-w-4xl rounded-2xl bg-white p-6 shadow-sm">
-          <p className="text-sm text-slate-600">Carregando pagina de agendamento...</p>
+      <main className="min-h-screen bg-gradient-to-b from-slate-100 to-white flex items-center justify-center p-6">
+        <div className="w-full max-w-3xl rounded-2xl bg-white p-8 shadow-lg">
+          <p className="text-sm text-slate-600">Carregando página de agendamento…</p>
         </div>
       </main>
     );
@@ -149,53 +149,54 @@ export default function PublicBookingByIdPage() {
 
   if (!lookup) {
     return (
-      <main className="min-h-screen bg-slate-100 px-4 py-10">
-        <div className="mx-auto max-w-4xl rounded-2xl bg-white p-6 shadow-sm">
-          <p className="text-sm font-medium text-red-600">
-            {erro ?? "Barbearia nao encontrada para este link."}
-          </p>
+      <main className="min-h-screen bg-gradient-to-b from-slate-100 to-white flex items-center justify-center p-6">
+        <div className="w-full max-w-3xl rounded-2xl bg-white p-8 shadow-lg">
+          <p className="text-sm font-medium text-red-600">{erro ?? "Barbearia não encontrada."}</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8">
-      <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-[1fr_1.4fr]">
-        <section className="rounded-2xl bg-slate-900 p-6 text-slate-100 shadow-xl">
+    <main className="min-h-screen bg-slate-50 flex items-center justify-center py-10 px-4">
+      <div className="w-full max-w-5xl grid gap-6 md:grid-cols-2 items-start">
+        {/* Left - Hero / Summary */}
+        <aside className="order-2 md:order-1 rounded-2xl bg-gradient-to-b from-slate-900 to-slate-800 p-6 text-slate-100 shadow-2xl md:sticky md:top-20">
           <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Agendamento Online</p>
-          <h1 className="mt-2 text-3xl font-black leading-tight">{lookup.nome}</h1>
-          <p className="mt-3 text-sm text-slate-300">
-            Escolha o servico e horario para confirmar seu atendimento.
-          </p>
-          <div className="mt-6 rounded-xl border border-slate-700 bg-slate-950/70 p-4">
-            <p className="text-xs text-slate-400">Servico selecionado</p>
-            <p className="mt-1 text-lg font-bold text-emerald-300">
-              {servicoSelecionado ? `${servicoSelecionado.nome} - ${moedaBRL(servicoSelecionado.preco)}` : "-"}
-            </p>
-            <p className="text-xs text-slate-400">
-              Duracao: {servicoSelecionado ? `${servicoSelecionado.duracao} min` : "-"}
-            </p>
-          </div>
-        </section>
+          <h1 className="mt-2 text-3xl font-extrabold leading-tight">{lookup.nome}</h1>
+          <p className="mt-3 text-sm text-slate-300">Escolha o serviço e horário para confirmar seu atendimento.</p>
 
-        <section className="rounded-2xl bg-white p-6 shadow-xl">
-          <form className="space-y-4" onSubmit={onSubmit}>
-            <div className="grid gap-4 md:grid-cols-2">
+          <div className="mt-6 rounded-xl border border-slate-700 bg-slate-950/30 p-4">
+            <p className="text-xs text-slate-400">Serviço selecionado</p>
+            <p className="mt-1 text-lg font-bold text-emerald-300">
+              {servicoSelecionado ? `${servicoSelecionado.nome} • ${moedaBRL(servicoSelecionado.preco)}` : "-"}
+            </p>
+            <p className="text-xs text-slate-400">Duração: {servicoSelecionado ? `${servicoSelecionado.duracao} min` : "-"}</p>
+            <div className="mt-4 flex gap-3 text-xs text-slate-400">
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-800/40 px-3 py-1">Barbeiros: {lookup.barbeiros.length}</span>
+              <span className="inline-flex items-center gap-2 rounded-full bg-slate-800/40 px-3 py-1">Horários: {lookup.horarios_grade.length}</span>
+            </div>
+          </div>
+        </aside>
+
+        {/* Right - Form */}
+        <section className="order-1 md:order-2 rounded-2xl bg-white p-6 shadow-lg">
+          <form className="space-y-5" onSubmit={onSubmit}>
+            <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">Nome</span>
                 <input
-                  className="input"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
                   required
                   value={nomeCliente}
                   onChange={(event) => setNomeCliente(event.target.value)}
-                  placeholder="Ex.: Joao Silva"
+                  placeholder="Ex.: João Silva"
                 />
               </label>
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">Telefone</span>
                 <input
-                  className="input"
+                  className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300"
                   required
                   value={telefoneCliente}
                   onChange={(event) => setTelefoneCliente(event.target.value)}
@@ -204,11 +205,11 @@ export default function PublicBookingByIdPage() {
               </label>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-3">
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">Barbeiro</span>
                 <select
-                  className="select"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                   value={barbeiroId ?? ""}
                   onChange={(event) => {
                     const valor = Number(event.target.value);
@@ -225,9 +226,9 @@ export default function PublicBookingByIdPage() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Servico</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700">Serviço</span>
                 <select
-                  className="select"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                   value={servicoId ?? ""}
                   onChange={(event) => {
                     const valor = Number(event.target.value);
@@ -246,7 +247,7 @@ export default function PublicBookingByIdPage() {
               <label className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">Data</span>
                 <input
-                  className="input"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm"
                   type="date"
                   min={hojeISO()}
                   value={data}
@@ -260,8 +261,8 @@ export default function PublicBookingByIdPage() {
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-slate-700">Horarios</span>
-                <span className="text-xs text-slate-500">Indisponivel = X</span>
+                <span className="text-sm font-medium text-slate-700">Horários</span>
+                <span className="text-xs text-slate-500">Indisponível = X</span>
               </div>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
                 {lookup.horarios_grade.map((slot) => (
@@ -271,7 +272,7 @@ export default function PublicBookingByIdPage() {
                     disabled={!slot.disponivel}
                     onClick={() => setHoraInicio(slot.hora)}
                     className={[
-                      "relative rounded-lg border px-2 py-2 text-sm font-semibold transition",
+                      "relative rounded-lg border px-3 py-2 text-sm font-semibold transition",
                       slot.disponivel
                         ? "border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
                         : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400",
@@ -280,9 +281,7 @@ export default function PublicBookingByIdPage() {
                   >
                     <span>{slot.hora}</span>
                     {!slot.disponivel && (
-                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg text-red-500">
-                        X
-                      </span>
+                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg text-red-500">X</span>
                     )}
                   </button>
                 ))}
@@ -292,9 +291,31 @@ export default function PublicBookingByIdPage() {
             {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
             {sucesso && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{sucesso}</p>}
 
-            <button className="btn btn-success w-full" type="submit" disabled={submitting}>
-              {submitting ? "Agendando..." : "Confirmar Agendamento"}
-            </button>
+            <div className="flex gap-3">
+              <button
+                className="flex-1 rounded-lg bg-emerald-500 px-4 py-3 text-sm font-bold text-white shadow hover:bg-emerald-600 disabled:opacity-60"
+                type="submit"
+                disabled={submitting}
+              >
+                {submitting ? "Agendando..." : "Confirmar Agendamento"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNomeCliente("");
+                  setTelefoneCliente("");
+                  setBarbeiroId(lookup.barbeiros[0]?.id ?? null);
+                  setServicoId(lookup.servicos[0]?.id ?? null);
+                  setData(hojeISO());
+                  setHoraInicio(null);
+                  setErro(null);
+                  setSucesso(null);
+                }}
+                className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Limpar
+              </button>
+            </div>
           </form>
         </section>
       </div>
