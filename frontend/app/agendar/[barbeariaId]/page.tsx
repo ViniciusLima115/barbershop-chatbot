@@ -159,7 +159,7 @@ export default function PublicBookingByIdPage() {
 
   return (
     <main className="min-h-screen bg-blue-50 flex items-center justify-center py-10 px-4">
-      <div className="w-full max-w-5xl grid gap-6 grid-cols-1 items-start">
+      <div className="w-full max-w-5xl grid gap-6 grid-cols-1 items-start p-1">
         {/* Left - Hero / Summary */}
         <aside className="order-1 rounded-2xl bg-white p-4 shadow-md border border-blue-50">
           <div className="flex items-center justify-between gap-4">
@@ -280,11 +280,13 @@ export default function PublicBookingByIdPage() {
                       disabled={!slot.disponivel}
                       onClick={() => setHoraInicio(slot.hora)}
                       className={[
-                        "relative w-full h-12 flex items-center justify-center text-sm font-semibold transition rounded-xl border",
+                        "relative w-full h-12 flex items-center justify-center text-sm font-semibold transition-all rounded-xl border focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2",
                         slot.disponivel
-                          ? "border-blue-100 bg-white text-blue-700 hover:bg-blue-50"
+                          ? "border-blue-100 bg-white text-blue-700 hover:border-blue-300 hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-sm"
                           : "border-blue-50 bg-blue-50 text-blue-200 opacity-60 cursor-not-allowed",
-                        selected ? "bg-blue-600 text-white border-blue-600" : "",
+                        selected
+                          ? "border-blue-700 bg-blue-600 text-white shadow-md shadow-blue-200 hover:border-blue-700 hover:bg-blue-700"
+                          : "",
                       ].join(" ")}
                     >
                       <span>{slot.hora}</span>
