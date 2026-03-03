@@ -158,7 +158,7 @@ export default function PublicBookingByIdPage() {
   }
 
   return (
-    <main className="min-h-screen bg-blue-50 flex items-center justify-center px-3 py-6 sm:px-4 sm:py-10">
+    <main id="agendar-page" className="min-h-screen bg-blue-50 flex items-center justify-center px-3 py-6 sm:px-4 sm:py-10">
       <div className="w-full max-w-5xl grid grid-cols-1 items-start gap-4 sm:gap-6">
         {/* Left - Hero / Summary */}
         <aside className="order-1 rounded-2xl border border-blue-50 bg-white p-4 shadow-md sm:p-5">
@@ -339,3 +339,4 @@ export default function PublicBookingByIdPage() {
     </main>
   );
 }
+
