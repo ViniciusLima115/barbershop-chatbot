@@ -49,9 +49,16 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Crie um `.env` em `backend/.env`:
+Use arquivos separados por ambiente:
+
+- Local: `backend/.env`
+- Produção: `backend/.env.production`
+
+Exemplo de `backend/.env` (local):
 
 ```env
+APP_ENV=development
+INIT_DB_CREATE_ALL=true
 DATABASE_URL=mysql+pymysql://chatbot:chatbot@localhost:3306/chatbot
 HORARIO_ABERTURA=8
 HORARIO_FECHAMENTO=19
@@ -60,21 +67,33 @@ INTERVALO_MINUTOS=40
 # Opcional (integração WhatsApp / webhook MegaAPI)
 WHATSAPP_TOKEN=
 PHONE_NUMBER_ID=
-BOOKING_PUBLIC_BASE_URL=https://app.virtualbarber.shop
+BOOKING_PUBLIC_BASE_URL=http://localhost:3000
 MEGAAPI_WEBHOOK_TOKEN=
 MEGAAPI_WEBHOOK_SECRET=
 MEGAAPI_WEBHOOK_ALLOW_UNSIGNED=false
 MEGAAPI_WEBHOOK_MAX_SKEW_SECONDS=300
 MEGAAPI_SEND_URL=
 INTERNAL_REMINDER_TOKEN=
-APP_ENV=development
-INIT_DB_CREATE_ALL=true
+DOCS_USER=admin
+DOCS_PASS=admin
 ```
 
 Rode a API:
 
 ```bash
 uvicorn app.main:app --reload
+```
+
+Para produção, rode com `APP_ENV=production` para carregar `backend/.env.production`:
+
+```bash
+APP_ENV=production uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Para staging, use `APP_ENV=staging` (carrega `backend/.env.staging` ou `backend/.env.stage` quando existir):
+
+```bash
+APP_ENV=staging uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 API disponível em:

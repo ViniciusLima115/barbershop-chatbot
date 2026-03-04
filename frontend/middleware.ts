@@ -3,8 +3,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const isProtectedPath =
+    pathname === "/" ||
+    pathname === "/agenda" ||
+    pathname.startsWith("/agenda/") ||
+    pathname === "/gestao" ||
+    pathname.startsWith("/gestao/") ||
+    pathname.startsWith("/admin");
 
-  if (pathname.startsWith("/admin")) {
+  if (isProtectedPath) {
     const token = req.cookies.get("token")?.value;
     if (!token) {
       const url = new URL("/login", req.url);
@@ -18,5 +25,5 @@ export function middleware(req: NextRequest) {
 
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ["/", "/agenda/:path*", "/gestao/:path*", "/admin/:path*"],
 };
