@@ -7,6 +7,7 @@ import {
   lookupPublicBarbershopById,
   PublicLookupResponse,
 } from "@/services/api";
+import styles from "./page.module.css";
 
 function hojeISO() {
   return new Date().toISOString().slice(0, 10);
@@ -17,6 +18,18 @@ function moedaBRL(valor: number) {
     style: "currency",
     currency: "BRL",
   }).format(valor);
+}
+
+function formatarDataBR(dataISO: string) {
+  if (!dataISO) return "-";
+  const data = new Date(`${dataISO}T00:00:00`);
+  if (Number.isNaN(data.getTime())) return dataISO;
+  return data.toLocaleDateString("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 }
 
 function normalizarTelefone(valor: string) {
@@ -107,6 +120,11 @@ export default function PublicBookingByIdPage() {
     return lookup.servicos.find((item) => item.id === servicoId) ?? null;
   }, [lookup, servicoId]);
 
+  const horariosDisponiveis = useMemo(
+    () => lookup?.horarios_grade.filter((slot) => slot.disponivel).length ?? 0,
+    [lookup]
+  );
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!barbeiroId || !servicoId || !horaInicio) {
@@ -139,9 +157,11 @@ export default function PublicBookingByIdPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-6">
-        <div className="w-full max-w-3xl rounded-2xl bg-white p-8 shadow-lg">
-          <p className="text-sm text-blue-600">Carregando página de agendamento…</p>
+      <main className={styles.page}>
+        <div className={styles.pageInner}>
+          <div className={styles.stateCard}>
+            <p className={styles.stateText}>Carregando pagina de agendamento...</p>
+          </div>
         </div>
       </main>
     );
@@ -149,149 +169,185 @@ export default function PublicBookingByIdPage() {
 
   if (!lookup) {
     return (
-      <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-6">
-        <div className="w-full max-w-3xl rounded-2xl bg-white p-8 shadow-lg">
-          <p className="text-sm font-medium text-red-600">{erro ?? "Barbearia não encontrada."}</p>
+      <main className={styles.page}>
+        <div className={styles.pageInner}>
+          <div className={styles.stateCard}>
+            <p className={`${styles.stateText} ${styles.errorText}`}>
+              {erro ?? "Barbearia nao encontrada."}
+            </p>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main id="agendar-page" className="min-h-screen bg-blue-50 flex items-center justify-center px-3 py-6 sm:px-4 sm:py-10">
-      <div className="w-full max-w-5xl grid grid-cols-1 items-start gap-4 sm:gap-6">
-        {/* Left - Hero / Summary */}
-        <aside className="order-1 rounded-2xl border border-blue-50 bg-white p-4 shadow-md sm:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+    <main className={styles.page}>
+      <div className={styles.pageInner}>
+        <section className={styles.summaryCard}>
+          <div className={styles.summaryTop}>
             <div>
-              <p className="text-xs text-blue-500 uppercase tracking-wide">Agendamento</p>
-              <h2 className="mt-1 text-lg font-bold text-blue-800">{lookup.nome}</h2>
-              <p className="mt-1 text-sm text-slate-500">{servicoSelecionado ? `${servicoSelecionado.nome} • ${moedaBRL(servicoSelecionado.preco)}` : "Escolha um serviço"}</p>
+              <p className={styles.eyebrow}>Agendamento</p>
+              <h1 className={styles.title}>{lookup.nome}</h1>
+              <p className={styles.subtitle}>Reserve seu horario em menos de 1 minuto.</p>
             </div>
-            <div className="text-left sm:text-right">
-              <p className="text-sm font-semibold text-blue-700">{servicoSelecionado ? moedaBRL(servicoSelecionado.preco) : ""}</p>
+
+            <div className={styles.priceCard}>
+              <p className={styles.priceLabel}>Valor</p>
+              <p className={styles.priceValue}>
+                {servicoSelecionado ? moedaBRL(servicoSelecionado.preco) : "-"}
+              </p>
             </div>
           </div>
-        </aside>
 
-        {/* Form abaixo da seção AGENDAMENTO ONLINE */}
-        <section className="order-2 rounded-2xl bg-white p-4 shadow-lg sm:p-6">
-          <form className="space-y-5 sm:space-y-6" onSubmit={onSubmit}>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-semibold">1</div>
-              <h3 className="text-sm font-medium text-blue-800">Dados</h3>
+          <div className={styles.statsGrid}>
+            <div className={styles.statCard}>
+              <p className={styles.statLabel}>Servico</p>
+              <p className={styles.statValue}>
+                {servicoSelecionado?.nome ?? "Selecione um servico"}
+              </p>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-blue-700">Nome</span>
-                <input
-                  className="w-full h-12 rounded-xl border border-blue-200 bg-white px-3 text-sm focus:outline-none focus:ring-0 focus:border-blue-600 focus:bg-blue-600 focus:text-white"
-                  required
-                  value={nomeCliente}
-                  onChange={(event) => setNomeCliente(event.target.value)}
-                  placeholder="Ex.: João Silva"
-                />
-              </label>
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-blue-700">Telefone</span>
-                <input
-                  className="w-full h-12 rounded-xl border border-blue-200 bg-white px-3 text-sm focus:outline-none focus:ring-0 focus:border-blue-600 focus:bg-blue-600 focus:text-white"
-                  required
-                  value={telefoneCliente}
-                  onChange={(event) => setTelefoneCliente(event.target.value)}
-                  placeholder="Ex.: (82) 99999-0000"
-                />
-              </label>
+            <div className={styles.statCard}>
+              <p className={styles.statLabel}>Data</p>
+              <p className={styles.statValue}>{formatarDataBR(data)}</p>
             </div>
-
-            <div className="flex items-center gap-3 pt-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-semibold">2</div>
-              <h3 className="text-sm font-medium text-blue-800">Serviço / Barbeiro</h3>
+            <div className={styles.statCard}>
+              <p className={styles.statLabel}>Disponiveis</p>
+              <p className={styles.statValue}>{horariosDisponiveis}</p>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-blue-700">Barbeiro</span>
-                <select
-                  className="w-full h-12 rounded-xl border border-blue-200 bg-white px-3 text-sm focus:outline-none focus:ring-0 focus:border-blue-600 focus:bg-blue-600 focus:text-white"
-                  value={barbeiroId ?? ""}
-                  onChange={(event) => {
-                    const valor = Number(event.target.value);
-                    setBarbeiroId(Number.isFinite(valor) ? valor : null);
-                    setHoraInicio(null);
-                  }}
-                >
-                  {lookup.barbeiros.map((barbeiro) => (
-                    <option key={barbeiro.id} value={barbeiro.id}>
-                      {barbeiro.nome}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-blue-700">Serviço</span>
-                <select
-                  className="w-full h-12 rounded-xl border border-blue-200 bg-white px-3 text-sm focus:outline-none focus:ring-0 focus:border-blue-600 focus:bg-blue-600 focus:text-white"
-                  value={servicoId ?? ""}
-                  onChange={(event) => {
-                    const valor = Number(event.target.value);
-                    setServicoId(Number.isFinite(valor) ? valor : null);
-                    setHoraInicio(null);
-                  }}
-                >
-                  {lookup.servicos.map((servico) => (
-                    <option key={servico.id} value={servico.id}>
-                      {servico.nome} - {moedaBRL(servico.preco)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-blue-700">Data</span>
-                <input
-                  className="w-full h-12 rounded-xl border border-blue-200 bg-white px-3 text-sm focus:outline-none focus:ring-0 focus:border-blue-600 focus:bg-blue-600 focus:text-white"
-                  type="date"
-                  min={hojeISO()}
-                  value={data}
-                  onChange={(event) => {
-                    setData(event.target.value);
-                    setHoraInicio(null);
-                  }}
-                />
-              </label>
+            <div className={styles.statCard}>
+              <p className={styles.statLabel}>Selecionado</p>
+              <p className={styles.statValue}>{horaInicio ?? "Nenhum horario"}</p>
             </div>
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-semibold">3</div>
-                  <h3 className="text-sm font-medium text-blue-800">Horários</h3>
-                </div>
-                <span className="text-xs text-slate-500"></span>
+          </div>
+        </section>
+
+        <section className={styles.formCard}>
+          <form className={styles.form} onSubmit={onSubmit}>
+            <div className={styles.stepSection}>
+              <div className={styles.stepHeader}>
+                <span className={styles.stepBadge}>1</span>
+                <h3 className={styles.stepTitle}>Dados pessoais</h3>
               </div>
-              <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              <div className={styles.gridTwo}>
+                <label className={styles.fieldGroup}>
+                  <span className={styles.fieldLabel}>Nome</span>
+                  <input
+                    className={styles.fieldControl}
+                    required
+                    value={nomeCliente}
+                    onChange={(event) => setNomeCliente(event.target.value)}
+                    placeholder="Ex.: Joao Silva"
+                  />
+                </label>
+                <label className={styles.fieldGroup}>
+                  <span className={styles.fieldLabel}>Telefone</span>
+                  <input
+                    className={styles.fieldControl}
+                    required
+                    value={telefoneCliente}
+                    onChange={(event) => setTelefoneCliente(event.target.value)}
+                    placeholder="Ex.: (82) 99999-0000"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className={styles.stepSection}>
+              <div className={styles.stepHeader}>
+                <span className={styles.stepBadge}>2</span>
+                <h3 className={styles.stepTitle}>Servico e profissional</h3>
+              </div>
+              <div className={styles.gridThree}>
+                <label className={styles.fieldGroup}>
+                  <span className={styles.fieldLabel}>Barbeiro</span>
+                  <select
+                    className={styles.fieldControl}
+                    value={barbeiroId ?? ""}
+                    onChange={(event) => {
+                      const valor = Number(event.target.value);
+                      setBarbeiroId(Number.isFinite(valor) ? valor : null);
+                      setHoraInicio(null);
+                    }}
+                  >
+                    {lookup.barbeiros.map((barbeiro) => (
+                      <option key={barbeiro.id} value={barbeiro.id}>
+                        {barbeiro.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={styles.fieldGroup}>
+                  <span className={styles.fieldLabel}>Servico</span>
+                  <select
+                    className={styles.fieldControl}
+                    value={servicoId ?? ""}
+                    onChange={(event) => {
+                      const valor = Number(event.target.value);
+                      setServicoId(Number.isFinite(valor) ? valor : null);
+                      setHoraInicio(null);
+                    }}
+                  >
+                    {lookup.servicos.map((servico) => (
+                      <option key={servico.id} value={servico.id}>
+                        {servico.nome} - {moedaBRL(servico.preco)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={styles.fieldGroup}>
+                  <span className={styles.fieldLabel}>Data</span>
+                  <input
+                    className={styles.fieldControl}
+                    type="date"
+                    min={hojeISO()}
+                    value={data}
+                    onChange={(event) => {
+                      setData(event.target.value);
+                      setHoraInicio(null);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className={styles.stepSection}>
+              <div className={styles.scheduleHeader}>
+                <div className={styles.stepHeader}>
+                  <span className={styles.stepBadge}>3</span>
+                  <h3 className={styles.stepTitle}>Escolha o horario</h3>
+                </div>
+                <p className={styles.scheduleHint}>Horarios indisponiveis ficam desativados</p>
+              </div>
+
+              <div className={styles.timeGrid}>
                 {lookup.horarios_grade.map((slot) => {
                   const selected = horaInicio === slot.hora;
+                  const timeClasses = [styles.timeSlot];
+                  if (slot.disponivel) {
+                    timeClasses.push(styles.timeSlotAvailable);
+                  } else {
+                    timeClasses.push(styles.timeSlotUnavailable);
+                  }
+                  if (selected) {
+                    timeClasses.push(styles.timeSlotSelected);
+                  }
+
                   return (
                     <button
                       key={slot.hora}
                       type="button"
                       disabled={!slot.disponivel}
                       onClick={() => setHoraInicio(slot.hora)}
-                      className={[
-                        "relative w-full h-12 flex items-center justify-center text-sm font-semibold transition-all rounded-xl border focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 focus-visible:ring-offset-2",
-                        slot.disponivel
-                          ? "border-blue-100 bg-white text-blue-700 hover:border-blue-300 hover:bg-blue-50 hover:-translate-y-0.5 hover:shadow-sm"
-                          : "border-blue-50 bg-blue-50 text-blue-200 opacity-60 cursor-not-allowed",
-                        selected
-                          ? "border-blue-700 bg-blue-600 text-white shadow-md shadow-blue-200 hover:border-blue-700 hover:bg-blue-700"
-                          : "",
-                      ].join(" ")}
+                      className={timeClasses.join(" ")}
                     >
-                      <span>{slot.hora}</span>
+                      <span className={slot.disponivel ? "" : styles.timeLabelUnavailable}>
+                        {slot.hora}
+                      </span>
                       {!slot.disponivel && (
-                        <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-lg text-red-500 p-1">X</span>
+                        <span className={styles.unavailableTag}>
+                          Indisp.
+                        </span>
                       )}
                     </button>
                   );
@@ -299,39 +355,33 @@ export default function PublicBookingByIdPage() {
               </div>
             </div>
 
-            {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
-            {sucesso && <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">{sucesso}</p>}
+            {erro && <p className={`${styles.alert} ${styles.alertError}`}>{erro}</p>}
+            {sucesso && <p className={`${styles.alert} ${styles.alertSuccess}`}>{sucesso}</p>}
 
-            <div className="pt-2">
-              <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex-1">
-                  <button
-                    className="w-full h-12 rounded-[14px] bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 disabled:opacity-60"
-                    type="submit"
-                    disabled={submitting}
-                  >
-                    {submitting ? "Agendando..." : "Confirmar agendamento"}
-                  </button>
-                </div>
-                <div className="flex items-center sm:justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNomeCliente("");
-                      setTelefoneCliente("");
-                      setBarbeiroId(lookup.barbeiros[0]?.id ?? null);
-                      setServicoId(lookup.servicos[0]?.id ?? null);
-                      setData(hojeISO());
-                      setHoraInicio(null);
-                      setErro(null);
-                      setSucesso(null);
-                    }}
-                    className="h-10 rounded-md border border-blue-200 bg-white px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 sm:ml-3"
-                  >
-                    Limpar
-                  </button>
-                </div>
-              </div>
+            <div className={styles.actions}>
+              <button
+                type="button"
+                onClick={() => {
+                  setNomeCliente("");
+                  setTelefoneCliente("");
+                  setBarbeiroId(lookup.barbeiros[0]?.id ?? null);
+                  setServicoId(lookup.servicos[0]?.id ?? null);
+                  setData(hojeISO());
+                  setHoraInicio(null);
+                  setErro(null);
+                  setSucesso(null);
+                }}
+                className={styles.clearButton}
+              >
+                Limpar
+              </button>
+              <button
+                className={styles.submitButton}
+                type="submit"
+                disabled={submitting}
+              >
+                {submitting ? "Agendando..." : "Confirmar agendamento"}
+              </button>
             </div>
           </form>
         </section>
@@ -339,4 +389,3 @@ export default function PublicBookingByIdPage() {
     </main>
   );
 }
-
