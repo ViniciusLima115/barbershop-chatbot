@@ -47,10 +47,18 @@ def verify_docs(credentials: HTTPBasicCredentials = Depends(security)):
             headers={"WWW-Authenticate": "Basic"},
         )
 
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
 app = FastAPI(
     docs_url=None,
     redoc_url=None,
-    openapi_url=None
+    openapi_url=None,
+    lifespan=lifespan
 )
 
 @app.get("/docs", response_class=HTMLResponse)
@@ -63,13 +71,14 @@ def custom_swagger_ui(credentials: HTTPBasicCredentials = Depends(verify_docs)):
 def openapi(credentials: HTTPBasicCredentials = Depends(verify_docs)):
     return app.openapi()
 
-@app.on_event("startup")
-def startup():
-    init_db()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # depois você restringe
+    allow_origins=[
+        "https://virtualbarber.shop",
+        "https://app.virtualbarber.shop",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -92,3 +101,11 @@ app.include_router(auth.router)
 @app.get("/")
 def home():
     return {"status": "ok"}
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "service": "barbearia-api"
+    }
