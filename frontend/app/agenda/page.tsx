@@ -84,7 +84,9 @@ export default function AgendaPage() {
     ) ?? [];
   const filteredData = data ? { ...data, barbeiros: barbeirosVisiveis } : null;
   const selectedKey = selected ? `${selected.barbeiroId}-${selected.hora}` : undefined;
-  const totalSlots = filteredData ? filteredData.horarios.length * filteredData.barbeiros.length : 0;
+  const totalSlots = filteredData
+    ? filteredData.barbeiros.reduce((acc, barbeiro) => acc + barbeiro.horarios.length, 0)
+    : 0;
   const totalOcupados = filteredData
     ? filteredData.barbeiros.reduce((acc, b) => acc + b.agendamentos.length, 0)
     : 0;

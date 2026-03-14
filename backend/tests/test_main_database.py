@@ -13,11 +13,8 @@ def test_main_home_e_startup(monkeypatch):
 
     monkeypatch.setattr(main_module, "init_db", fake_init_db)
 
-    # Cobre o corpo da funcao de startup explicitamente.
-    main_module.startup()
-    assert chamado["ok"] is True
-
     with TestClient(main_module.app) as client:
+        assert chamado["ok"] is True
         resp = client.get("/")
         assert resp.status_code == 200
         assert resp.json() == {"status": "ok"}
@@ -39,7 +36,13 @@ def test_database_get_db_yield():
 def test_database_init_db_chama_create_all(monkeypatch):
     from app import database
 
-    chamadas = {"create_all": False, "clientes": False, "barbearias": False, "barbeiros": False}
+    chamadas = {
+        "create_all": False,
+        "clientes": False,
+        "barbearias": False,
+        "barbeiros": False,
+        "barbeiros_horarios": False,
+    }
 
     def fake_create_all(bind):
         chamadas["create_all"] = True
@@ -54,16 +57,22 @@ def test_database_init_db_chama_create_all(monkeypatch):
     def fake_ensure_barbeiros():
         chamadas["barbeiros"] = True
 
+    def fake_ensure_barbeiros_horarios():
+        chamadas["barbeiros_horarios"] = True
+
+    monkeypatch.setattr(database, "IS_MYSQL", True)
     monkeypatch.setattr(database.Base.metadata, "create_all", fake_create_all)
     monkeypatch.setattr(database, "_ensure_clientes_contexto_column", fake_ensure_clientes)
     monkeypatch.setattr(database, "_ensure_barbearias_admin_columns", fake_ensure_barbearias)
     monkeypatch.setattr(database, "_ensure_barbeiros_barbershop_column", fake_ensure_barbeiros)
+    monkeypatch.setattr(database, "_ensure_barbeiros_working_hours_column", fake_ensure_barbeiros_horarios)
 
     database.init_db()
     assert chamadas["create_all"] is True
     assert chamadas["clientes"] is True
     assert chamadas["barbearias"] is True
     assert chamadas["barbeiros"] is True
+    assert chamadas["barbeiros_horarios"] is True
 
 
 def test_database_init_db_nao_chama_create_all_em_producao(monkeypatch):
@@ -82,6 +91,7 @@ def test_database_init_db_nao_chama_create_all_em_producao(monkeypatch):
     monkeypatch.setattr(database, "_ensure_clientes_tenant_indexes", lambda: None)
     monkeypatch.setattr(database, "_ensure_barbearias_admin_columns", lambda: None)
     monkeypatch.setattr(database, "_ensure_barbearias_slug", lambda: None)
+    monkeypatch.setattr(database, "_ensure_barbeiros_working_hours_column", lambda: None)
     monkeypatch.setattr(database, "_ensure_barbeiros_barbershop_column", lambda: None)
     monkeypatch.setattr(database, "_ensure_barbeiros_public_columns", lambda: None)
     monkeypatch.setattr(database, "_ensure_conversas_multi_tenant", lambda: None)

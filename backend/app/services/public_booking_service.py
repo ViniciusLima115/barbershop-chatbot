@@ -4,13 +4,13 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.config import HORARIO_ABERTURA, HORARIO_FECHAMENTO, INTERVALO_MINUTOS
 from app.models.barbeiro import Barbeiro
 from app.models.barbearia import Barbearia
 from app.models.servico import Servico
 from app.repositories.booking_repository import BookingRepository
 from app.repositories.tenant_repository import TenantRepository
 from app.services.agenda_service import gerar_horarios_disponiveis
+from app.services.barbershop_hours_service import build_day_slots, is_within_working_hours
 from app.services.notificacao_service import (
     agendar_lembretes_agendamento,
     enviar_mensagem_whatsapp,
@@ -79,17 +79,6 @@ def _duracao_servico(
     return servico.duracao_minutos
 
 
-def _gerar_grade_horarios(data_referencia: date, duracao_minutos: int) -> list[datetime]:
-    inicio = datetime.combine(data_referencia, time(HORARIO_ABERTURA, 0))
-    fim = datetime.combine(data_referencia, time(HORARIO_FECHAMENTO, 0))
-    grade: list[datetime] = []
-    atual = inicio
-    while atual + timedelta(minutes=duracao_minutos) <= fim:
-        grade.append(atual)
-        atual += timedelta(minutes=INTERVALO_MINUTOS)
-    return grade
-
-
 def _obter_barbearia(
     db: Session,
     *,
@@ -137,7 +126,12 @@ def listar_horarios_disponiveis_publico(
     horarios_set = set(horarios)
     grade = [
         {"hora": slot.strftime("%H:%M"), "disponivel": slot.strftime("%H:%M") in horarios_set}
-        for slot in _gerar_grade_horarios(data_referencia, duracao)
+        for slot in build_day_slots(
+            _obter_barbearia(db, barbearia_id=barbearia_id),
+            data_referencia,
+            duracao,
+            barbeiro=barbeiro,
+        )
     ]
     return {"horarios_disponiveis": horarios, "horarios_grade": grade}
 
@@ -235,6 +229,10 @@ def criar_agendamento_publico(
 
     duracao = _duracao_servico(barbeiro=barbeiro, servico=servico)
     fim = inicio + timedelta(minutes=duracao)
+    if not is_within_working_hours(barbearia, inicio, fim):
+        raise ValueError("Horario fora do funcionamento da barbearia.")
+    if not is_within_working_hours(barbearia, inicio, fim, barbeiro=barbeiro):
+        raise ValueError("Horario fora do funcionamento do barbeiro.")
 
     conflito = repo.get_conflicting_agendamento(
         tenant_id=barbearia.id,

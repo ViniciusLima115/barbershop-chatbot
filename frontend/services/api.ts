@@ -16,6 +16,7 @@ export type AgendaSlot = {
 export type AgendaBarbeiro = {
   id: number;
   nome: string;
+  horarios: string[];
   agendamentos: AgendaSlot[];
 };
 
@@ -43,6 +44,9 @@ export type Servico = {
 export type Barbeiro = {
   id: number;
   nome: string;
+  ativo?: boolean;
+  tempo_por_servico?: Record<string, number> | null;
+  horarios_funcionamento?: BarbershopWorkingHours | null;
   barbershop_id?: number;
   barbearia_id?: number;
 };
@@ -113,6 +117,16 @@ export type PublicAgendamentoResponse = {
   status: string;
   lembretes_agendados: number;
 };
+
+export type WorkingDayKey = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
+
+export type WorkingHoursDay = {
+  ativo: boolean;
+  inicio: string;
+  fim: string;
+};
+
+export type BarbershopWorkingHours = Record<WorkingDayKey, WorkingHoursDay>;
 
 function getAccessToken(): string | null {
   const accessToken = getAuthSession()?.accessToken ?? null;
@@ -241,7 +255,10 @@ export async function listBarbeiros(): Promise<Barbeiro[]> {
   return parseOrThrow(res, "Falha ao carregar barbeiros.");
 }
 
-export async function createBarbeiro(payload: { nome: string }): Promise<Barbeiro> {
+export async function createBarbeiro(payload: {
+  nome: string;
+  horarios_funcionamento?: BarbershopWorkingHours | null;
+}): Promise<Barbeiro> {
   const res = await apiFetch("/barbeiros/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -250,7 +267,13 @@ export async function createBarbeiro(payload: { nome: string }): Promise<Barbeir
   return parseOrThrow(res, "Falha ao criar barbeiro.");
 }
 
-export async function updateBarbeiro(id: number, payload: { nome: string }): Promise<Barbeiro> {
+export async function updateBarbeiro(
+  id: number,
+  payload: {
+    nome: string;
+    horarios_funcionamento?: BarbershopWorkingHours | null;
+  }
+): Promise<Barbeiro> {
   const res = await apiFetch(`/barbeiros/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -307,6 +330,34 @@ export async function updateAgendamento(
     body: JSON.stringify(payload),
   });
   return parseOrThrow(res, "Falha ao atualizar agendamento.");
+}
+
+export function defaultBarbershopWorkingHours(): BarbershopWorkingHours {
+  return {
+    seg: { ativo: true, inicio: "08:00", fim: "18:00" },
+    ter: { ativo: true, inicio: "08:00", fim: "18:00" },
+    qua: { ativo: true, inicio: "08:00", fim: "18:00" },
+    qui: { ativo: true, inicio: "08:00", fim: "18:00" },
+    sex: { ativo: true, inicio: "08:00", fim: "18:00" },
+    sab: { ativo: true, inicio: "08:00", fim: "18:00" },
+    dom: { ativo: true, inicio: "08:00", fim: "18:00" },
+  };
+}
+
+export async function getBarbershopWorkingHours(): Promise<BarbershopWorkingHours> {
+  const res = await apiFetch("/barbearias/me/funcionamento", { cache: "no-store" });
+  return parseOrThrow(res, "Falha ao carregar horarios de funcionamento.");
+}
+
+export async function updateBarbershopWorkingHours(
+  payload: BarbershopWorkingHours
+): Promise<BarbershopWorkingHours> {
+  const res = await apiFetch("/barbearias/me/funcionamento", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseOrThrow(res, "Falha ao salvar horarios de funcionamento.");
 }
 
 export async function deleteAgendamento(id: number): Promise<void> {

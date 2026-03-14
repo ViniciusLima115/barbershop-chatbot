@@ -1,16 +1,31 @@
 def test_barbeiros_criar_e_listar(client, db_session, make_tenant_headers):
     from app.models.barbearia import Barbearia
 
+    funcionamento = {
+        "seg": {"ativo": True, "inicio": "13:00", "fim": "18:00"},
+        "ter": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "qua": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "qui": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "sex": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "sab": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "dom": {"ativo": False, "inicio": "08:00", "fim": "18:00"},
+    }
+
     premium = Barbearia(nome="Barbearia Premium", plano="premium")
     db_session.add(premium)
     db_session.commit()
     db_session.refresh(premium)
     db_headers = make_tenant_headers(premium.id)
 
-    criar = client.post("/barbeiros/", json={"nome": "Carlos"}, headers=db_headers)
+    criar = client.post(
+        "/barbeiros/",
+        json={"nome": "Carlos", "horarios_funcionamento": funcionamento},
+        headers=db_headers,
+    )
     assert criar.status_code == 200
     assert criar.json()["nome"] == "Carlos"
     assert criar.json()["barbershop_id"] == premium.id
+    assert criar.json()["horarios_funcionamento"]["seg"]["inicio"] == "13:00"
 
     listar = client.get("/barbeiros/", headers=db_headers)
     assert listar.status_code == 200
@@ -18,6 +33,7 @@ def test_barbeiros_criar_e_listar(client, db_session, make_tenant_headers):
     assert len(body) == 1
     assert body[0]["nome"] == "Carlos"
     assert body[0]["barbershop_id"] == premium.id
+    assert body[0]["horarios_funcionamento"]["seg"]["inicio"] == "13:00"
 
 
 def test_barbeiros_exige_header_tenant(client, make_tenant_headers):

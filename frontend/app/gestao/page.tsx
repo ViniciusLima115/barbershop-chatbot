@@ -1,8 +1,9 @@
 "use client";
 
-import { ComponentType, FormEvent, useEffect, useMemo, useState } from "react";
+import { ComponentType, FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import {
   Agendamento,
+  BarbershopWorkingHours,
   Barbeiro,
   Cliente,
   Servico,
@@ -10,41 +11,87 @@ import {
   createBarbeiro,
   createCliente,
   createServico,
+  defaultBarbershopWorkingHours,
   deleteAgendamento,
   deleteBarbeiro,
   deleteCliente,
   deleteServico,
+  getBarbershopWorkingHours,
   listAgendamentos,
   listBarbeiros,
   listClientes,
   listServicos,
   updateAgendamento,
   updateBarbeiro,
+  updateBarbershopWorkingHours,
   updateCliente,
   updateServico,
 } from "@/services/api";
 import { useAuthSession } from "@/services/auth";
-import Alert from "../components/Alert";
-import Loading from "../components/Loading";
-import Card from "../components/Card";
-import Button from "../components/Button";
-import FormInput from "../components/FormInput";
-import Modal from "../components/Modal";
-import Badge from "../components/Badge";
-import { Trash2, Edit2, Plus, RefreshCw, CalendarDays, Users, Scissors } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  CircleAlert,
+  Clock3,
+  Edit2,
+  Plus,
+  RefreshCw,
+  Scissors,
+  Trash2,
+  Users,
+} from "lucide-react";
+import styles from "./page.module.css";
 
-type Tab = "agendamentos" | "clientes" | "servicos";
+type Tab = "agendamentos" | "clientes" | "servicos" | "funcionamento";
 
 const initialCliente = { nome: "", telefone: "" };
 const initialServico = { nome: "", duracao_minutos: 40, preco: 40 };
-const initialBarbeiro = { nome: "" };
 const MAX_BARBEIROS_PREMIUM = 3;
 const MAX_BARBEIROS_BASICO = 1;
-const tabs: Array<{ key: Tab; label: string; icon: ComponentType<{ size?: number }> }> = [
-  { key: "agendamentos", label: "Agendamentos", icon: CalendarDays },
-  { key: "clientes", label: "Clientes", icon: Users },
-  { key: "servicos", label: "Servicos", icon: Scissors },
+const tabs: Array<{
+  key: Tab;
+  label: string;
+  description: string;
+  icon: ComponentType<{ size?: number }>;
+}> = [
+  {
+    key: "agendamentos",
+    label: "Agenda",
+    description: "Equipe, agenda e operacao diaria",
+    icon: CalendarDays,
+  },
+  {
+    key: "clientes",
+    label: "Clientes",
+    description: "Base de contatos da barbearia",
+    icon: Users,
+  },
+  {
+    key: "servicos",
+    label: "Servicos",
+    description: "Catalogo e duracao dos atendimentos",
+    icon: Scissors,
+  },
+  {
+    key: "funcionamento",
+    label: "Funcionamento",
+    description: "Dias e horarios aceitos na agenda",
+    icon: Clock3,
+  },
 ];
+const workingDays = [
+  { key: "seg", label: "Segunda" },
+  { key: "ter", label: "Terca" },
+  { key: "qua", label: "Quarta" },
+  { key: "qui", label: "Quinta" },
+  { key: "sex", label: "Sexta" },
+  { key: "sab", label: "Sabado" },
+  { key: "dom", label: "Domingo" },
+] as const;
+
+function cx(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
+}
 
 function toBackendDateTime(localValue: string): string {
   return `${localValue}:00`;
@@ -57,6 +104,304 @@ function toDateTimeLocalInput(value: string): string {
   return `${datePart}T${hhmm}`;
 }
 
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function summarizeWorkingHours(funcionamento: BarbershopWorkingHours) {
+  const ativos = workingDays.filter((day) => funcionamento[day.key].ativo);
+  if (ativos.length === 0) return "Nenhum dia ativo";
+
+  const primeiro = ativos[0];
+  const ultimo = ativos[ativos.length - 1];
+  const intervalo = `${funcionamento[primeiro.key].inicio} - ${funcionamento[ultimo.key].fim}`;
+
+  if (ativos.length === 1) {
+    return `${primeiro.label}: ${funcionamento[primeiro.key].inicio} - ${funcionamento[primeiro.key].fim}`;
+  }
+
+  return `${primeiro.label} a ${ultimo.label} · ${intervalo}`;
+}
+
+function cloneWorkingHours(source?: BarbershopWorkingHours | null): BarbershopWorkingHours {
+  const base = source ?? defaultBarbershopWorkingHours();
+  return {
+    seg: { ...base.seg },
+    ter: { ...base.ter },
+    qua: { ...base.qua },
+    qui: { ...base.qui },
+    sex: { ...base.sex },
+    sab: { ...base.sab },
+    dom: { ...base.dom },
+  };
+}
+
+function createBarbeiroForm(source?: BarbershopWorkingHours | null) {
+  return {
+    nome: "",
+    horarios_funcionamento: cloneWorkingHours(source),
+  };
+}
+
+function getWorkingDayKeyFromDateTime(value: string) {
+  if (!value) return null;
+  const target = new Date(value);
+  if (Number.isNaN(target.getTime())) return null;
+  return workingDays[target.getDay() === 0 ? 6 : target.getDay() - 1]?.key ?? null;
+}
+
+type NoticeTone = "success" | "error" | "warning";
+
+function Notice({
+  tone,
+  message,
+  onClose,
+}: {
+  tone: NoticeTone;
+  message: string;
+  onClose?: () => void;
+}) {
+  return (
+    <div
+      className={cx(
+        styles.notice,
+        tone === "success" && styles.noticeSuccess,
+        tone === "error" && styles.noticeError,
+        tone === "warning" && styles.noticeWarning
+      )}
+    >
+      <div className={styles.noticeIcon}>
+        {tone === "success" ? <CheckCircle2 size={18} /> : <CircleAlert size={18} />}
+      </div>
+      <p className={styles.noticeText}>{message}</p>
+      {onClose ? (
+        <button type="button" onClick={onClose} className={styles.noticeClose} aria-label="Fechar aviso">
+          x
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function Panel({
+  eyebrow,
+  title,
+  description,
+  actions,
+  children,
+}: {
+  eyebrow?: string;
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className={styles.panel}>
+      <div className={styles.panelHeader}>
+        <div>
+          {eyebrow ? <p className={styles.panelEyebrow}>{eyebrow}</p> : null}
+          <h2 className={styles.panelTitle}>{title}</h2>
+          {description ? <p className={styles.panelDescription}>{description}</p> : null}
+        </div>
+        {actions ? <div className={styles.panelActions}>{actions}</div> : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function ActionButton({
+  children,
+  variant = "primary",
+  type = "button",
+  onClick,
+  disabled = false,
+}: {
+  children: ReactNode;
+  variant?: "primary" | "secondary" | "ghost";
+  type?: "button" | "submit" | "reset";
+  onClick?: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={cx(
+        styles.actionButton,
+        variant === "primary" && styles.actionButtonPrimary,
+        variant === "secondary" && styles.actionButtonSecondary,
+        variant === "ghost" && styles.actionButtonGhost
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function IconActionButton({
+  label,
+  tone = "secondary",
+  onClick,
+  children,
+}: {
+  label: string;
+  tone?: "secondary" | "danger";
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(
+        styles.iconActionButton,
+        tone === "secondary" && styles.iconActionButtonSecondary,
+        tone === "danger" && styles.iconActionButtonDanger
+      )}
+      aria-label={label}
+      title={label}
+    >
+      <span className={styles.iconActionButtonGlyph}>{children}</span>
+    </button>
+  );
+}
+
+function Field({
+  label,
+  required = false,
+  hint,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  hint?: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className={styles.field}>
+      <span className={styles.fieldLabel}>
+        {label}
+        {required ? <span className={styles.requiredMark}>*</span> : null}
+      </span>
+      {children}
+      {hint ? <span className={styles.fieldHint}>{hint}</span> : null}
+    </label>
+  );
+}
+
+function StatusPill({ status }: { status: Agendamento["status"] }) {
+  const label =
+    status === "confirmado" ? "Confirmado" : status === "pendente" ? "Pendente" : "Cancelado";
+
+  return (
+    <span
+      className={cx(
+        styles.statusPill,
+        status === "confirmado" && styles.statusConfirmado,
+        status === "pendente" && styles.statusPendente,
+        status === "cancelado" && styles.statusCancelado
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  helper,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  helper: string;
+}) {
+  return (
+    <article className={styles.statCard}>
+      <div className={styles.statIcon}>{icon}</div>
+      <div className={styles.statContent}>
+        <span className={styles.statLabel}>{label}</span>
+        <strong className={styles.statValue}>{value}</strong>
+        <span className={styles.statHelper}>{helper}</span>
+      </div>
+    </article>
+  );
+}
+
+function EmptyState({
+  title,
+  description,
+  action,
+}: {
+  title: string;
+  description: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className={styles.emptyState}>
+      <h3 className={styles.emptyTitle}>{title}</h3>
+      <p className={styles.emptyDescription}>{description}</p>
+      {action ? <div className={styles.emptyAction}>{action}</div> : null}
+    </div>
+  );
+}
+
+function Modal({
+  isOpen,
+  onClose,
+  title,
+  subtitle,
+  children,
+  size = "md",
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+  size?: "md" | "lg";
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className={styles.modalOverlay} role="presentation" onClick={onClose}>
+      <div
+        className={cx(styles.modalCard, size === "lg" && styles.modalCardLarge)}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={styles.modalHeader}>
+          <div>
+            <h2 className={styles.modalTitle}>{title}</h2>
+            {subtitle ? <p className={styles.modalSubtitle}>{subtitle}</p> : null}
+          </div>
+          <button type="button" onClick={onClose} className={styles.modalClose} aria-label="Fechar">
+            x
+          </button>
+        </div>
+        <div className={styles.modalBody}>{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function GestaoPage() {
   const authSession = useAuthSession();
   const isPremiumPlan = authSession?.plan === "premium";
@@ -65,7 +410,6 @@ export default function GestaoPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Modal states
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [showServicoModal, setShowServicoModal] = useState(false);
   const [showAgendamentoModal, setShowAgendamentoModal] = useState(false);
@@ -75,13 +419,17 @@ export default function GestaoPage() {
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [barbeiros, setBarbeiros] = useState<Barbeiro[]>([]);
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
+  const [funcionamento, setFuncionamento] = useState<BarbershopWorkingHours>(
+    defaultBarbershopWorkingHours()
+  );
+  const [savingFuncionamento, setSavingFuncionamento] = useState(false);
 
   const [novoCliente, setNovoCliente] = useState(initialCliente);
   const [editClienteId, setEditClienteId] = useState<number | null>(null);
 
   const [novoServico, setNovoServico] = useState(initialServico);
   const [editServicoId, setEditServicoId] = useState<number | null>(null);
-  const [novoBarbeiro, setNovoBarbeiro] = useState(initialBarbeiro);
+  const [novoBarbeiro, setNovoBarbeiro] = useState(() => createBarbeiroForm());
   const [editBarbeiroId, setEditBarbeiroId] = useState<number | null>(null);
 
   const [formAgendamento, setFormAgendamento] = useState({
@@ -100,16 +448,18 @@ export default function GestaoPage() {
     setLoading(true);
     setError(null);
     try {
-      const [cs, ss, bs, as] = await Promise.all([
+      const [cs, ss, bs, ags, workingHours] = await Promise.all([
         listClientes(),
         listServicos(),
         listBarbeiros(),
         listAgendamentos(),
+        getBarbershopWorkingHours(),
       ]);
       setClientes(cs);
       setServicos(ss);
       setBarbeiros(bs);
-      setAgendamentos(as);
+      setAgendamentos(ags);
+      setFuncionamento(workingHours);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar dados.");
     } finally {
@@ -123,21 +473,80 @@ export default function GestaoPage() {
 
   useEffect(() => {
     if (!success) return;
-    const t = setTimeout(() => setSuccess(null), 4000);
-    return () => clearTimeout(t);
+    const timeout = window.setTimeout(() => setSuccess(null), 4000);
+    return () => window.clearTimeout(timeout);
   }, [success]);
 
-  const clientesById = useMemo(
-    () => Object.fromEntries(clientes.map((c) => [c.id, c])),
-    [clientes]
+  const clientesById = useMemo(() => Object.fromEntries(clientes.map((c) => [c.id, c])), [clientes]);
+  const funcionamentoResumo = useMemo(() => summarizeWorkingHours(funcionamento), [funcionamento]);
+  const proximoAgendamento = useMemo(() => {
+    const futuros = agendamentos
+      .filter((item) => new Date(item.data_hora_inicio).getTime() >= Date.now())
+      .sort(
+        (left, right) =>
+          new Date(left.data_hora_inicio).getTime() - new Date(right.data_hora_inicio).getTime()
+      );
+    return futuros[0] ?? null;
+  }, [agendamentos]);
+  const barbeiroSelecionadoAgendamento = useMemo(
+    () => barbeiros.find((item) => String(item.id) === formAgendamento.barbeiroId) ?? null,
+    [barbeiros, formAgendamento.barbeiroId]
   );
+  const dicaFuncionamentoBarbeiro = useMemo(() => {
+    if (!barbeiroSelecionadoAgendamento || !formAgendamento.dataHora) return null;
+    const dayKey = getWorkingDayKeyFromDateTime(formAgendamento.dataHora);
+    if (!dayKey) return null;
+
+    const dia = workingDays.find((item) => item.key === dayKey);
+    const schedule = barbeiroSelecionadoAgendamento.horarios_funcionamento ?? funcionamento;
+    const item = schedule[dayKey];
+    if (!item.ativo) {
+      return `${barbeiroSelecionadoAgendamento.nome} nao atende em ${dia?.label.toLowerCase() ?? "esse dia"}.`;
+    }
+    return `${barbeiroSelecionadoAgendamento.nome} atende em ${dia?.label.toLowerCase() ?? "esse dia"} das ${item.inicio} as ${item.fim}.`;
+  }, [barbeiroSelecionadoAgendamento, formAgendamento.dataHora, funcionamento]);
 
   const limparMensagens = () => {
     setError(null);
     setSuccess(null);
   };
 
-  // CLIENTE HANDLERS
+  function fecharClienteModal() {
+    setShowClienteModal(false);
+    limparMensagens();
+  }
+
+  function fecharServicoModal() {
+    setShowServicoModal(false);
+    limparMensagens();
+  }
+
+  function fecharBarbeiroModal() {
+    setShowBarbeiroModal(false);
+    limparMensagens();
+  }
+
+  function fecharModalAgendamento() {
+    setShowAgendamentoModal(false);
+    setError(null);
+  }
+
+  async function salvarFuncionamento(e: FormEvent) {
+    e.preventDefault();
+    limparMensagens();
+    setSavingFuncionamento(true);
+
+    try {
+      const atualizado = await updateBarbershopWorkingHours(funcionamento);
+      setFuncionamento(atualizado);
+      setSuccess("Horarios de funcionamento salvos com sucesso!");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao salvar horarios.");
+    } finally {
+      setSavingFuncionamento(false);
+    }
+  }
+
   async function submitCliente(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
@@ -159,6 +568,7 @@ export default function GestaoPage() {
   }
 
   function abrirModalCliente(cliente?: Cliente) {
+    limparMensagens();
     if (cliente) {
       setEditClienteId(cliente.id);
       setNovoCliente({ nome: cliente.nome, telefone: cliente.telefone });
@@ -169,28 +579,28 @@ export default function GestaoPage() {
     setShowClienteModal(true);
   }
 
-  // SERVIÇO HANDLERS
   async function submitServico(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
     try {
       if (editServicoId) {
         await updateServico(editServicoId, novoServico);
-        setSuccess("Serviço atualizado com sucesso!");
+        setSuccess("Servico atualizado com sucesso!");
       } else {
         await createServico(novoServico);
-        setSuccess("Serviço criado com sucesso!");
+        setSuccess("Servico criado com sucesso!");
       }
       setNovoServico(initialServico);
       setEditServicoId(null);
       setShowServicoModal(false);
       await carregarTudo();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao salvar serviço.");
+      setError(e instanceof Error ? e.message : "Erro ao salvar servico.");
     }
   }
 
   function abrirModalServico(servico?: Servico) {
+    limparMensagens();
     if (servico) {
       setEditServicoId(servico.id);
       setNovoServico({
@@ -205,7 +615,6 @@ export default function GestaoPage() {
     setShowServicoModal(true);
   }
 
-  // BARBEIRO HANDLERS
   async function submitBarbeiro(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
@@ -219,7 +628,7 @@ export default function GestaoPage() {
         setSuccess("Barbeiro criado com sucesso!");
       }
 
-      setNovoBarbeiro(initialBarbeiro);
+      setNovoBarbeiro(createBarbeiroForm(funcionamento));
       setEditBarbeiroId(null);
       setShowBarbeiroModal(false);
       await carregarTudo();
@@ -229,25 +638,28 @@ export default function GestaoPage() {
   }
 
   function abrirModalBarbeiro(barbeiro?: Barbeiro) {
+    limparMensagens();
     if (barbeiro) {
       setEditBarbeiroId(barbeiro.id);
-      setNovoBarbeiro({ nome: barbeiro.nome });
+      setNovoBarbeiro({
+        nome: barbeiro.nome,
+        horarios_funcionamento: cloneWorkingHours(barbeiro.horarios_funcionamento ?? funcionamento),
+      });
     } else {
       setEditBarbeiroId(null);
-      setNovoBarbeiro(initialBarbeiro);
+      setNovoBarbeiro(createBarbeiroForm(funcionamento));
     }
 
     setShowBarbeiroModal(true);
   }
 
-  // AGENDAMENTO HANDLERS
   async function submitAgendamento(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
 
     const cliente = clientesById[Number(formAgendamento.clienteId)];
     if (!cliente) {
-      setError("Selecione um cliente válido.");
+      setError("Selecione um cliente valido.");
       return;
     }
 
@@ -287,6 +699,7 @@ export default function GestaoPage() {
   }
 
   function abrirModalAgendamento(agendamento?: Agendamento) {
+    limparMensagens();
     if (agendamento) {
       const cliente = clientes.find((c) => c.telefone === agendamento.telefone);
       const barbeiro = barbeiros.find((b) => b.nome === agendamento.barbeiro_nome);
@@ -312,7 +725,6 @@ export default function GestaoPage() {
     setShowAgendamentoModal(true);
   }
 
-  // DELETE HANDLERS
   const deleteClienteHandler = async (id: number) => {
     if (!confirm("Tem certeza que deseja remover este cliente?")) return;
     try {
@@ -326,14 +738,14 @@ export default function GestaoPage() {
   };
 
   const deleteServicoHandler = async (id: number) => {
-    if (!confirm("Tem certeza que deseja remover este serviço?")) return;
+    if (!confirm("Tem certeza que deseja remover este servico?")) return;
     try {
       limparMensagens();
       await deleteServico(id);
-      setSuccess("Serviço removido com sucesso!");
+      setSuccess("Servico removido com sucesso!");
       await carregarTudo();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao remover serviço.");
+      setError(e instanceof Error ? e.message : "Erro ao remover servico.");
     }
   };
 
@@ -363,627 +775,802 @@ export default function GestaoPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="py-8">
-        <div className="app-container space-y-6">
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Gestão</h1>
-              <p className="mt-1 text-gray-600">
-                Administre clientes, serviços e agendamentos
+    <main className={styles.page}>
+      <div className={styles.shell}>
+        <header className={styles.hero}>
+          <div className={styles.heroContent}>
+            <span className={styles.eyebrow}>Painel da barbearia</span>
+            <h1 className={styles.heroTitle}>{authSession?.tenantName ?? "Gestao da Barbearia"}</h1>
+            <p className={styles.heroSubtitle}>
+              Organize agenda, equipe, servicos e horarios em um painel claro para o dia a dia.
+            </p>
+            <div className={styles.heroMeta}>
+              <span className={styles.metaPill}>
+                Plano {isPremiumPlan ? "Premium" : "Basico"}
+              </span>
+              <span className={styles.metaPill}>{funcionamentoResumo}</span>
+              {proximoAgendamento ? (
+                <span className={styles.metaPill}>
+                  Proximo: {formatDateTime(proximoAgendamento.data_hora_inicio)}
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <ActionButton variant="secondary" onClick={carregarTudo}>
+            <RefreshCw size={16} />
+            Atualizar dados
+          </ActionButton>
+        </header>
+
+        <section className={styles.statsGrid}>
+          <StatCard
+            icon={<CalendarDays size={20} />}
+            label="Agendamentos"
+            value={String(agendamentos.length)}
+            helper={proximoAgendamento ? "Com proximos horarios cadastrados" : "Nenhum horario futuro"}
+          />
+          <StatCard
+            icon={<Users size={20} />}
+            label="Clientes"
+            value={String(clientes.length)}
+            helper={clientes.length > 0 ? "Base pronta para novos atendimentos" : "Comece criando o primeiro cliente"}
+          />
+          <StatCard
+            icon={<Scissors size={20} />}
+            label="Servicos"
+            value={String(servicos.length)}
+            helper={servicos.length > 0 ? "Catalogo ativo para agendamentos" : "Adicione servicos para liberar a agenda"}
+          />
+          <StatCard
+            icon={<Clock3 size={20} />}
+            label="Funcionamento"
+            value={`${workingDays.filter((day) => funcionamento[day.key].ativo).length} dias`}
+            helper={funcionamentoResumo}
+          />
+        </section>
+
+        {error ? <Notice tone="error" message={error} onClose={() => setError(null)} /> : null}
+        {success ? <Notice tone="success" message={success} onClose={() => setSuccess(null)} /> : null}
+
+        <div className={styles.workspace}>
+          <aside className={styles.sidebar}>
+            <div className={styles.sidebarIntro}>
+              <p className={styles.sidebarEyebrow}>Navegacao</p>
+              <h2 className={styles.sidebarTitle}>Escolha a area que voce quer ajustar</h2>
+              <p className={styles.sidebarText}>
+                Cada aba concentra uma tarefa principal para reduzir clique e evitar erro operacional.
               </p>
             </div>
-            <Button
-              onClick={carregarTudo}
-              variant="secondary"
-              size="md"
-            >
-              <RefreshCw size={18} />
-              Atualizar Dados
-            </Button>
-          </div>
 
-          {/* Alerts */}
-          {error && (
-            <Alert
-              type="error"
-              message={error}
-              onClose={() => setError(null)}
-            />
-          )}
-          {success && (
-            <Alert
-              type="success"
-              message={success}
-              onClose={() => setSuccess(null)}
-            />
-          )}
-
-          {/* Tab Navigation */}
-          <nav
-            className="rounded-2xl border border-gray-200 bg-gradient-to-r from-slate-100 to-gray-100 p-3"
-            aria-label="Abas da gestao"
-          >
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            <nav className={styles.tabList} aria-label="Abas da gestao">
               {tabs.map((item) => {
-                const isActive = tab === item.key;
                 const Icon = item.icon;
+                const active = tab === item.key;
 
                 return (
                   <button
                     key={item.key}
                     type="button"
                     onClick={() => setTab(item.key)}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`inline-flex h-11 w-full items-center justify-center gap-1.5 rounded-lg border px-3 text-sm font-semibold shadow-sm transition sm:h-14 sm:flex-1 sm:gap-2 sm:rounded-xl sm:px-6 sm:text-base focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      isActive
-                        ? "border-blue-700 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md"
-                        : "border-gray-300 bg-white text-gray-800 hover:-translate-y-0.5 hover:border-gray-400 hover:bg-gray-50"
-                    }`}
+                    className={cx(styles.tabButton, active && styles.tabButtonActive)}
+                    aria-current={active ? "page" : undefined}
                   >
-                    <Icon size={16} />
-                    {item.label}
+                    <span className={styles.tabIcon}>
+                      <Icon size={18} />
+                    </span>
+                    <span className={styles.tabCopy}>
+                      <span className={styles.tabLabel}>{item.label}</span>
+                      <span className={styles.tabDescription}>{item.description}</span>
+                    </span>
                   </button>
                 );
               })}
-            </div>
-          </nav>
+            </nav>
+          </aside>
 
-          {/* Content */}
-          {loading ? (
-            <Loading />
-          ) : (
-            <>
-              {/* CLIENTES TAB */}
-              {tab === "clientes" && (
-                <div className="space-y-6">
-                  <div>
-                    <Button variant="primary" onClick={() => abrirModalCliente()}>
-                      <Plus size={18} />
-                      Novo Cliente
-                    </Button>
-                  </div>
+          <div className={styles.contentArea}>
+            {loading ? (
+              <div className={styles.loadingState}>
+                <div className={styles.loadingPulse} />
+                <p>Carregando painel de gestao...</p>
+              </div>
+            ) : null}
 
-                  <Card title="Lista de Clientes">
-                    {clientes.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-gray-600">Nenhum cliente cadastrado</p>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => abrirModalCliente()}
-                          className="mt-4"
-                        >
-                          Criar Primeiro Cliente
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="table-wrapper">
-                        <table className="table">
-                          <thead>
-                            <tr>
-                              <th>Nome</th>
-                              <th>Telefone</th>
-                              <th className="text-right">Ações</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {clientes.map((c) => (
-                              <tr key={c.id}>
-                                <td className="font-medium">{c.nome}</td>
-                                <td>{c.telefone}</td>
-                                <td className="text-right">
-                                  <div className="flex gap-2 justify-end">
-                                    <button
-                                      type="button"
-                                      onClick={() => abrirModalCliente(c)}
-                                      className="btn btn-secondary btn-sm"
-                                    >
-                                      <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteClienteHandler(c.id)}
-                                      className="btn btn-danger btn-sm"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              )}
-
-              {/* SERVIÇOS TAB */}
-              {tab === "servicos" && (
-                <div className="space-y-6">
-                  <div>
-                    <Button variant="primary" onClick={() => abrirModalServico()}>
-                      <Plus size={18} />
-                      Novo Serviço
-                    </Button>
-                  </div>
-
-                  <Card title="Lista de Serviços">
-                    {servicos.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-gray-600">Nenhum serviço cadastrado</p>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => abrirModalServico()}
-                          className="mt-4"
-                        >
-                          Criar Primeiro Serviço
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="table-wrapper">
-                        <table className="table">
-                          <thead>
-                            <tr>
-                              <th>Nome</th>
-                              <th>Duração</th>
-                              <th>Preço</th>
-                              <th className="text-right">Ações</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {servicos.map((s) => (
-                              <tr key={s.id}>
-                                <td className="font-medium">{s.nome}</td>
-                                <td>{s.duracao_minutos} min</td>
-                                <td className="text-green-600 font-semibold">
-                                  R$ {s.preco.toFixed(2)}
-                                </td>
-                                <td className="text-right">
-                                  <div className="flex gap-2 justify-end">
-                                    <button
-                                      type="button"
-                                      onClick={() => abrirModalServico(s)}
-                                      className="btn btn-secondary btn-sm"
-                                    >
-                                      <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteServicoHandler(s.id)}
-                                      className="btn btn-danger btn-sm"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              )}
-
-              {/* AGENDAMENTOS TAB */}
-              {tab === "agendamentos" && (
-                <div className="space-y-6">
-                  <Card
-                    title="Gestao de Barbeiros"
-                    subtitle="Crie, edite e exclua barbeiros ativos diretamente neste painel"
-                  >
-                    <div className="space-y-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-gray-600">
-                          Ativos: <strong>{barbeiros.length}</strong> / {limiteBarbeiros}
-                        </p>
-                        <Button variant="primary" onClick={() => abrirModalBarbeiro()}>
-                          <Plus size={18} />
-                          Adicionar Barbeiro
-                        </Button>
-                      </div>
-
-                      {!isPremiumPlan && limiteBarbeirosAtingido && (
-                        <p className="text-sm text-amber-600">
-                          Deseja adicionar mais barbeiros? Faca o upgrade para o plano premium.
-                        </p>
-                      )}
-
-                      {isPremiumPlan && limiteBarbeirosAtingido && (
-                        <p className="text-sm text-amber-600">
-                          Limite de 3 barbeiros ativos atingido.
-                        </p>
-                      )}
-
-                      {barbeiros.length === 0 ? (
-                        <p className="text-sm text-gray-600">Nenhum barbeiro cadastrado.</p>
-                      ) : (
-                        <div className="table-wrapper">
-                          <table className="table">
-                            <thead>
-                              <tr>
-                                <th>Nome</th>
-                                <th className="text-right">Acoes</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {barbeiros.map((barbeiro) => (
-                                <tr key={barbeiro.id}>
-                                  <td className="font-medium">{barbeiro.nome}</td>
-                                  <td className="text-right">
-                                    <div className="flex justify-end gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => abrirModalBarbeiro(barbeiro)}
-                                        className="btn btn-secondary btn-sm"
-                                      >
-                                        <Edit2 size={16} />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => deleteBarbeiroHandler(barbeiro.id)}
-                                        className="btn btn-danger btn-sm"
-                                      >
-                                        <Trash2 size={16} />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+            {!loading && tab === "agendamentos" ? (
+              <div className={styles.sectionStack}>
+                <Panel
+                  eyebrow="Equipe"
+                  title="Barbeiros ativos"
+                  description="Cadastre quem aparece na agenda e acompanhe o limite do seu plano."
+                  actions={
+                    <ActionButton variant="primary" onClick={() => abrirModalBarbeiro()}>
+                      <Plus size={16} />
+                      Adicionar barbeiro
+                    </ActionButton>
+                  }
+                >
+                  <div className={styles.inlineSummary}>
+                    <div className={styles.summaryTile}>
+                      <span className={styles.summaryLabel}>Ativos</span>
+                      <strong className={styles.summaryValue}>
+                        {barbeiros.length} / {limiteBarbeiros}
+                      </strong>
                     </div>
-                  </Card>
+                    <div className={styles.summaryTile}>
+                      <span className={styles.summaryLabel}>Plano atual</span>
+                      <strong className={styles.summaryValue}>{isPremiumPlan ? "Premium" : "Basico"}</strong>
+                    </div>
+                  </div>
 
-                  <div>
-                    <Button
+                  {!isPremiumPlan && limiteBarbeirosAtingido ? (
+                    <Notice
+                      tone="warning"
+                      message="Limite do plano basico atingido. Para mais barbeiros, faca upgrade para o premium."
+                    />
+                  ) : null}
+                  {isPremiumPlan && limiteBarbeirosAtingido ? (
+                    <Notice tone="warning" message="Limite de 3 barbeiros ativos atingido no plano premium." />
+                  ) : null}
+
+                  {barbeiros.length === 0 ? (
+                    <EmptyState
+                      title="Nenhum barbeiro cadastrado"
+                      description="Adicione a equipe para liberar criacao de agendamentos com responsavel definido."
+                      action={
+                        <ActionButton variant="secondary" onClick={() => abrirModalBarbeiro()}>
+                          <Plus size={16} />
+                          Criar primeiro barbeiro
+                        </ActionButton>
+                      }
+                    />
+                  ) : (
+                    <div className={styles.personList}>
+                      {barbeiros.map((barbeiro) => (
+                        <article key={barbeiro.id} className={styles.personRow}>
+                          <div>
+                            <strong className={styles.personName}>{barbeiro.nome}</strong>
+                            <p className={styles.personMeta}>
+                              Disponibilidade: {summarizeWorkingHours(barbeiro.horarios_funcionamento ?? funcionamento)}
+                            </p>
+                          </div>
+                          <div className={styles.rowActions}>
+                            <IconActionButton label="Editar barbeiro" onClick={() => abrirModalBarbeiro(barbeiro)}>
+                              <Edit2 size={16} />
+                            </IconActionButton>
+                            <IconActionButton
+                              label="Remover barbeiro"
+                              tone="danger"
+                              onClick={() => deleteBarbeiroHandler(barbeiro.id)}
+                            >
+                              <Trash2 size={16} />
+                            </IconActionButton>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </Panel>
+
+                <Panel
+                  eyebrow="Agenda"
+                  title="Agendamentos do sistema"
+                  description="Crie novos horarios e acompanhe rapidamente o que ja esta reservado."
+                  actions={
+                    <ActionButton
                       variant="primary"
                       onClick={() => abrirModalAgendamento()}
                       disabled={clientes.length === 0 || servicos.length === 0 || barbeiros.length === 0}
                     >
-                      <Plus size={18} />
-                      Novo Agendamento
-                    </Button>
-                    {(clientes.length === 0 || servicos.length === 0 || barbeiros.length === 0) && (
-                      <p className="mt-2 text-sm text-amber-600">
-                        ⚠️ Você precisa cadastrar clientes, serviços e barbeiros antes de fazer agendamentos
-                      </p>
-                    )}
-                  </div>
+                      <Plus size={16} />
+                      Novo agendamento
+                    </ActionButton>
+                  }
+                >
+                  {clientes.length === 0 || servicos.length === 0 || barbeiros.length === 0 ? (
+                    <Notice
+                      tone="warning"
+                      message="Cadastre clientes, servicos e barbeiros antes de criar um agendamento."
+                    />
+                  ) : null}
 
-                  <Card title="Lista de Agendamentos">
-                    {agendamentos.length === 0 ? (
-                      <div className="text-center py-8">
-                        <p className="text-gray-600">Nenhum agendamento cadastrado</p>
-                        <Button
-                          size="sm"
+                  {agendamentos.length === 0 ? (
+                    <EmptyState
+                      title="Nenhum agendamento cadastrado"
+                      description="Depois que a estrutura estiver pronta, seus horarios vao aparecer aqui."
+                      action={
+                        <ActionButton
                           variant="secondary"
                           onClick={() => abrirModalAgendamento()}
-                          className="mt-4"
                           disabled={clientes.length === 0 || servicos.length === 0 || barbeiros.length === 0}
                         >
-                          Criar Primeiro Agendamento
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="table-wrapper">
-                        <table className="table">
-                          <thead>
-                            <tr>
-                              <th>Cliente</th>
-                              <th>Serviço</th>
-                              <th>Horário</th>
-                              <th>Status</th>
-                              <th className="text-right">Ações</th>
+                          <Plus size={16} />
+                          Criar primeiro agendamento
+                        </ActionButton>
+                      }
+                    />
+                  ) : (
+                    <div className={styles.tableWrap}>
+                      <table className={styles.dataTable}>
+                        <thead>
+                          <tr>
+                            <th>Cliente</th>
+                            <th>Servico</th>
+                            <th>Barbeiro</th>
+                            <th>Horario</th>
+                            <th>Status</th>
+                            <th className={styles.actionsColumn}>Acoes</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {agendamentos.map((agendamento) => (
+                            <tr key={agendamento.id}>
+                              <td>
+                                <strong>{agendamento.cliente_nome}</strong>
+                              </td>
+                              <td>{agendamento.servico_nome}</td>
+                              <td>{agendamento.barbeiro_nome}</td>
+                              <td>{formatDateTime(agendamento.data_hora_inicio)}</td>
+                              <td>
+                                <StatusPill status={agendamento.status} />
+                              </td>
+                              <td className={styles.actionsColumn}>
+                                <div className={styles.rowActions}>
+                                  <IconActionButton
+                                    label="Editar agendamento"
+                                    onClick={() => abrirModalAgendamento(agendamento)}
+                                  >
+                                    <Edit2 size={16} />
+                                  </IconActionButton>
+                                  <IconActionButton
+                                    label="Remover agendamento"
+                                    tone="danger"
+                                    onClick={() => deleteAgendamentoHandler(agendamento.id)}
+                                  >
+                                    <Trash2 size={16} />
+                                  </IconActionButton>
+                                </div>
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {agendamentos.map((a) => (
-                              <tr key={a.id}>
-                                <td className="font-medium">{a.cliente_nome}</td>
-                                <td>{a.servico_nome}</td>
-                                <td>
-                                  {new Date(
-                                    a.data_hora_inicio
-                                  ).toLocaleString("pt-BR")}
-                                </td>
-                                <td>
-                                  <Badge
-                                    status={
-                                      a.status as
-                                        | "confirmado"
-                                        | "pendente"
-                                        | "cancelado"
-                                    }
-                                  />
-                                </td>
-                                <td className="text-right">
-                                  <div className="flex gap-2 justify-end">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        abrirModalAgendamento(a)
-                                      }
-                                      className="btn btn-secondary btn-sm"
-                                    >
-                                      <Edit2 size={16} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        deleteAgendamentoHandler(a.id)
-                                      }
-                                      className="btn btn-danger btn-sm"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </Card>
-                </div>
-              )}
-            </>
-          )}
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </Panel>
+              </div>
+            ) : null}
+
+            {!loading && tab === "clientes" ? (
+              <Panel
+                eyebrow="Relacionamento"
+                title="Clientes cadastrados"
+                description="Mantenha os contatos organizados para agilizar novos atendimentos e reagendamentos."
+                actions={
+                  <ActionButton variant="primary" onClick={() => abrirModalCliente()}>
+                    <Plus size={16} />
+                    Novo cliente
+                  </ActionButton>
+                }
+              >
+                {clientes.length === 0 ? (
+                  <EmptyState
+                    title="Sua base de clientes esta vazia"
+                    description="Cadastre o primeiro contato para iniciar o uso interno da agenda."
+                    action={
+                      <ActionButton variant="secondary" onClick={() => abrirModalCliente()}>
+                        <Plus size={16} />
+                        Criar primeiro cliente
+                      </ActionButton>
+                    }
+                  />
+                ) : (
+                  <div className={styles.tableWrap}>
+                    <table className={styles.dataTable}>
+                      <thead>
+                        <tr>
+                          <th>Nome</th>
+                          <th>Telefone</th>
+                          <th className={styles.actionsColumn}>Acoes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clientes.map((cliente) => (
+                          <tr key={cliente.id}>
+                            <td>
+                              <strong>{cliente.nome}</strong>
+                            </td>
+                            <td>{cliente.telefone}</td>
+                            <td className={styles.actionsColumn}>
+                              <div className={styles.rowActions}>
+                                <IconActionButton label="Editar cliente" onClick={() => abrirModalCliente(cliente)}>
+                                  <Edit2 size={16} />
+                                </IconActionButton>
+                                <IconActionButton
+                                  label="Remover cliente"
+                                  tone="danger"
+                                  onClick={() => deleteClienteHandler(cliente.id)}
+                                >
+                                  <Trash2 size={16} />
+                                </IconActionButton>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Panel>
+            ) : null}
+
+            {!loading && tab === "servicos" ? (
+              <Panel
+                eyebrow="Catalogo"
+                title="Servicos disponiveis"
+                description="Defina nome, duracao e valor para refletir corretamente no agendamento."
+                actions={
+                  <ActionButton variant="primary" onClick={() => abrirModalServico()}>
+                    <Plus size={16} />
+                    Novo servico
+                  </ActionButton>
+                }
+              >
+                {servicos.length === 0 ? (
+                  <EmptyState
+                    title="Nenhum servico cadastrado"
+                    description="Crie os servicos para habilitar a escolha correta no momento de agendar."
+                    action={
+                      <ActionButton variant="secondary" onClick={() => abrirModalServico()}>
+                        <Plus size={16} />
+                        Criar primeiro servico
+                      </ActionButton>
+                    }
+                  />
+                ) : (
+                  <div className={styles.tableWrap}>
+                    <table className={styles.dataTable}>
+                      <thead>
+                        <tr>
+                          <th>Nome</th>
+                          <th>Duracao</th>
+                          <th>Preco</th>
+                          <th className={styles.actionsColumn}>Acoes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {servicos.map((servico) => (
+                          <tr key={servico.id}>
+                            <td>
+                              <strong>{servico.nome}</strong>
+                            </td>
+                            <td>{servico.duracao_minutos} min</td>
+                            <td>{formatCurrency(servico.preco)}</td>
+                            <td className={styles.actionsColumn}>
+                              <div className={styles.rowActions}>
+                                <IconActionButton label="Editar servico" onClick={() => abrirModalServico(servico)}>
+                                  <Edit2 size={16} />
+                                </IconActionButton>
+                                <IconActionButton
+                                  label="Remover servico"
+                                  tone="danger"
+                                  onClick={() => deleteServicoHandler(servico.id)}
+                                >
+                                  <Trash2 size={16} />
+                                </IconActionButton>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Panel>
+            ) : null}
+
+            {!loading && tab === "funcionamento" ? (
+              <div className={styles.sectionStack}>
+                <Panel
+                  eyebrow="Resumo"
+                  title="Regras da agenda"
+                  description="Esses horarios definem o que o sistema aceita nos agendamentos publicos e internos."
+                >
+                  <div className={styles.inlineSummary}>
+                    <div className={styles.summaryTile}>
+                      <span className={styles.summaryLabel}>Dias ativos</span>
+                      <strong className={styles.summaryValue}>
+                        {workingDays.filter((day) => funcionamento[day.key].ativo).length}
+                      </strong>
+                    </div>
+                    <div className={styles.summaryTile}>
+                      <span className={styles.summaryLabel}>Resumo rapido</span>
+                      <strong className={styles.summaryValue}>{funcionamentoResumo}</strong>
+                    </div>
+                  </div>
+                </Panel>
+
+                <Panel
+                  eyebrow="Configuracao"
+                  title="Funcionamento da barbearia"
+                  description="Ative cada dia de trabalho e defina a janela de horarios em que a agenda pode aceitar reservas."
+                >
+                  <form onSubmit={salvarFuncionamento} className={styles.workingForm}>
+                    <div className={styles.workingDaysGrid}>
+                      {workingDays.map((day) => {
+                        const item = funcionamento[day.key];
+
+                        return (
+                          <article key={day.key} className={styles.workingCard}>
+                            <div className={styles.workingCardHeader}>
+                              <div>
+                                <h3 className={styles.workingDayTitle}>{day.label}</h3>
+                                <p className={styles.workingDayMeta}>
+                                  {item.ativo ? "Aceitando horarios" : "Dia bloqueado"}
+                                </p>
+                              </div>
+                              <label className={styles.switchField}>
+                                <input
+                                  type="checkbox"
+                                  checked={item.ativo}
+                                  onChange={(e) =>
+                                    setFuncionamento((prev) => ({
+                                      ...prev,
+                                      [day.key]: { ...prev[day.key], ativo: e.target.checked },
+                                    }))
+                                  }
+                                />
+                                <span className={styles.switchTrack} />
+                                <span className={styles.switchLabel}>{item.ativo ? "Ativo" : "Fechado"}</span>
+                              </label>
+                            </div>
+
+                            <div className={styles.workingTimeGrid}>
+                              <Field label="Inicio">
+                                <input
+                                  type="time"
+                                  value={item.inicio}
+                                  disabled={!item.ativo}
+                                  className={styles.input}
+                                  onChange={(e) =>
+                                    setFuncionamento((prev) => ({
+                                      ...prev,
+                                      [day.key]: { ...prev[day.key], inicio: e.target.value },
+                                    }))
+                                  }
+                                />
+                              </Field>
+                              <Field label="Fim">
+                                <input
+                                  type="time"
+                                  value={item.fim}
+                                  disabled={!item.ativo}
+                                  className={styles.input}
+                                  onChange={(e) =>
+                                    setFuncionamento((prev) => ({
+                                      ...prev,
+                                      [day.key]: { ...prev[day.key], fim: e.target.value },
+                                    }))
+                                  }
+                                />
+                              </Field>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+
+                    <div className={styles.formActions}>
+                      <ActionButton type="submit" disabled={savingFuncionamento}>
+                        {savingFuncionamento ? "Salvando..." : "Salvar funcionamento"}
+                      </ActionButton>
+                    </div>
+                  </form>
+                </Panel>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      {/* MODALS */}
-
-      {/* Cliente Modal */}
       <Modal
         isOpen={showClienteModal}
-        onClose={() => setShowClienteModal(false)}
-        title={editClienteId ? "Editar Cliente" : "Novo Cliente"}
+        onClose={fecharClienteModal}
+        title={editClienteId ? "Editar cliente" : "Novo cliente"}
+        subtitle="Cadastre rapidamente o contato para reutilizar em agendamentos."
       >
-        <form onSubmit={submitCliente} className="space-y-4">
-          <FormInput
-            label="Nome do Cliente"
-            placeholder="Ex: João Silva"
-            value={novoCliente.nome}
-            onChange={(e) =>
-              setNovoCliente((p) => ({ ...p, nome: e.target.value }))
-            }
-            required
-          />
-          <FormInput
-            label="Telefone"
-            placeholder="Ex: (11) 98765-4321"
-            value={novoCliente.telefone}
-            onChange={(e) =>
-              setNovoCliente((p) => ({ ...p, telefone: e.target.value }))
-            }
-            required
-          />
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
-            <Button
-              variant="secondary"
-              onClick={() => setShowClienteModal(false)}
-            >
+        <form onSubmit={submitCliente} className={styles.formStack}>
+          <Field label="Nome do cliente" required>
+            <input
+              className={styles.input}
+              placeholder="Ex: Joao Silva"
+              value={novoCliente.nome}
+              onChange={(e) => setNovoCliente((prev) => ({ ...prev, nome: e.target.value }))}
+              required
+            />
+          </Field>
+          <Field label="Telefone" required>
+            <input
+              className={styles.input}
+              placeholder="Ex: (11) 98765-4321"
+              value={novoCliente.telefone}
+              onChange={(e) => setNovoCliente((prev) => ({ ...prev, telefone: e.target.value }))}
+              required
+            />
+          </Field>
+          <div className={styles.formActions}>
+            <ActionButton variant="ghost" onClick={fecharClienteModal}>
               Cancelar
-            </Button>
-            <Button variant="primary" type="submit">
-              {editClienteId ? "Atualizar" : "Criar"} Cliente
-            </Button>
+            </ActionButton>
+            <ActionButton type="submit">{editClienteId ? "Atualizar cliente" : "Criar cliente"}</ActionButton>
           </div>
         </form>
       </Modal>
 
-      {/* Serviço Modal */}
       <Modal
         isOpen={showServicoModal}
-        onClose={() => setShowServicoModal(false)}
-        title={editServicoId ? "Editar Serviço" : "Novo Serviço"}
+        onClose={fecharServicoModal}
+        title={editServicoId ? "Editar servico" : "Novo servico"}
+        subtitle="Mantenha nome, duracao e preco alinhados com a agenda."
       >
-        <form onSubmit={submitServico} className="space-y-4">
-          <FormInput
-            label="Nome do Serviço"
-            placeholder="Ex: Corte Básico"
-            value={novoServico.nome}
-            onChange={(e) =>
-              setNovoServico((p) => ({ ...p, nome: e.target.value }))
-            }
-            required
-          />
-          <FormInput
-            label="Duração (minutos)"
-            type="number"
-            placeholder="Ex: 40"
-            value={novoServico.duracao_minutos}
-            onChange={(e) =>
-              setNovoServico((p) => ({
-                ...p,
-                duracao_minutos: Number(e.target.value),
-              }))
-            }
-            required
-          />
-          <FormInput
-            label="Preço (R$)"
-            type="number"
-            step="0.01"
-            placeholder="Ex: 40.00"
-            value={novoServico.preco}
-            onChange={(e) =>
-              setNovoServico((p) => ({
-                ...p,
-                preco: Number(e.target.value),
-              }))
-            }
-            required
-          />
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
-            <Button
-              variant="secondary"
-              onClick={() => setShowServicoModal(false)}
-            >
+        <form onSubmit={submitServico} className={styles.formStack}>
+          <Field label="Nome do servico" required>
+            <input
+              className={styles.input}
+              placeholder="Ex: Corte basico"
+              value={novoServico.nome}
+              onChange={(e) => setNovoServico((prev) => ({ ...prev, nome: e.target.value }))}
+              required
+            />
+          </Field>
+          <div className={styles.formGrid}>
+            <Field label="Duracao" required hint="Em minutos">
+              <input
+                className={styles.input}
+                type="number"
+                value={novoServico.duracao_minutos}
+                onChange={(e) =>
+                  setNovoServico((prev) => ({ ...prev, duracao_minutos: Number(e.target.value) }))
+                }
+                required
+              />
+            </Field>
+            <Field label="Preco" required hint="Valor em reais">
+              <input
+                className={styles.input}
+                type="number"
+                step="0.01"
+                value={novoServico.preco}
+                onChange={(e) => setNovoServico((prev) => ({ ...prev, preco: Number(e.target.value) }))}
+                required
+              />
+            </Field>
+          </div>
+          <div className={styles.formActions}>
+            <ActionButton variant="ghost" onClick={fecharServicoModal}>
               Cancelar
-            </Button>
-            <Button variant="primary" type="submit">
-              {editServicoId ? "Atualizar" : "Criar"} Serviço
-            </Button>
+            </ActionButton>
+            <ActionButton type="submit">{editServicoId ? "Atualizar servico" : "Criar servico"}</ActionButton>
           </div>
         </form>
       </Modal>
 
-      {/* Barbeiro Modal */}
       <Modal
         isOpen={showBarbeiroModal}
-        onClose={() => setShowBarbeiroModal(false)}
-        title={editBarbeiroId ? "Editar Barbeiro" : "Novo Barbeiro"}
+        onClose={fecharBarbeiroModal}
+        title={editBarbeiroId ? "Editar barbeiro" : "Novo barbeiro"}
+        subtitle="Quem estiver aqui pode aparecer como responsavel pelo atendimento."
+        size="lg"
       >
-        <form onSubmit={submitBarbeiro} className="space-y-4">
-          <FormInput
-            label="Nome do Barbeiro"
-            placeholder="Ex: Carlos"
-            value={novoBarbeiro.nome}
-            onChange={(e) =>
-              setNovoBarbeiro((p) => ({ ...p, nome: e.target.value }))
-            }
-            required
-          />
+        <form onSubmit={submitBarbeiro} className={styles.formStack}>
+          <Field label="Nome do barbeiro" required>
+            <input
+              className={styles.input}
+              placeholder="Ex: Carlos"
+              value={novoBarbeiro.nome}
+              onChange={(e) => setNovoBarbeiro((prev) => ({ ...prev, nome: e.target.value }))}
+              required
+            />
+          </Field>
+          <div className={styles.inlineInfoCard}>
+            <p className={styles.inlineInfoTitle}>Disponibilidade individual</p>
+            <p className={styles.inlineInfoText}>
+              Esses horarios refinam o funcionamento geral da barbearia. Exemplo: se a barbearia abre
+              08:00 e o barbeiro comeca 13:00, a manha nao aparece para ele.
+            </p>
+          </div>
+          <div className={styles.workingDaysGrid}>
+            {workingDays.map((day) => {
+              const item = novoBarbeiro.horarios_funcionamento[day.key];
+              return (
+                <article key={day.key} className={styles.workingCard}>
+                  <div className={styles.workingCardHeader}>
+                    <div>
+                      <h3 className={styles.workingDayTitle}>{day.label}</h3>
+                      <p className={styles.workingDayMeta}>
+                        {item.ativo ? "Aceitando agenda" : "Fora do expediente"}
+                      </p>
+                    </div>
+                    <label className={styles.switchField}>
+                      <input
+                        type="checkbox"
+                        checked={item.ativo}
+                        onChange={(e) =>
+                          setNovoBarbeiro((prev) => ({
+                            ...prev,
+                            horarios_funcionamento: {
+                              ...prev.horarios_funcionamento,
+                              [day.key]: {
+                                ...prev.horarios_funcionamento[day.key],
+                                ativo: e.target.checked,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                      <span className={styles.switchTrack} />
+                      <span className={styles.switchLabel}>{item.ativo ? "Ativo" : "Fechado"}</span>
+                    </label>
+                  </div>
 
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
-            <Button
-              variant="secondary"
-              onClick={() => setShowBarbeiroModal(false)}
-            >
+                  <div className={styles.workingTimeGrid}>
+                    <Field label="Inicio">
+                      <input
+                        className={styles.input}
+                        type="time"
+                        value={item.inicio}
+                        disabled={!item.ativo}
+                        onChange={(e) =>
+                          setNovoBarbeiro((prev) => ({
+                            ...prev,
+                            horarios_funcionamento: {
+                              ...prev.horarios_funcionamento,
+                              [day.key]: {
+                                ...prev.horarios_funcionamento[day.key],
+                                inicio: e.target.value,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                    </Field>
+                    <Field label="Fim">
+                      <input
+                        className={styles.input}
+                        type="time"
+                        value={item.fim}
+                        disabled={!item.ativo}
+                        onChange={(e) =>
+                          setNovoBarbeiro((prev) => ({
+                            ...prev,
+                            horarios_funcionamento: {
+                              ...prev.horarios_funcionamento,
+                              [day.key]: {
+                                ...prev.horarios_funcionamento[day.key],
+                                fim: e.target.value,
+                              },
+                            },
+                          }))
+                        }
+                      />
+                    </Field>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+          <div className={styles.formActions}>
+            <ActionButton variant="ghost" onClick={fecharBarbeiroModal}>
               Cancelar
-            </Button>
-            <Button variant="primary" type="submit">
-              {editBarbeiroId ? "Atualizar" : "Criar"} Barbeiro
-            </Button>
+            </ActionButton>
+            <ActionButton type="submit">{editBarbeiroId ? "Atualizar barbeiro" : "Criar barbeiro"}</ActionButton>
           </div>
         </form>
       </Modal>
 
-      {/* Agendamento Modal */}
       <Modal
         isOpen={showAgendamentoModal}
-        onClose={() => setShowAgendamentoModal(false)}
-        title={editAgendamentoId ? "Editar Agendamento" : "Novo Agendamento"}
+        onClose={fecharModalAgendamento}
+        title={editAgendamentoId ? "Editar agendamento" : "Novo agendamento"}
+        subtitle="Escolha cliente, servico e horario. As regras de funcionamento sao validadas no backend."
         size="lg"
       >
-        <form onSubmit={submitAgendamento} className="space-y-4">
-          <FormInput
-            label="Cliente"
-            as="select"
-            value={formAgendamento.clienteId}
-            onChange={(e) =>
-              setFormAgendamento((p) => ({
-                ...p,
-                clienteId: e.target.value,
-              }))
-            }
-            required
-          >
-            <option value="">Selecione um cliente</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nome} ({c.telefone})
-              </option>
-            ))}
-          </FormInput>
+        <form onSubmit={submitAgendamento} className={styles.formStack}>
+          {error ? <Notice tone="error" message={error} onClose={() => setError(null)} /> : null}
 
-          <FormInput
-            label="Barbeiro"
-            as="select"
-            value={formAgendamento.barbeiroId}
-            onChange={(e) =>
-              setFormAgendamento((p) => ({
-                ...p,
-                barbeiroId: e.target.value,
-              }))
-            }
-            required
-          >
-            <option value="">Selecione um barbeiro</option>
-            {barbeiros.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.nome}
-              </option>
-            ))}
-          </FormInput>
+          <div className={styles.formGrid}>
+            <Field label="Cliente" required>
+              <select
+                className={styles.select}
+                value={formAgendamento.clienteId}
+                onChange={(e) => setFormAgendamento((prev) => ({ ...prev, clienteId: e.target.value }))}
+                required
+              >
+                <option value="">Selecione um cliente</option>
+                {clientes.map((cliente) => (
+                  <option key={cliente.id} value={cliente.id}>
+                    {cliente.nome} ({cliente.telefone})
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Barbeiro" required>
+              <select
+                className={styles.select}
+                value={formAgendamento.barbeiroId}
+                onChange={(e) => setFormAgendamento((prev) => ({ ...prev, barbeiroId: e.target.value }))}
+                required
+              >
+                <option value="">Selecione um barbeiro</option>
+                {barbeiros.map((barbeiro) => (
+                  <option key={barbeiro.id} value={barbeiro.id}>
+                    {barbeiro.nome}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
 
-          <FormInput
-            label="Serviço"
-            as="select"
-            value={formAgendamento.servicoId}
-            onChange={(e) =>
-              setFormAgendamento((p) => ({
-                ...p,
-                servicoId: e.target.value,
-              }))
-            }
-            required
-          >
-            <option value="">Selecione um serviço</option>
-            {servicos.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nome} ({s.duracao_minutos} min - R$ {s.preco.toFixed(2)})
-              </option>
-            ))}
-          </FormInput>
+          <div className={styles.formGrid}>
+            <Field label="Servico" required>
+              <select
+                className={styles.select}
+                value={formAgendamento.servicoId}
+                onChange={(e) => setFormAgendamento((prev) => ({ ...prev, servicoId: e.target.value }))}
+                required
+              >
+                <option value="">Selecione um servico</option>
+                {servicos.map((servico) => (
+                  <option key={servico.id} value={servico.id}>
+                    {servico.nome} ({servico.duracao_minutos} min - {formatCurrency(servico.preco)})
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Status">
+              <select
+                className={styles.select}
+                value={formAgendamento.status}
+                onChange={(e) =>
+                  setFormAgendamento((prev) => ({
+                    ...prev,
+                    status: e.target.value as "pendente" | "confirmado" | "cancelado",
+                  }))
+                }
+              >
+                <option value="confirmado">Confirmado</option>
+                <option value="pendente">Pendente</option>
+                <option value="cancelado">Cancelado</option>
+              </select>
+            </Field>
+          </div>
 
-          <FormInput
-            label="Data e Hora"
-            type="datetime-local"
-            value={formAgendamento.dataHora}
-            onChange={(e) =>
-              setFormAgendamento((p) => ({
-                ...p,
-                dataHora: e.target.value,
-              }))
-            }
-            required
-          />
+          <Field label="Data e hora" required hint="A validacao respeita o funcionamento configurado">
+            <input
+              className={styles.input}
+              type="datetime-local"
+              value={formAgendamento.dataHora}
+              onChange={(e) => setFormAgendamento((prev) => ({ ...prev, dataHora: e.target.value }))}
+              required
+            />
+          </Field>
 
-          <FormInput
-            label="Status"
-            as="select"
-            value={formAgendamento.status}
-            onChange={(e) =>
-              setFormAgendamento((p) => ({
-                ...p,
-                status: e.target.value as
-                  | "pendente"
-                  | "confirmado"
-                  | "cancelado",
-              }))
-            }
-          >
-            <option value="confirmado">✓ Confirmado</option>
-            <option value="pendente">⏳ Pendente</option>
-            <option value="cancelado">✗ Cancelado</option>
-          </FormInput>
+          {dicaFuncionamentoBarbeiro ? (
+            <div className={styles.inlineInfoCard}>
+              <p className={styles.inlineInfoTitle}>Horario do barbeiro</p>
+              <p className={styles.inlineInfoText}>{dicaFuncionamentoBarbeiro}</p>
+            </div>
+          ) : null}
 
-          <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
-            <Button
-              variant="secondary"
-              onClick={() => setShowAgendamentoModal(false)}
-            >
+          <div className={styles.formActions}>
+            <ActionButton variant="ghost" onClick={fecharModalAgendamento}>
               Cancelar
-            </Button>
-            <Button variant="primary" type="submit">
-              {editAgendamentoId ? "Atualizar" : "Criar"} Agendamento
-            </Button>
+            </ActionButton>
+            <ActionButton type="submit">
+              {editAgendamentoId ? "Atualizar agendamento" : "Criar agendamento"}
+            </ActionButton>
           </div>
         </form>
       </Modal>
     </main>
   );
 }
-

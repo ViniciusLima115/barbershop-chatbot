@@ -27,6 +27,7 @@ export default function AgendaGrid({ data, selectedKey, onSelect }: AgendaGridPr
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {data.horarios.map((hora) => {
               const agendamento = barbeiro.agendamentos.find((a) => a.hora === hora);
+              const disponivel = barbeiro.horarios.includes(hora);
               const key = `${barbeiro.id}-${hora}`;
 
               return (
@@ -35,15 +36,17 @@ export default function AgendaGrid({ data, selectedKey, onSelect }: AgendaGridPr
                   hora={hora}
                   barbeiroNome={barbeiro.nome}
                   agendamento={agendamento}
+                  disponivel={disponivel}
                   isSelected={selectedKey === key}
-                  onSelect={() =>
+                  onSelect={() => {
+                    if (!disponivel && !agendamento) return;
                     onSelect({
                       hora,
                       barbeiroId: barbeiro.id,
                       barbeiroNome: barbeiro.nome,
                       agendamento,
-                    })
-                  }
+                    });
+                  }}
                 />
               );
             })}

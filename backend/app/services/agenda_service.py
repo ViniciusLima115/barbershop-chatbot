@@ -2,10 +2,11 @@ from datetime import datetime, time, timedelta
 
 from sqlalchemy.orm import Session
 
-from app.config import HORARIO_ABERTURA, HORARIO_FECHAMENTO, INTERVALO_MINUTOS
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
+from app.models.barbearia import Barbearia
 from app.models.servico import Servico
+from app.services.barbershop_hours_service import build_day_slots, get_working_window
 
 
 def _hora_esta_no_periodo(hora: int, periodo: str) -> bool:
@@ -45,17 +46,18 @@ def gerar_horarios_disponiveis(
     if not barbeiro:
         return []
 
+    barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
+    if not barbearia:
+        return []
+
     duracao = servico.duracao_minutos
+    window = get_working_window(barbearia, data.date(), barbeiro=barbeiro)
+    if not window:
+        return []
 
-    inicio_dia = datetime.combine(data.date(), time(HORARIO_ABERTURA, 0))
-    fim_dia = datetime.combine(data.date(), time(HORARIO_FECHAMENTO, 0))
-
-    horarios = []
-    atual = inicio_dia
-
-    while atual + timedelta(minutes=duracao) <= fim_dia:
-        horarios.append(atual)
-        atual += timedelta(minutes=INTERVALO_MINUTOS)
+    inicio_dia = datetime.combine(data.date(), window[0])
+    fim_dia = datetime.combine(data.date(), window[1])
+    horarios = build_day_slots(barbearia, data.date(), duracao, barbeiro=barbeiro)
 
     agendamentos_query = db.query(Agendamento).filter(
         Agendamento.barbeiro_id == barbeiro_id,

@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base, get_db
 from app.models import Barbearia, Barbeiro, Servico
-from app.routes import agenda, agendamentos, chatbot, barbeiros, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal, webhook
+from app.routes import agenda, agendamentos, chatbot, barbeiros, barbearia_funcionamento, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal, webhook
 from app.security import create_access_token
 
 
@@ -51,6 +51,7 @@ def app(session_factory):
     test_app.include_router(agenda.router)
     test_app.include_router(chatbot.router)
     test_app.include_router(barbeiros.router)
+    test_app.include_router(barbearia_funcionamento.router)
     test_app.include_router(clientes.router)
     test_app.include_router(barbearias.router)
     test_app.include_router(servicos.router)

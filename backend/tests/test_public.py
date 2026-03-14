@@ -61,6 +61,64 @@ def test_public_lookup_retorna_barbeiros_servicos_e_horarios(client, db_session)
     assert "horarios_disponiveis" in resp_horarios.json()
 
 
+def test_public_lookup_respeita_funcionamento_individual_do_barbeiro(client, db_session):
+    horarios_barbearia = {
+        "seg": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "ter": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "qua": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "qui": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "sex": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "sab": {"ativo": True, "inicio": "08:00", "fim": "18:00"},
+        "dom": {"ativo": False, "inicio": "08:00", "fim": "18:00"},
+    }
+    horarios_barbeiro = {
+        "seg": {"ativo": True, "inicio": "13:00", "fim": "18:00"},
+        "ter": {"ativo": True, "inicio": "13:00", "fim": "18:00"},
+        "qua": {"ativo": True, "inicio": "13:00", "fim": "18:00"},
+        "qui": {"ativo": True, "inicio": "13:00", "fim": "18:00"},
+        "sex": {"ativo": True, "inicio": "13:00", "fim": "18:00"},
+        "sab": {"ativo": True, "inicio": "13:00", "fim": "18:00"},
+        "dom": {"ativo": False, "inicio": "08:00", "fim": "18:00"},
+    }
+
+    barbearia = Barbearia(
+        nome="Barbearia Tarde",
+        slug="publica-tarde",
+        endereco="Rua Publica",
+        horarios_funcionamento=horarios_barbearia,
+    )
+    db_session.add(barbearia)
+    db_session.commit()
+    db_session.refresh(barbearia)
+
+    barbeiro = Barbeiro(
+        nome="Tarde",
+        barbershop_id=barbearia.id,
+        ativo=True,
+        horarios_funcionamento=horarios_barbeiro,
+    )
+    servico = Servico(nome="Corte", duracao_minutos=40, preco=50.0, barbearia_id=barbearia.id)
+    db_session.add_all([barbeiro, servico])
+    db_session.commit()
+    db_session.refresh(barbeiro)
+    db_session.refresh(servico)
+
+    data_futura = (datetime.now() + timedelta(days=2)).date()
+    resp = client.get(
+        "/public/horarios-disponiveis",
+        params={
+            "barbearia_id": barbearia.id,
+            "barbeiro_id": barbeiro.id,
+            "servico_id": servico.id,
+            "data": data_futura.isoformat(),
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["horarios_disponiveis"]
+    assert all(int(item.split(":")[0]) >= 13 for item in body["horarios_disponiveis"])
+
+
 def test_public_agendamento_cria_confirma_e_agenda_lembretes(monkeypatch, client, db_session):
     import app.services.public_booking_service as public_service
 

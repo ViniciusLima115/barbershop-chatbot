@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, model_validator
 
 
 PlanoBarbearia = Literal["basico", "premium"]
@@ -55,3 +55,37 @@ class BarbeariaAdminResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class BarbeariaFuncionamentoDia(BaseModel):
+    ativo: bool = True
+    inicio: str = "08:00"
+    fim: str = "18:00"
+
+    @field_validator("inicio", "fim")
+    @classmethod
+    def validar_hora(cls, value: str) -> str:
+        texto = value.strip()
+        try:
+            datetime.strptime(texto, "%H:%M")
+        except ValueError as exc:
+            raise ValueError("Horario deve estar no formato HH:MM.") from exc
+        return texto
+
+
+class BarbeariaFuncionamento(BaseModel):
+    seg: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
+    ter: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
+    qua: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
+    qui: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
+    sex: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
+    sab: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
+    dom: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
+
+    @model_validator(mode="after")
+    def validar_intervalos(self):
+        for dia in ("seg", "ter", "qua", "qui", "sex", "sab", "dom"):
+            item = getattr(self, dia)
+            if item.ativo and item.inicio >= item.fim:
+                raise ValueError(f"{dia}: horario inicial precisa ser menor que o final.")
+        return self

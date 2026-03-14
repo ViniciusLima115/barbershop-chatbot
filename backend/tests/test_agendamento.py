@@ -202,3 +202,50 @@ def test_patch_agendamento_altera_status(client, dados_base, tenant_headers):
     )
     assert patch.status_code == 200
     assert patch.json()["status"] == "cancelado"
+
+
+def test_remover_agendamento_remove_reminders_relacionados(
+    client,
+    db_session,
+    dados_base,
+    tenant_headers,
+):
+    from app.models.reminder_job import ReminderJob
+
+    inicio = dados_base["amanha"].replace(hour=16, minute=0, second=0, microsecond=0)
+    payload = {
+        "telefone": "5582944444444",
+        "nome_cliente": "Cliente Delete",
+        "barbeiro_id": dados_base["barbeiro"].id,
+        "servico_id": dados_base["servico"].id,
+        "data_hora_inicio": inicio.isoformat(),
+        "status": "confirmado",
+    }
+
+    created = client.post("/agendamentos/", json=payload, headers=tenant_headers)
+    assert created.status_code == 200
+    agendamento_id = created.json()["id"]
+
+    db_session.add(
+        ReminderJob(
+            tenant_id=dados_base["barbearia"].id,
+            agendamento_id=agendamento_id,
+            tipo="reminder_2h",
+            canal="whatsapp",
+            destinatario="5582944444444",
+            mensagem="Lembrete de teste",
+            enviar_em=inicio - timedelta(hours=2),
+            status="pendente",
+        )
+    )
+    db_session.commit()
+
+    response = client.delete(f"/agendamentos/{agendamento_id}", headers=tenant_headers)
+    assert response.status_code == 204
+
+    assert (
+        db_session.query(ReminderJob)
+        .filter(ReminderJob.agendamento_id == agendamento_id)
+        .count()
+        == 0
+    )

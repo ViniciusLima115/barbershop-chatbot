@@ -49,6 +49,8 @@ def init_db():
     )
     if _should_run_create_all():
         Base.metadata.create_all(bind=engine)
+    _ensure_barbearias_working_hours_column()
+    _ensure_barbeiros_working_hours_column()
     if IS_MYSQL:
         _ensure_clientes_contexto_column()
         _ensure_clientes_tenant_indexes()
@@ -59,6 +61,22 @@ def init_db():
         _ensure_conversas_multi_tenant()
         _ensure_agendamentos_barbearia_column()
         _ensure_agendamentos_public_columns()
+
+
+def _ensure_barbearias_working_hours_column():
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE barbearias ADD COLUMN horarios_funcionamento JSON NULL"))
+    except Exception:
+        pass
+
+
+def _ensure_barbeiros_working_hours_column():
+    try:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE barbeiros ADD COLUMN horarios_funcionamento JSON NULL"))
+    except Exception:
+        pass
 
 
 def _run_best_effort(statements: list[str]):
@@ -177,6 +195,7 @@ def _ensure_barbeiros_public_columns():
         [
             "ALTER TABLE barbeiros ADD COLUMN ativo BOOLEAN NOT NULL DEFAULT TRUE",
             "ALTER TABLE barbeiros ADD COLUMN tempo_por_servico JSON NULL",
+            "ALTER TABLE barbeiros ADD COLUMN horarios_funcionamento JSON NULL",
             "CREATE INDEX ix_barbeiros_ativo ON barbeiros (ativo)",
         ]
     )

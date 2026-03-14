@@ -5,6 +5,7 @@ from app.routes import (
     agenda,
     agendamentos,
     auth,
+    barbearia_funcionamento,
     barbearias,
     barbeiros,
     chatbot,
@@ -25,6 +26,48 @@ from fastapi.responses import HTMLResponse
 
 
 security = HTTPBasic()
+
+
+def _str_to_bool(value: str | None, default: bool) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _get_cors_allow_origins() -> list[str]:
+    configured = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
+    if configured:
+        return [item.strip() for item in configured.split(",") if item.strip()]
+
+    return [
+        "https://virtualbarber.shop",
+        "https://app.virtualbarber.shop",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+
+
+def _get_cors_allow_origin_regex() -> str | None:
+    configured = os.getenv("CORS_ALLOWED_ORIGIN_REGEX", "").strip()
+    if configured:
+        return configured
+
+    app_env = os.getenv("APP_ENV", "").strip().lower()
+    allow_private_networks = _str_to_bool(
+        os.getenv("CORS_ALLOW_PRIVATE_NETWORKS"),
+        default=app_env not in {"prod", "production"},
+    )
+    if not allow_private_networks:
+        return None
+
+    return (
+        r"^https?://("
+        r"localhost|127\.0\.0\.1|"
+        r"192\.168\.\d{1,3}\.\d{1,3}|"
+        r"10\.\d{1,3}\.\d{1,3}\.\d{1,3}|"
+        r"172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}"
+        r")(:\d+)?$"
+    )
 
 
 def verify_docs(credentials: HTTPBasicCredentials = Depends(security)):
@@ -74,11 +117,8 @@ def openapi(credentials: HTTPBasicCredentials = Depends(verify_docs)):
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://virtualbarber.shop",
-        "https://app.virtualbarber.shop",
-        "http://localhost:3000",
-    ],
+    allow_origins=_get_cors_allow_origins(),
+    allow_origin_regex=_get_cors_allow_origin_regex(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -87,6 +127,7 @@ app.add_middleware(
 app.include_router(agendamentos.router)
 app.include_router(clientes.router)
 app.include_router(barbearias.router)
+app.include_router(barbearia_funcionamento.router)
 app.include_router(barbeiros.router)
 app.include_router(servicos.router)
 app.include_router(agenda.router)

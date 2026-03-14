@@ -1,15 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { CalendarDays, LayoutDashboard, Scissors, Settings2, Shield } from "lucide-react";
+import { CalendarDays, LayoutDashboard, Scissors, Settings2, Shield, LogOut } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { getAuthSession, logout } from "@/services/auth";
+import { logout, useAuthSession } from "@/services/auth";
+import styles from "./Header.module.css";
+
+function cx(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
+}
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
-  const session = getAuthSession();
-  const tenantName = session?.tenantName ?? "";
+  const session = useAuthSession();
+  const tenantName = session?.tenantName ?? "Barbearia";
   const isAdmin = session?.tenantId === "admin";
   const inAdminPage = pathname.startsWith("/admin");
   const navItems = [
@@ -25,20 +30,21 @@ export default function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur">
-      <div className="app-container flex h-16 items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white">
+    <header className={styles.header}>
+      <div className={cx("app-container", styles.shell)}>
+        <Link href="/" className={styles.brand}>
+          <div className={styles.brandIcon}>
             <Scissors size={18} />
           </div>
-          <span className="hidden sm:inline">
-            {tenantName ? `${tenantName} - Sistema Interno` : "Barbearia - Sistema Interno"}
-          </span>
+          <div className={styles.brandCopy}>
+            <span className={styles.brandEyebrow}>Sistema interno</span>
+            <span className={styles.brandTitle}>{tenantName}</span>
+          </div>
         </Link>
 
-        <div className="flex items-center gap-2">
-          {!inAdminPage && (
-            <nav className="flex items-center gap-1">
+        <div className={styles.actions}>
+          {!inAdminPage ? (
+            <nav className={styles.nav} aria-label="Navegacao principal">
               {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 const Icon = item.icon;
@@ -47,22 +53,19 @@ export default function Header() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    }`}
+                    className={cx(styles.navLink, isActive && styles.navLinkActive)}
                   >
                     <Icon size={16} />
-                    <span className="hidden sm:inline">{item.label}</span>
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
             </nav>
-          )}
+          ) : null}
 
-          <button type="button" className="btn btn-secondary btn-sm" onClick={handleLogout}>
-            Sair
+          <button type="button" className={styles.logoutButton} onClick={handleLogout}>
+            <LogOut size={16} />
+            <span>Sair</span>
           </button>
         </div>
       </div>

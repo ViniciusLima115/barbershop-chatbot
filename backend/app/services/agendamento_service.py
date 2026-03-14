@@ -4,8 +4,11 @@ from sqlalchemy.orm import Session
 
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
+from app.models.barbearia import Barbearia
 from app.models.cliente import Cliente
+from app.models.reminder_job import ReminderJob
 from app.models.servico import Servico
+from app.services.barbershop_hours_service import is_within_working_hours
 
 
 def _serializar_agendamento(agendamento: Agendamento):
@@ -23,7 +26,30 @@ def _serializar_agendamento(agendamento: Agendamento):
     }
 
 
+def _obter_barbearia(db: Session, tenant_id: int) -> Barbearia:
+    barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
+    if not barbearia:
+        raise ValueError("Barbearia não encontrada")
+    return barbearia
+
+
+def _validar_funcionamento(barbearia: Barbearia, inicio: datetime, fim: datetime):
+    if not is_within_working_hours(barbearia, inicio, fim):
+        raise ValueError("Horário fora do funcionamento da barbearia")
+
+
+def _validar_funcionamento_barbeiro(
+    barbearia: Barbearia,
+    barbeiro: Barbeiro,
+    inicio: datetime,
+    fim: datetime,
+):
+    if not is_within_working_hours(barbearia, inicio, fim, barbeiro=barbeiro):
+        raise ValueError("Horário fora do funcionamento do barbeiro")
+
+
 def criar_agendamento(db: Session, dados, tenant_id: int):
+    barbearia = _obter_barbearia(db, tenant_id)
     servico_query = db.query(Servico).filter(
         Servico.id == dados.servico_id,
         Servico.barbearia_id == tenant_id,
@@ -56,6 +82,8 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
         db.refresh(cliente)
 
     fim = dados.data_hora_inicio + timedelta(minutes=servico.duracao_minutos)
+    _validar_funcionamento(barbearia, dados.data_hora_inicio, fim)
+    _validar_funcionamento_barbeiro(barbearia, barbeiro, dados.data_hora_inicio, fim)
 
     conflito_query = db.query(Agendamento).filter(
         Agendamento.barbeiro_id == dados.barbeiro_id,
@@ -146,6 +174,7 @@ def remarcar_agendamento(
     agendamento = query.first()
     if not agendamento:
         raise ValueError("Agendamento não encontrado")
+    barbearia = _obter_barbearia(db, tenant_id)
 
     servico = (
         db.query(Servico)
@@ -159,6 +188,19 @@ def remarcar_agendamento(
         raise ValueError("Serviço não encontrado")
 
     nova_data_hora_fim = nova_data_hora_inicio + timedelta(minutes=servico.duracao_minutos)
+    barbeiro = (
+        db.query(Barbeiro)
+        .filter(
+            Barbeiro.id == agendamento.barbeiro_id,
+            Barbeiro.barbershop_id == tenant_id,
+        )
+        .first()
+    )
+    if not barbeiro:
+        raise ValueError("Barbeiro não encontrado")
+
+    _validar_funcionamento(barbearia, nova_data_hora_inicio, nova_data_hora_fim)
+    _validar_funcionamento_barbeiro(barbearia, barbeiro, nova_data_hora_inicio, nova_data_hora_fim)
 
     conflito_query = db.query(Agendamento).filter(
         Agendamento.id != agendamento.id,
@@ -197,6 +239,7 @@ def atualizar_agendamento(
     agendamento = query.first()
     if not agendamento:
         raise ValueError("Agendamento não encontrado")
+    barbearia = _obter_barbearia(db, tenant_id)
 
     servico_query = db.query(Servico).filter(
         Servico.id == dados.servico_id,
@@ -215,6 +258,8 @@ def atualizar_agendamento(
         raise ValueError("Barbeiro não encontrado")
 
     novo_fim = dados.data_hora_inicio + timedelta(minutes=servico.duracao_minutos)
+    _validar_funcionamento(barbearia, dados.data_hora_inicio, novo_fim)
+    _validar_funcionamento_barbeiro(barbearia, barbeiro, dados.data_hora_inicio, novo_fim)
 
     conflito_query = db.query(Agendamento).filter(
         Agendamento.id != agendamento.id,
@@ -287,6 +332,13 @@ def remover_agendamento(db: Session, agendamento_id: int, tenant_id: int):
     agendamento = query.first()
     if not agendamento:
         raise ValueError("Agendamento não encontrado")
+
+    # Remove lembretes pendentes/enviados vinculados antes do DELETE do agendamento
+    # para evitar violação de chave estrangeira no Postgres/Neon.
+    db.query(ReminderJob).filter(
+        ReminderJob.agendamento_id == agendamento.id,
+        ReminderJob.tenant_id == tenant_id,
+    ).delete(synchronize_session=False)
 
     db.delete(agendamento)
     db.commit()
