@@ -19,11 +19,14 @@ function hojeISO() {
 function formatarDataHora(valor: string) {
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return valor;
-  return data.toLocaleString("pt-BR", { dateStyle: "full", timeStyle: "short" });
-}
-
-function cx(...values: Array<string | false | null | undefined>) {
-  return values.filter(Boolean).join(" ");
+  return data.toLocaleString("pt-BR", {
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export default function ReagendarPage() {
@@ -61,16 +64,14 @@ export default function ReagendarPage() {
         setData(dataExistente >= hojeISO() ? dataExistente : hojeISO());
       } catch (err) {
         if (!ativo) return;
-        setErro(err instanceof Error ? err.message : "Nao foi possivel carregar o agendamento.");
+        setErro(err instanceof Error ? err.message : "Não foi possível carregar o agendamento.");
       } finally {
         if (ativo) setLoadingBooking(false);
       }
     }
 
     carregar();
-    return () => {
-      ativo = false;
-    };
+    return () => { ativo = false; };
   }, [token]);
 
   useEffect(() => {
@@ -102,14 +103,12 @@ export default function ReagendarPage() {
     }
 
     carregarSlots();
-    return () => {
-      ativo = false;
-    };
+    return () => { ativo = false; };
   }, [booking, barbeiroId, servicoId, data]);
 
   async function onSubmit() {
     if (!horaInicio) {
-      setErro("Selecione um horario disponivel.");
+      setErro("Selecione um horário disponível.");
       return;
     }
     setSubmitting(true);
@@ -122,7 +121,7 @@ export default function ReagendarPage() {
       setSucesso("Agendamento reagendado com sucesso!");
       setHoraInicio(null);
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Nao foi possivel reagendar.");
+      setErro(err instanceof Error ? err.message : "Não foi possível reagendar.");
     } finally {
       setSubmitting(false);
     }
@@ -134,211 +133,404 @@ export default function ReagendarPage() {
       ? `/agendar/${booking.barbearia_id}`
       : "/";
 
-  if (loadingBooking) {
-    return (
-      <main className="min-h-screen bg-[var(--theme-canvas)] px-4 py-10">
-        <div className="mx-auto max-w-3xl rounded-[28px] border border-[var(--theme-line)] bg-[var(--theme-panel)] p-8 shadow-[var(--theme-shadow)]">
-          <p className="text-sm text-[var(--theme-muted)]">Carregando agendamento...</p>
-        </div>
-      </main>
-    );
-  }
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: "1.5px solid #e5d5c5",
+    backgroundColor: "#faf7f4",
+    fontSize: 14,
+    color: "#1a120b",
+    outline: "none",
+    boxSizing: "border-box",
+  };
 
-  if (!booking) {
-    return (
-      <main className="min-h-screen bg-[var(--theme-canvas)] px-4 py-10">
-        <div className="mx-auto max-w-3xl rounded-[28px] border border-[var(--theme-line)] bg-[var(--theme-panel)] p-8 shadow-[var(--theme-shadow)]">
-          <p className="text-sm text-[var(--theme-danger-text)]">
-            {erro ?? "Agendamento nao encontrado."}
-          </p>
-        </div>
-      </main>
-    );
-  }
+  const labelStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: 5,
+  };
 
-  const cancelado = booking.status === "cancelado";
+  const labelTextStyle: React.CSSProperties = {
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: "0.14em",
+    textTransform: "uppercase",
+    color: "#c36b2d",
+    margin: 0,
+  };
 
   return (
-    <main className="min-h-screen bg-[var(--theme-canvas)] px-4 py-10">
-      <section className="mx-auto max-w-3xl overflow-hidden rounded-[28px] border border-[var(--theme-line)] bg-[var(--theme-panel)] shadow-[var(--theme-shadow)]">
-        <div className="bg-gradient-to-r from-[#17120f] via-[#2d2119] to-[#4a2e1d] px-6 py-8 text-[var(--theme-on-accent)]">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#f2d1b2]">
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#f5efe7",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
+      {/* Top brand bar */}
+      <div
+        style={{
+          width: "100%",
+          backgroundColor: "#1a120b",
+          padding: "14px 24px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            backgroundColor: "#c36b2d",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
+          }}
+        >
+          ✂
+        </div>
+        <span style={{ color: "#f5efe7", fontWeight: 700, fontSize: 15, letterSpacing: "0.02em" }}>
+          Virtual Barber
+        </span>
+      </div>
+
+      {/* Card */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 580,
+          margin: "40px 16px",
+          backgroundColor: "#ffffff",
+          borderRadius: 20,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            background: "linear-gradient(135deg, #1a120b 0%, #3b1f0d 100%)",
+            padding: "32px 32px 28px",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "#f2c89a",
+            }}
+          >
             Email de agendamento
           </p>
-          <h1 className="mt-3 text-3xl font-black">Escolha um novo horario</h1>
-          <p className="mt-2 text-sm text-[#f3dfce]">
-            Selecione a data e o horario para seu reagendamento.
+          <h1
+            style={{
+              margin: "10px 0 6px",
+              fontSize: 26,
+              fontWeight: 800,
+              color: "#ffffff",
+              lineHeight: 1.2,
+            }}
+          >
+            Escolher novo horário
+          </h1>
+          <p style={{ margin: 0, fontSize: 14, color: "#e8d5c0" }}>
+            Selecione data e horário para seu reagendamento.
           </p>
         </div>
 
-        <div className="space-y-6 px-6 py-7">
-          {/* Booking details */}
-          <div className="grid gap-4 rounded-[22px] bg-[var(--theme-panel-strong)] p-5 md:grid-cols-2">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">
-                Cliente
-              </p>
-              <p className="mt-2 text-lg font-semibold text-[var(--theme-text)]">
-                {booking.cliente_nome}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">
-                Horario atual
-              </p>
-              <p className="mt-2 text-[var(--theme-text)]">
-                {formatarDataHora(booking.data_hora_inicio)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">
-                Servico
-              </p>
-              <p className="mt-2 text-[var(--theme-text)]">{booking.servico_nome}</p>
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">
-                Barbeiro
-              </p>
-              <p className="mt-2 text-[var(--theme-text)]">{booking.barbeiro_nome}</p>
-            </div>
-          </div>
+        {/* Body */}
+        <div style={{ padding: "28px 32px 32px" }}>
 
-          {sucesso ? (
-            <div className="rounded-2xl bg-[var(--theme-success-soft)] px-4 py-3 text-sm font-semibold text-[var(--theme-success-text)]">
-              {sucesso}
-            </div>
-          ) : null}
-
-          {erro ? (
-            <div className="rounded-2xl bg-[var(--theme-danger-soft)] px-4 py-3 text-sm font-semibold text-[var(--theme-danger-text)]">
-              {erro}
-            </div>
-          ) : null}
-
-          {cancelado ? (
-            <div className="rounded-2xl bg-[var(--theme-danger-soft)] px-4 py-3 text-sm font-semibold text-[var(--theme-danger-text)]">
-              Este agendamento foi cancelado e nao pode ser reagendado.
-            </div>
-          ) : sucesso ? null : (
-            <>
-              {/* Selectors */}
-              {lookup ? (
-                <div className="grid gap-4 md:grid-cols-3">
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">
-                      Barbeiro
-                    </span>
-                    <select
-                      className="rounded-xl border border-[var(--theme-line)] bg-[var(--theme-panel)] px-3 py-2 text-sm text-[var(--theme-text)]"
-                      value={barbeiroId ?? ""}
-                      onChange={(e) => {
-                        setBarbeiroId(Number(e.target.value));
-                        setHoraInicio(null);
-                      }}
-                    >
-                      {lookup.barbeiros.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">
-                      Servico
-                    </span>
-                    <select
-                      className="rounded-xl border border-[var(--theme-line)] bg-[var(--theme-panel)] px-3 py-2 text-sm text-[var(--theme-text)]"
-                      value={servicoId ?? ""}
-                      onChange={(e) => {
-                        setServicoId(Number(e.target.value));
-                        setHoraInicio(null);
-                      }}
-                    >
-                      {lookup.servicos.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="flex flex-col gap-1">
-                    <span className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">
-                      Data
-                    </span>
-                    <input
-                      type="date"
-                      min={today}
-                      value={data}
-                      onChange={(e) => {
-                        setData(e.target.value);
-                        setHoraInicio(null);
-                      }}
-                      className="rounded-xl border border-[var(--theme-line)] bg-[var(--theme-panel)] px-3 py-2 text-sm text-[var(--theme-text)]"
-                    />
-                  </label>
-                </div>
-              ) : null}
-
-              {/* Time slots */}
-              {loadingSlots ? (
-                <p className="text-sm text-[var(--theme-muted)]">Carregando horarios...</p>
-              ) : lookup && lookup.horarios_grade.length > 0 ? (
-                <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
-                  {lookup.horarios_grade.map((slot) => (
-                    <button
-                      key={slot.hora}
-                      type="button"
-                      disabled={!slot.disponivel}
-                      onClick={() => setHoraInicio(slot.hora)}
-                      className={cx(
-                        "flex flex-col items-center rounded-2xl border px-2 py-3 text-xs font-bold transition",
-                        slot.disponivel
-                          ? horaInicio === slot.hora
-                            ? "border-[var(--theme-accent)] bg-[var(--theme-accent)] text-[var(--theme-on-accent)]"
-                            : "border-[var(--theme-line)] bg-[var(--theme-panel)] text-[var(--theme-text)] hover:border-[var(--theme-accent)] hover:bg-[var(--theme-accent-soft)]"
-                          : "cursor-not-allowed border-[var(--theme-line)] bg-[var(--theme-panel-strong)] text-[var(--theme-muted)] opacity-50",
-                      )}
-                    >
-                      <span>{slot.hora}</span>
-                      <span className="mt-1 font-normal opacity-70">
-                        {slot.disponivel ? "Livre" : "Indisp."}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : lookup ? (
-                <p className="text-sm text-[var(--theme-muted)]">
-                  Nenhum horario disponivel nesta data.
-                </p>
-              ) : null}
-
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  disabled={submitting || !horaInicio}
-                  onClick={onSubmit}
-                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--theme-accent)] px-6 text-sm font-bold text-[var(--theme-on-accent)] transition hover:bg-[var(--theme-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {submitting ? "Reagendando..." : "Confirmar novo horario"}
-                </button>
-              </div>
-            </>
+          {loadingBooking && (
+            <p style={{ color: "#9ca3af", fontSize: 14, margin: 0 }}>
+              Carregando agendamento...
+            </p>
           )}
 
-          {(sucesso || cancelado) ? (
-            <Link
-              href={linkBarbearia}
-              className="inline-flex min-h-12 items-center justify-center rounded-full border border-[var(--theme-line-strong)] px-6 text-sm font-bold text-[var(--theme-text)] transition hover:bg-[var(--theme-accent-soft)]"
+          {!loadingBooking && !booking && (
+            <div
+              style={{
+                backgroundColor: "#fff1f2",
+                border: "1px solid #fecdd3",
+                borderRadius: 12,
+                padding: "12px 16px",
+                fontSize: 14,
+                color: "#9f1239",
+              }}
             >
-              Voltar para o site da barbearia
-            </Link>
-          ) : null}
+              {erro ?? "Agendamento não encontrado."}
+            </div>
+          )}
+
+          {booking && (
+            <>
+              {/* Current booking info */}
+              <div
+                style={{
+                  backgroundColor: "#faf7f4",
+                  borderRadius: 14,
+                  padding: "20px 22px",
+                  marginBottom: 24,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "16px 24px",
+                }}
+              >
+                <div>
+                  <p style={{ ...labelTextStyle, marginBottom: 4 }}>Cliente</p>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#1a120b" }}>
+                    {booking.cliente_nome}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ ...labelTextStyle, marginBottom: 4 }}>Horário atual</p>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#1a120b", lineHeight: 1.4 }}>
+                    {formatarDataHora(booking.data_hora_inicio)}
+                  </p>
+                </div>
+                <div>
+                  <p style={{ ...labelTextStyle, marginBottom: 4 }}>Serviço</p>
+                  <p style={{ margin: 0, fontSize: 14, color: "#1a120b" }}>{booking.servico_nome}</p>
+                </div>
+                <div>
+                  <p style={{ ...labelTextStyle, marginBottom: 4 }}>Barbeiro</p>
+                  <p style={{ margin: 0, fontSize: 14, color: "#1a120b" }}>{booking.barbeiro_nome}</p>
+                </div>
+              </div>
+
+              {/* Feedback */}
+              {sucesso && (
+                <div
+                  style={{
+                    backgroundColor: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    marginBottom: 20,
+                    fontSize: 14,
+                    color: "#14532d",
+                    fontWeight: 600,
+                  }}
+                >
+                  ✓ {sucesso}
+                </div>
+              )}
+
+              {erro && !sucesso && (
+                <div
+                  style={{
+                    backgroundColor: "#fff1f2",
+                    border: "1px solid #fecdd3",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    marginBottom: 20,
+                    fontSize: 14,
+                    color: "#9f1239",
+                  }}
+                >
+                  {erro}
+                </div>
+              )}
+
+              {booking.status === "cancelado" && (
+                <div
+                  style={{
+                    backgroundColor: "#fff1f2",
+                    border: "1px solid #fecdd3",
+                    borderRadius: 12,
+                    padding: "12px 16px",
+                    marginBottom: 20,
+                    fontSize: 14,
+                    color: "#9f1239",
+                  }}
+                >
+                  Este agendamento foi cancelado e não pode ser reagendado.
+                </div>
+              )}
+
+              {!sucesso && booking.status !== "cancelado" && (
+                <>
+                  {/* Selectors */}
+                  {lookup && (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gap: 12,
+                        marginBottom: 20,
+                      }}
+                    >
+                      <label style={labelStyle}>
+                        <span style={labelTextStyle}>Barbeiro</span>
+                        <select
+                          style={inputStyle}
+                          value={barbeiroId ?? ""}
+                          onChange={(e) => {
+                            setBarbeiroId(Number(e.target.value));
+                            setHoraInicio(null);
+                          }}
+                        >
+                          {lookup.barbeiros.map((b) => (
+                            <option key={b.id} value={b.id}>{b.nome}</option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label style={labelStyle}>
+                        <span style={labelTextStyle}>Serviço</span>
+                        <select
+                          style={inputStyle}
+                          value={servicoId ?? ""}
+                          onChange={(e) => {
+                            setServicoId(Number(e.target.value));
+                            setHoraInicio(null);
+                          }}
+                        >
+                          {lookup.servicos.map((s) => (
+                            <option key={s.id} value={s.id}>{s.nome}</option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label style={labelStyle}>
+                        <span style={labelTextStyle}>Data</span>
+                        <input
+                          type="date"
+                          style={inputStyle}
+                          min={today}
+                          value={data}
+                          onChange={(e) => {
+                            setData(e.target.value);
+                            setHoraInicio(null);
+                          }}
+                        />
+                      </label>
+                    </div>
+                  )}
+
+                  {/* Time slots */}
+                  {loadingSlots ? (
+                    <p style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>
+                      Carregando horários...
+                    </p>
+                  ) : lookup && lookup.horarios_grade.length > 0 ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(5, 1fr)",
+                        gap: 8,
+                        marginBottom: 24,
+                      }}
+                    >
+                      {lookup.horarios_grade.map((slot) => (
+                        <button
+                          key={slot.hora}
+                          type="button"
+                          disabled={!slot.disponivel}
+                          onClick={() => setHoraInicio(slot.hora)}
+                          style={{
+                            padding: "10px 4px",
+                            borderRadius: 10,
+                            border: "1.5px solid",
+                            borderColor: !slot.disponivel
+                              ? "#e5d5c5"
+                              : horaInicio === slot.hora
+                                ? "#c36b2d"
+                                : "#e5d5c5",
+                            backgroundColor: !slot.disponivel
+                              ? "#faf7f4"
+                              : horaInicio === slot.hora
+                                ? "#c36b2d"
+                                : "#ffffff",
+                            color: !slot.disponivel
+                              ? "#c4a882"
+                              : horaInicio === slot.hora
+                                ? "#ffffff"
+                                : "#1a120b",
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: slot.disponivel ? "pointer" : "not-allowed",
+                            opacity: slot.disponivel ? 1 : 0.5,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 2,
+                          }}
+                        >
+                          <span>{slot.hora}</span>
+                          <span style={{ fontSize: 10, fontWeight: 400, opacity: 0.7 }}>
+                            {slot.disponivel ? "Livre" : "Ocup."}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : lookup ? (
+                    <p style={{ color: "#9ca3af", fontSize: 13, marginBottom: 20 }}>
+                      Nenhum horário disponível nesta data.
+                    </p>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    disabled={submitting || !horaInicio}
+                    onClick={onSubmit}
+                    style={{
+                      width: "100%",
+                      padding: "14px 20px",
+                      borderRadius: 12,
+                      border: "none",
+                      backgroundColor: "#c36b2d",
+                      color: "#ffffff",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      cursor: submitting || !horaInicio ? "not-allowed" : "pointer",
+                      opacity: submitting || !horaInicio ? 0.6 : 1,
+                      transition: "opacity 0.15s",
+                    }}
+                  >
+                    {submitting ? "Reagendando..." : "Confirmar novo horário"}
+                  </button>
+                </>
+              )}
+
+              {(sucesso || booking.status === "cancelado") && (
+                <Link
+                  href={linkBarbearia}
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    marginTop: 12,
+                    padding: "13px 20px",
+                    borderRadius: 12,
+                    border: "1.5px solid #e5d5c5",
+                    color: "#3b1f0d",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Voltar para o site da barbearia →
+                </Link>
+              )}
+            </>
+          )}
         </div>
-      </section>
-    </main>
+      </div>
+
+      {/* Footer */}
+      <p style={{ fontSize: 12, color: "#a18070", marginBottom: 32 }}>
+        Powered by Virtual Barber
+      </p>
+    </div>
   );
 }

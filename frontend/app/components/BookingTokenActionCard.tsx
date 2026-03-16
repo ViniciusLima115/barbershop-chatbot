@@ -22,19 +22,23 @@ function formatarDataHora(valor: string) {
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return valor;
   return data.toLocaleString("pt-BR", {
-    dateStyle: "full",
-    timeStyle: "short",
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
 function labelStatus(status: PublicAgendamentoTokenResponse["status"]) {
-  const mapa = {
-    pendente: "Pendente",
-    confirmado: "Confirmado",
-    cancelado: "Cancelado",
-    reagendamento_solicitado: "Reagendamento solicitado",
+  const mapa: Record<string, { label: string; color: string }> = {
+    pendente:                 { label: "Pendente",                color: "#b45309" },
+    confirmado:               { label: "Confirmado",              color: "#15803d" },
+    cancelado:                { label: "Cancelado",               color: "#b91c1c" },
+    reagendamento_solicitado: { label: "Reagendamento solicitado", color: "#6d28d9" },
   };
-  return mapa[status] ?? status;
+  return mapa[status] ?? { label: status, color: "#6b7280" };
 }
 
 function montarLinkAgendamento(dados: PublicAgendamentoTokenResponse | null) {
@@ -42,6 +46,39 @@ function montarLinkAgendamento(dados: PublicAgendamentoTokenResponse | null) {
   if (dados.slug) return `/${dados.slug}`;
   return `/agendar/${dados.barbearia_id}`;
 }
+
+const modeConfig = {
+  confirmar: {
+    titulo: "Confirmar presença",
+    subtitulo: "Confirme que você comparecerá ao seu horário.",
+    botao: "Confirmar presença",
+    executar: confirmBookingByToken,
+    sucessoMsg: "Presença confirmada! Até logo.",
+    accentColor: "#15803d",
+    accentBg: "#f0fdf4",
+    accentText: "#14532d",
+  },
+  cancelar: {
+    titulo: "Cancelar agendamento",
+    subtitulo: "Não poderá comparecer? Cancele com antecedência.",
+    botao: "Cancelar horário",
+    executar: cancelBookingByToken,
+    sucessoMsg: "Agendamento cancelado.",
+    accentColor: "#b91c1c",
+    accentBg: "#fff1f2",
+    accentText: "#7f1d1d",
+  },
+  reagendar: {
+    titulo: "Reagendar",
+    subtitulo: "Solicite o reagendamento e escolha um novo horário.",
+    botao: "Solicitar reagendamento",
+    executar: requestRescheduleByToken,
+    sucessoMsg: "Pedido de reagendamento registrado.",
+    accentColor: "#c36b2d",
+    accentBg: "#fff7ed",
+    accentText: "#7c2d12",
+  },
+} satisfies Record<BookingActionMode, unknown>;
 
 export default function BookingTokenActionCard({
   token,
@@ -55,7 +92,6 @@ export default function BookingTokenActionCard({
 
   useEffect(() => {
     let ativo = true;
-
     async function carregar() {
       setLoading(true);
       setErro(null);
@@ -65,45 +101,18 @@ export default function BookingTokenActionCard({
         setDados(resposta);
       } catch (err) {
         if (!ativo) return;
-        setErro(err instanceof Error ? err.message : "Nao foi possivel carregar o agendamento.");
+        setErro(err instanceof Error ? err.message : "Não foi possível carregar o agendamento.");
       } finally {
         if (ativo) setLoading(false);
       }
     }
-
     carregar();
-    return () => {
-      ativo = false;
-    };
+    return () => { ativo = false; };
   }, [token]);
 
-  const config = useMemo(() => {
-    if (mode === "confirmar") {
-      return {
-        titulo: "Confirmar presenca",
-        descricao: "Valide sua presenca para que a barbearia saiba que voce vem.",
-        botao: "Confirmar agora",
-        executar: confirmBookingByToken,
-        sucesso: "Presenca confirmada com sucesso.",
-      };
-    }
-    if (mode === "cancelar") {
-      return {
-        titulo: "Cancelar agendamento",
-        descricao: "Se voce nao puder comparecer, cancele por aqui em poucos segundos.",
-        botao: "Cancelar horario",
-        executar: cancelBookingByToken,
-        sucesso: "Agendamento cancelado com sucesso.",
-      };
-    }
-    return {
-      titulo: "Solicitar reagendamento",
-      descricao: "Marque seu pedido de reagendamento e depois escolha um novo horario.",
-      botao: "Solicitar reagendamento",
-      executar: requestRescheduleByToken,
-      sucesso: "Pedido de reagendamento registrado.",
-    };
-  }, [mode]);
+  const config = modeConfig[mode];
+  const linkAgendamento = montarLinkAgendamento(dados);
+  const status = dados ? labelStatus(dados.status) : null;
 
   async function onAction() {
     setSubmitting(true);
@@ -112,84 +121,283 @@ export default function BookingTokenActionCard({
     try {
       const resposta = await config.executar(token);
       setDados(resposta);
-      setSucesso(config.sucesso);
+      setSucesso(config.sucessoMsg);
     } catch (err) {
-      setErro(err instanceof Error ? err.message : "Nao foi possivel concluir a acao.");
+      setErro(err instanceof Error ? err.message : "Não foi possível concluir a ação.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  const linkAgendamento = montarLinkAgendamento(dados);
-
   return (
-    <main className="min-h-screen bg-[var(--theme-canvas)] px-4 py-10">
-      <section className="mx-auto max-w-3xl overflow-hidden rounded-[28px] border border-[var(--theme-line)] bg-[var(--theme-panel)] shadow-[var(--theme-shadow)]">
-        <div className="bg-gradient-to-r from-[#17120f] via-[#2d2119] to-[#4a2e1d] px-6 py-8 text-[var(--theme-on-accent)]">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#f2d1b2]">Email de agendamento</p>
-          <h1 className="mt-3 text-3xl font-black">{config.titulo}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-[#f3dfce]">{config.descricao}</p>
+    <div
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#f5efe7",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "flex-start",
+        padding: "0",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      }}
+    >
+      {/* Top brand bar */}
+      <div
+        style={{
+          width: "100%",
+          backgroundColor: "#1a120b",
+          padding: "14px 24px",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+        }}
+      >
+        <div
+          style={{
+            width: 32,
+            height: 32,
+            borderRadius: 8,
+            backgroundColor: "#c36b2d",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 16,
+          }}
+        >
+          ✂
+        </div>
+        <span style={{ color: "#f5efe7", fontWeight: 700, fontSize: 15, letterSpacing: "0.02em" }}>
+          Virtual Barber
+        </span>
+      </div>
+
+      {/* Card */}
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 560,
+          margin: "40px 16px",
+          backgroundColor: "#ffffff",
+          borderRadius: 20,
+          boxShadow: "0 4px 24px rgba(0,0,0,0.10)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Card header */}
+        <div
+          style={{
+            background: "linear-gradient(135deg, #1a120b 0%, #3b1f0d 100%)",
+            padding: "32px 32px 28px",
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              color: "#f2c89a",
+            }}
+          >
+            Email de agendamento
+          </p>
+          <h1
+            style={{
+              margin: "10px 0 6px",
+              fontSize: 26,
+              fontWeight: 800,
+              color: "#ffffff",
+              lineHeight: 1.2,
+            }}
+          >
+            {config.titulo}
+          </h1>
+          <p style={{ margin: 0, fontSize: 14, color: "#e8d5c0" }}>
+            {config.subtitulo}
+          </p>
         </div>
 
-        <div className="space-y-5 px-6 py-7">
-          {loading ? <p className="text-sm text-[var(--theme-muted)]">Carregando dados do agendamento...</p> : null}
-          {erro ? (
-            <div className="rounded-2xl bg-[var(--theme-danger-soft)] px-4 py-3 text-sm font-semibold text-[var(--theme-danger-text)]">
+        {/* Card body */}
+        <div style={{ padding: "28px 32px 32px" }}>
+
+          {/* Loading */}
+          {loading && (
+            <p style={{ color: "#9ca3af", fontSize: 14, margin: 0 }}>
+              Carregando dados do agendamento...
+            </p>
+          )}
+
+          {/* Error */}
+          {erro && (
+            <div
+              style={{
+                backgroundColor: "#fff1f2",
+                border: "1px solid #fecdd3",
+                borderRadius: 12,
+                padding: "12px 16px",
+                marginBottom: 20,
+                fontSize: 14,
+                color: "#9f1239",
+                fontWeight: 500,
+              }}
+            >
               {erro}
             </div>
-          ) : null}
-          {sucesso ? (
-            <div className="rounded-2xl bg-[var(--theme-success-soft)] px-4 py-3 text-sm font-semibold text-[var(--theme-success-text)]">
-              {sucesso}
+          )}
+
+          {/* Success */}
+          {sucesso && (
+            <div
+              style={{
+                backgroundColor: config.accentBg,
+                border: `1px solid ${config.accentColor}33`,
+                borderRadius: 12,
+                padding: "12px 16px",
+                marginBottom: 20,
+                fontSize: 14,
+                color: config.accentText,
+                fontWeight: 600,
+              }}
+            >
+              ✓ {sucesso}
             </div>
-          ) : null}
+          )}
 
-          {dados ? (
+          {/* Booking details */}
+          {dados && (
             <>
-              <div className="grid gap-4 rounded-[22px] bg-[var(--theme-panel-strong)] p-5 md:grid-cols-2">
+              <div
+                style={{
+                  backgroundColor: "#faf7f4",
+                  borderRadius: 14,
+                  padding: "20px 22px",
+                  marginBottom: 24,
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "18px 24px",
+                }}
+              >
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">Cliente</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--theme-text)]">{dados.cliente_nome}</p>
-                  <p className="text-sm text-[var(--theme-muted)]">{dados.cliente_email ?? "Email nao informado"}</p>
+                  <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c36b2d" }}>
+                    Cliente
+                  </p>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#1a120b" }}>
+                    {dados.cliente_nome}
+                  </p>
+                  {dados.cliente_email && (
+                    <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280" }}>
+                      {dados.cliente_email}
+                    </p>
+                  )}
                 </div>
+
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">Status atual</p>
-                  <p className="mt-2 text-lg font-semibold text-[var(--theme-text)]">{labelStatus(dados.status)}</p>
+                  <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c36b2d" }}>
+                    Status
+                  </p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: status?.color }}>
+                    {status?.label}
+                  </p>
                 </div>
+
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">Servico</p>
-                  <p className="mt-2 text-[var(--theme-text)]">{dados.servico_nome}</p>
-                  <p className="text-sm text-[var(--theme-muted)]">{dados.barbeiro_nome}</p>
+                  <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c36b2d" }}>
+                    Serviço
+                  </p>
+                  <p style={{ margin: 0, fontSize: 14, fontWeight: 500, color: "#1a120b" }}>
+                    {dados.servico_nome}
+                  </p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280" }}>
+                    {dados.barbeiro_nome}
+                  </p>
                 </div>
+
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--theme-accent-strong)]">Horario</p>
-                  <p className="mt-2 text-[var(--theme-text)]">{formatarDataHora(dados.data_hora_inicio)}</p>
+                  <p style={{ margin: "0 0 4px", fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#c36b2d" }}>
+                    Horário
+                  </p>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#1a120b", lineHeight: 1.4 }}>
+                    {formatarDataHora(dados.data_hora_inicio)}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-3">
-                <button
-                  className="inline-flex min-h-12 items-center justify-center rounded-full bg-[var(--theme-accent)] px-6 text-sm font-bold text-[var(--theme-on-accent)] transition hover:bg-[var(--theme-accent-strong)] disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={submitting}
-                  onClick={onAction}
-                  type="button"
-                >
-                  {submitting ? "Processando..." : config.botao}
-                </button>
-
-                {mode === "reagendar" ? (
-                  <Link
-                    className="inline-flex min-h-12 items-center justify-center rounded-full border border-[var(--theme-line-strong)] px-6 text-sm font-bold text-[var(--theme-text)] transition hover:bg-[var(--theme-accent-soft)]"
-                    href={linkAgendamento}
+              {/* Actions */}
+              {!sucesso && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  <button
+                    onClick={onAction}
+                    disabled={submitting}
+                    style={{
+                      width: "100%",
+                      padding: "14px 20px",
+                      borderRadius: 12,
+                      border: "none",
+                      backgroundColor: config.accentColor,
+                      color: "#ffffff",
+                      fontSize: 15,
+                      fontWeight: 700,
+                      cursor: submitting ? "not-allowed" : "pointer",
+                      opacity: submitting ? 0.6 : 1,
+                      transition: "opacity 0.15s",
+                    }}
+                    type="button"
                   >
-                    Escolher novo horario
-                  </Link>
-                ) : null}
-              </div>
+                    {submitting ? "Processando..." : config.botao}
+                  </button>
+
+                  {mode === "reagendar" && (
+                    <Link
+                      href={linkAgendamento}
+                      style={{
+                        display: "block",
+                        textAlign: "center",
+                        padding: "13px 20px",
+                        borderRadius: 12,
+                        border: "1.5px solid #e5d5c5",
+                        backgroundColor: "transparent",
+                        color: "#3b1f0d",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        textDecoration: "none",
+                      }}
+                    >
+                      Escolher novo horário →
+                    </Link>
+                  )}
+                </div>
+              )}
+
+              {sucesso && (
+                <Link
+                  href={linkAgendamento}
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    padding: "13px 20px",
+                    borderRadius: 12,
+                    border: "1.5px solid #e5d5c5",
+                    backgroundColor: "transparent",
+                    color: "#3b1f0d",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Voltar para o site da barbearia →
+                </Link>
+              )}
             </>
-          ) : null}
+          )}
         </div>
-      </section>
-    </main>
+      </div>
+
+      {/* Footer */}
+      <p style={{ fontSize: 12, color: "#a18070", marginBottom: 32 }}>
+        Powered by Virtual Barber
+      </p>
+    </div>
   );
 }
