@@ -1,9 +1,10 @@
 import BookingTokenActionCard from "@/app/components/BookingTokenActionCard";
 
-export default function CancelarAgendamentoPage({
+export default async function CancelarAgendamentoPage({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
-  return <BookingTokenActionCard token={params.token} mode="cancelar" />;
+  const { token } = await params;
+  return <BookingTokenActionCard token={token} mode="cancelar" />;
 }

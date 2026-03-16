@@ -1,9 +1,10 @@
 import BookingTokenActionCard from "@/app/components/BookingTokenActionCard";
 
-export default function ConfirmarAgendamentoPage({
+export default async function ConfirmarAgendamentoPage({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
-  return <BookingTokenActionCard token={params.token} mode="confirmar" />;
+  const { token } = await params;
+  return <BookingTokenActionCard token={token} mode="confirmar" />;
 }
