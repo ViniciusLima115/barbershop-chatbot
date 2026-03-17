@@ -501,6 +501,24 @@ export async function createPublicBooking(payload: {
   return parseOrThrow(res, "Falha ao criar agendamento publico.");
 }
 
+export type PublicClienteLookupResponse = {
+  nome: string;
+  email: string | null;
+  telefone: string;
+};
+
+export async function lookupClienteByTelefone(
+  barbeariaId: number,
+  telefone: string,
+): Promise<PublicClienteLookupResponse | null> {
+  const params = new URLSearchParams({ telefone });
+  const res = await fetch(`${API_URL}/public/${barbeariaId}/cliente?${params}`, {
+    cache: "no-store",
+  });
+  if (res.status === 404) return null;
+  return parseOrThrow(res, "Falha ao buscar cliente.");
+}
+
 export async function getBookingByToken(token: string): Promise<PublicAgendamentoTokenResponse> {
   const res = await fetch(`${API_URL}/agendamentos/${token}/dados`, {
     cache: "no-store",

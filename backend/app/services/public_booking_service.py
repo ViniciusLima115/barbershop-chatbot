@@ -26,7 +26,16 @@ def _normalizar_texto(texto: str) -> str:
     return " ".join((texto or "").strip().lower().split())
 
 
-def _normalizar_telefone(telefone: str) -> str:
+def _normalizar_telefone_storage(telefone: str) -> str:
+    """Normaliza para armazenamento: remove caracteres não numéricos e DDI brasileiro (55)."""
+    digits = re.sub(r"\D", "", telefone or "")
+    if len(digits) >= 12 and digits.startswith("55"):
+        digits = digits[2:]
+    return digits
+
+
+def _normalizar_telefone_whatsapp(telefone: str) -> str:
+    """Normaliza para WhatsApp: garante DDI brasileiro (55)."""
     digits = re.sub(r"\D", "", telefone or "")
     if not digits.startswith("55"):
         digits = f"55{digits}"
@@ -206,6 +215,21 @@ def obter_lookup_publico_por_id(
     }
 
 
+def buscar_cliente_publico(db: Session, *, barbearia_id: int, telefone: str) -> dict | None:
+    telefone_norm = _normalizar_telefone_storage(telefone)
+    cliente = BookingRepository(db).get_cliente_by_telefone(
+        tenant_id=barbearia_id,
+        telefone=telefone_norm,
+    )
+    if not cliente:
+        return None
+    return {
+        "nome": cliente.nome,
+        "email": getattr(cliente, "email", None),
+        "telefone": cliente.telefone,
+    }
+
+
 def criar_agendamento_publico(
     db: Session,
     *,
@@ -252,7 +276,7 @@ def criar_agendamento_publico(
     if conflito:
         raise ValueError("Horario indisponivel.")
 
-    telefone = _normalizar_telefone(cliente_telefone)
+    telefone = _normalizar_telefone_storage(cliente_telefone)
     cliente = repo.get_or_create_cliente(
         tenant_id=barbearia.id,
         telefone=telefone,
@@ -290,7 +314,7 @@ def criar_agendamento_publico(
         servico_nome=servico.nome,
         inicio=inicio,
     )
-    enviar_mensagem_whatsapp(barbearia, cliente.telefone, mensagem_confirmacao)
+    enviar_mensagem_whatsapp(barbearia, _normalizar_telefone_whatsapp(cliente.telefone), mensagem_confirmacao)
 
     return {
         "id": agendamento.id,

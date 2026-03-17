@@ -9,9 +9,11 @@ from app.schemas.public import (
     PublicAgendamentoResponse,
     PublicBarbeiroItem,
     PublicBarbeariaLookupResponse,
+    PublicClienteLookupResponse,
     PublicServicoItem,
 )
 from app.services.public_booking_service import (
+    buscar_cliente_publico,
     criar_agendamento_publico,
     listar_barbeiros_publico,
     listar_horarios_disponiveis_publico,
@@ -97,6 +99,18 @@ def horarios_disponiveis_public(
         servico_id=servico_id,
         data_referencia=data,
     )
+
+
+@router.get("/{barbearia_id}/cliente", response_model=PublicClienteLookupResponse)
+def lookup_cliente_por_telefone(
+    barbearia_id: int,
+    telefone: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    cliente = buscar_cliente_publico(db, barbearia_id=barbearia_id, telefone=telefone)
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+    return cliente
 
 
 @router.post("/agendamentos", response_model=PublicAgendamentoResponse)

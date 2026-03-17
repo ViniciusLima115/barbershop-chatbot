@@ -35,6 +35,12 @@ class PublicBarbeariaLookupResponse(BaseModel):
     horarios_grade: list[PublicHorarioItem] = []
 
 
+class PublicClienteLookupResponse(BaseModel):
+    nome: str
+    email: str | None = None
+    telefone: str
+
+
 class PublicAgendamentoCreate(BaseModel):
     slug: str | None = None
     barbearia_id: int | None = None

@@ -2,7 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
-import { createPublicBooking, lookupPublicBarbershopById, PublicLookupResponse } from "@/services/api";
+import {
+  createPublicBooking,
+  lookupPublicBarbershopById,
+  lookupClienteByTelefone,
+  PublicLookupResponse,
+} from "@/services/api";
 import styles from "./page.module.css";
 
 function hojeISO() {
@@ -48,6 +53,7 @@ export default function PublicBookingByIdPage() {
   const [nomeCliente, setNomeCliente] = useState("");
   const [telefoneCliente, setTelefoneCliente] = useState("");
   const [emailCliente, setEmailCliente] = useState("");
+  const [welcomeMsg, setWelcomeMsg] = useState<string | null>(null);
   const [barbeiroId, setBarbeiroId] = useState<number | null>(null);
   const [servicoId, setServicoId] = useState<number | null>(null);
   const [today, setToday] = useState("");
@@ -176,6 +182,19 @@ export default function PublicBookingByIdPage() {
     }
   }
 
+  async function onTelefoneBlur() {
+    const digits = normalizarTelefone(telefoneCliente);
+    if (!digits || digits.length < 8) return;
+    const cliente = await lookupClienteByTelefone(barbeariaId, digits).catch(() => null);
+    if (!cliente) {
+      setWelcomeMsg(null);
+      return;
+    }
+    if (!nomeCliente) setNomeCliente(cliente.nome);
+    if (!emailCliente && cliente.email) setEmailCliente(cliente.email);
+    setWelcomeMsg(`Bem-vindo de volta, ${cliente.nome}! ✓`);
+  }
+
   function limparFormulario() {
     setNomeCliente("");
     setTelefoneCliente("");
@@ -186,6 +205,7 @@ export default function PublicBookingByIdPage() {
     setHoraInicio(null);
     setErro(null);
     setSucesso(null);
+    setWelcomeMsg(null);
   }
 
   if (loading) {
@@ -243,7 +263,8 @@ export default function PublicBookingByIdPage() {
               className={styles.control}
               required
               value={telefoneCliente}
-              onChange={(event) => setTelefoneCliente(event.target.value)}
+              onChange={(event) => { setTelefoneCliente(event.target.value); setWelcomeMsg(null); }}
+              onBlur={onTelefoneBlur}
               placeholder="(82) 99999-0000"
             />
           </label>
@@ -354,6 +375,7 @@ export default function PublicBookingByIdPage() {
           </div>
         )}
 
+        {welcomeMsg && !sucesso ? <p className={cx(styles.message, styles.messageSuccess)}>{welcomeMsg}</p> : null}
         {erro ? <p className={cx(styles.message, styles.messageError)}>{erro}</p> : null}
         {sucesso ? <p className={cx(styles.message, styles.messageSuccess)}>{sucesso}</p> : null}
 

@@ -45,6 +45,16 @@ class BookingRepository:
             .first()
         )
 
+    def get_cliente_by_telefone(self, *, tenant_id: int, telefone: str) -> Cliente | None:
+        return (
+            self.db.query(Cliente)
+            .filter(
+                Cliente.telefone == telefone,
+                Cliente.barbearia_id == tenant_id,
+            )
+            .first()
+        )
+
     def get_or_create_cliente(
         self,
         *,
