@@ -158,7 +158,7 @@ def test_public_agendamento_cria_confirma_e_agenda_lembretes(monkeypatch, client
         "barbeiro_id": barbeiro.id,
         "servico_id": servico.id,
         "data": data_hora.date().isoformat(),
-        "hora_inicio": data_hora.replace(minute=30, second=0, microsecond=0).strftime("%H:%M"),
+        "hora_inicio": "10:00",
     }
     resp = client.post("/public/agendamentos", json=payload)
     assert resp.status_code == 200

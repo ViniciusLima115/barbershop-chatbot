@@ -277,10 +277,12 @@ def criar_agendamento_publico(
         raise ValueError("Horario indisponivel.")
 
     telefone = _normalizar_telefone_storage(cliente_telefone)
+    email_normalizado = (cliente_email or "").strip().lower() or None
     cliente = repo.get_or_create_cliente(
         tenant_id=barbearia.id,
         telefone=telefone,
         nome=cliente_nome.strip(),
+        email=email_normalizado,
     )
     agendamento = repo.create_agendamento(
         tenant_id=barbearia.id,

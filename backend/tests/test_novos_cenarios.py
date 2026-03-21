@@ -372,21 +372,20 @@ def test_agendamento_publico_no_passado_retorna_400(client, db_session, barbeari
 
 
 # ---------------------------------------------------------------------------
-# Bug #2 exposto: buscar_cliente_publico sempre retorna email=None
+# Campo email no model Cliente
 # ---------------------------------------------------------------------------
 
-def test_buscar_cliente_publico_email_sempre_none(db_session, barbearia_com_barbeiro_e_servico):
+def test_buscar_cliente_publico_retorna_email(db_session, barbearia_com_barbeiro_e_servico):
     """
-    BUG: O model Cliente não possui campo 'email'.
-    buscar_cliente_publico usa getattr(cliente, 'email', None), que sempre retorna None.
-    Este teste documenta o comportamento atual e falha quando o bug for corrigido.
+    Cliente possui campo email. buscar_cliente_publico retorna o email armazenado.
     """
     fix = barbearia_com_barbeiro_e_servico
     barbearia_id = fix["barbearia"].id
 
     cliente = Cliente(
-        nome="Cliente Email Bug",
+        nome="Cliente Com Email",
         telefone="82991111111",
+        email="cliente@example.com",
         barbearia_id=barbearia_id,
     )
     db_session.add(cliente)
@@ -394,8 +393,27 @@ def test_buscar_cliente_publico_email_sempre_none(db_session, barbearia_com_barb
 
     resultado = buscar_cliente_publico(db_session, barbearia_id=barbearia_id, telefone="82991111111")
     assert resultado is not None
-    assert resultado["nome"] == "Cliente Email Bug"
-    # BUG: email sempre None porque Cliente não tem campo email
+    assert resultado["nome"] == "Cliente Com Email"
+    assert resultado["email"] == "cliente@example.com"
+
+
+def test_buscar_cliente_publico_email_none_quando_nao_informado(db_session, barbearia_com_barbeiro_e_servico):
+    """
+    Cliente sem email retorna email=None.
+    """
+    fix = barbearia_com_barbeiro_e_servico
+    barbearia_id = fix["barbearia"].id
+
+    cliente = Cliente(
+        nome="Cliente Sem Email",
+        telefone="82992222222",
+        barbearia_id=barbearia_id,
+    )
+    db_session.add(cliente)
+    db_session.commit()
+
+    resultado = buscar_cliente_publico(db_session, barbearia_id=barbearia_id, telefone="82992222222")
+    assert resultado is not None
     assert resultado["email"] is None
 
 

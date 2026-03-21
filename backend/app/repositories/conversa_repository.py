@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -56,7 +56,7 @@ class ConversaRepository:
         conversa.estado = estado
         conversa.contexto = contexto
         conversa.ativa = ativa
-        conversa.atualizado_em = datetime.utcnow()
+        conversa.atualizado_em = datetime.now(timezone.utc).replace(tzinfo=None)
         self.db.commit()
         self.db.refresh(conversa)
         return conversa

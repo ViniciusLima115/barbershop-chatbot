@@ -1,6 +1,6 @@
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 from sqlalchemy.orm import Session
@@ -92,7 +92,7 @@ def agendar_lembretes_agendamento(
     total = 0
     for tipo, horas in (("reminder_24h", 24), ("reminder_2h", 2)):
         enviar_em = inicio - timedelta(hours=horas)
-        if enviar_em <= datetime.utcnow():
+        if enviar_em <= datetime.now(timezone.utc).replace(tzinfo=None):
             continue
 
         reminder = ReminderJob(

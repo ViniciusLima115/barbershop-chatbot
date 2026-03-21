@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 
 PlanoBarbearia = Literal["basico", "premium"]
@@ -39,6 +39,8 @@ class BarbeariaAdminUpdate(BaseModel):
 
 
 class BarbeariaAdminResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     nome: str
     slug: str | None = None
@@ -52,9 +54,6 @@ class BarbeariaAdminResponse(BaseModel):
     ultimo_acesso_em: datetime | None = None
     pagamento_recusado: bool = False
     criado_em: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class BarbeariaFuncionamentoDia(BaseModel):

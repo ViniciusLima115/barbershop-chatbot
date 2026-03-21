@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class ClienteCreate(BaseModel):
@@ -10,14 +10,13 @@ class ClienteCreate(BaseModel):
 
 
 class ClienteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     telefone: str
     nome: str
     etapa_atual: str
     data_criacao: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class ClienteUpdate(BaseModel):
