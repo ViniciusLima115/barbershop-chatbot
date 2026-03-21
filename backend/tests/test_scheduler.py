@@ -50,6 +50,7 @@ def test_scheduler_envia_lembrete_24h(monkeypatch, db_session):
     db_session.add(agendamento)
     db_session.commit()
     db_session.refresh(agendamento)
+    agendamento_id = agendamento.id
 
     resultado = processar_lembretes_email_pendentes()
 
@@ -58,6 +59,7 @@ def test_scheduler_envia_lembrete_24h(monkeypatch, db_session):
     assert enviados[0]["to_email"] == "scheduler@example.com"
     assert "Lembrete de agendamento" in enviados[0]["subject"]
 
-    db_session.refresh(agendamento)
-    assert agendamento.lembrete_24h_enviado is True
-    assert agendamento.lembrete_2h_enviado is False
+    # scheduler calls db.close() which expunges objects — re-query instead of refresh
+    agendamento_atualizado = db_session.query(Agendamento).filter(Agendamento.id == agendamento_id).first()
+    assert agendamento_atualizado.lembrete_24h_enviado is True
+    assert agendamento_atualizado.lembrete_2h_enviado is False

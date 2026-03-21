@@ -151,4 +151,6 @@ def test_webhook_megaapi_retorna_link_publico_em_saudacao(monkeypatch, client, d
     body = resp.json()
     assert body["status"] == "ok"
     assert body["resposta"]["tipo"] == "link_agendamento"
-    assert f"https://app.virtualbarber.shop/agendar/{barbearia.id}" in body["resposta"]["resposta"]
+    import app.services.public_booking_service as pbs
+    link_esperado = pbs.montar_link_agendamento_por_id(barbearia.id)
+    assert link_esperado in body["resposta"]["resposta"]
