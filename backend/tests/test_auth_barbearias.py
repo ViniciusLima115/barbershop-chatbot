@@ -1,8 +1,9 @@
 from app.models.barbearia import Barbearia
+import app.routes.auth as auth_module
 
 
 def test_auth_admin_check_ok_e_invalido(client):
-    ok = client.post("/auth/admin-check", json={"usuario": "vhtech_", "senha": "@dinizvascaino"})
+    ok = client.post("/auth/admin-check", json={"usuario": auth_module.ADMIN_USUARIO, "senha": auth_module.ADMIN_SENHA})
     assert ok.status_code == 200
     assert ok.json()["is_admin"] is True
 
@@ -12,7 +13,7 @@ def test_auth_admin_check_ok_e_invalido(client):
 
 
 def test_auth_login_admin_retorna_token(client):
-    resp = client.post("/auth/login", json={"usuario": "vhtech_", "senha": "@dinizvascaino"})
+    resp = client.post("/auth/login", json={"usuario": auth_module.ADMIN_USUARIO, "senha": auth_module.ADMIN_SENHA})
     assert resp.status_code == 200
     body = resp.json()
     assert body["is_admin"] is True

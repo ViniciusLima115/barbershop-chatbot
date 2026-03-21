@@ -174,7 +174,7 @@ def test_public_agendamento_cria_confirma_e_agenda_lembretes(monkeypatch, client
     agendamento = db_session.query(Agendamento).filter(Agendamento.id == body["id"]).first()
     assert agendamento is not None
     assert agendamento.cliente_nome == "Vinicius"
-    assert agendamento.cliente_telefone == "558298373869"
+    assert agendamento.cliente_telefone == "8298373869"
     assert agendamento.cliente_email == "vinicius@example.com"
     assert agendamento.confirmation_token == body["confirmation_token"]
 
