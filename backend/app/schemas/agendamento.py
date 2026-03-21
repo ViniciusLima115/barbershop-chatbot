@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
@@ -38,6 +38,8 @@ class AgendamentoUpdate(BaseModel):
 
 
 class AgendamentoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
 
     cliente_nome: str
@@ -50,9 +52,6 @@ class AgendamentoResponse(BaseModel):
     data_hora_inicio: datetime
     data_hora_fim: datetime
     status: StatusAgendamento
-
-    class Config:
-        from_attributes = True
 
 
 class AgendamentoRemarcacaoRequest(BaseModel):

@@ -61,6 +61,7 @@ class BookingRepository:
         tenant_id: int,
         telefone: str,
         nome: str,
+        email: str | None = None,
     ) -> Cliente:
         cliente = (
             self.db.query(Cliente)
@@ -73,11 +74,14 @@ class BookingRepository:
         if cliente:
             if nome and cliente.nome != nome:
                 cliente.nome = nome
+            if email and not cliente.email:
+                cliente.email = email
             return cliente
 
         cliente = Cliente(
             nome=nome,
             telefone=telefone,
+            email=email,
             etapa_atual="menu",
             barbearia_id=tenant_id,
         )
