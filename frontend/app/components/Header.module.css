@@ -150,10 +150,16 @@
   .brandTitle {
     font-size: 13px;
   }
+  /* Grid 2-col: nav ocupa linha inteira, ThemeToggle+logout lado a lado */
+  .actions {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    align-items: center;
+  }
   /* Nav rola horizontalmente — evita 2×2 que deixa o header muito alto */
   .nav {
-    order: -1;
-    flex: 1 1 100%;
+    grid-column: 1 / -1;
     overflow-x: auto;
     flex-wrap: nowrap;
     gap: 4px;
@@ -168,17 +174,8 @@
     flex: 0 0 auto;
     min-width: unset;
     white-space: nowrap;
-    justify-content: center;
-  }
-  /* ThemeToggle + logout lado a lado */
-  .actions {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
   }
   .logoutButton {
-    flex: 1 1 0;
-    min-width: 0;
+    justify-content: center;
   }
 }
