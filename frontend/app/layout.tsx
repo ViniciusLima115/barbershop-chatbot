@@ -1,7 +1,23 @@
 import type { Metadata } from "next";
+import { Libre_Baskerville, Jost } from "next/font/google";
 import "./globals.css";
 import AppShell from "./components/AppShell";
 import { ThemeProvider } from "./components/ThemeProvider";
+
+const libreBaskerville = Libre_Baskerville({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-display",
+  display: "swap",
+});
+
+const jost = Jost({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-body",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Painel da Barbearia",
@@ -30,7 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className="antialiased" suppressHydrationWarning>
+      <body className={`antialiased ${libreBaskerville.variable} ${jost.variable}`} suppressHydrationWarning>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <ThemeProvider>
           <AppShell>{children}</AppShell>
