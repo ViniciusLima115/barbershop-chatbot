@@ -1,22 +1,7 @@
 .page {
-  --panel: var(--theme-panel);
-  --line: var(--theme-line);
-  --text: var(--theme-text);
-  --muted: var(--theme-muted);
-  --accent: var(--theme-accent);
-  --accent-strong: var(--theme-accent-strong);
-  --hero-border: var(--theme-hero-border);
-  --surface-soft: var(--theme-panel-soft);
-  --surface-strong: var(--theme-panel-strong);
-  --accent-soft: var(--theme-accent-soft);
-  --danger-soft: var(--theme-danger-soft);
-  --danger-text: var(--theme-danger-text);
-  --success-soft: var(--theme-success-soft);
-  --success-text: var(--theme-success-text);
-  --warning-soft: var(--theme-warning-soft);
   min-height: 100vh;
-  background: var(--theme-canvas);
-  color: var(--text);
+  background: var(--canvas);
+  color: var(--ink);
 }
 
 .shell {
@@ -28,11 +13,10 @@
 .hero,
 .panel,
 .statCard {
-  border-radius: 28px;
-  border: 1px solid var(--hero-border);
-  background: var(--panel);
-  backdrop-filter: blur(12px);
-  box-shadow: var(--theme-shadow);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
 }
 
 .hero {
@@ -41,6 +25,7 @@
   gap: 18px;
   align-items: flex-start;
   padding: 28px;
+  background: var(--surface);
 }
 
 .heroCopy {
@@ -56,7 +41,7 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--accent-strong);
+  color: var(--accent-dark);
 }
 
 .heroTitle {
@@ -70,7 +55,7 @@
 .panelDescription,
 .emptyState {
   margin: 0;
-  color: var(--muted);
+  color: var(--ink-muted);
   line-height: 1.65;
 }
 
@@ -89,7 +74,7 @@
 .controlLabel,
 .statLabel,
 .detailLabel {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.84rem;
   font-weight: 700;
 }
@@ -97,17 +82,17 @@
 .control {
   min-height: 48px;
   padding: 0 14px;
-  border-radius: 15px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--line);
-  background: var(--surface-strong);
-  color: var(--text);
+  background: var(--surface);
+  color: var(--ink);
   font: inherit;
   outline: none;
 }
 
 .control:focus {
-  border-color: rgba(195, 107, 45, 0.5);
-  box-shadow: 0 0 0 4px rgba(195, 107, 45, 0.12);
+  border-color: rgba(212, 147, 10, 0.5);
+  box-shadow: 0 0 0 4px rgba(212, 147, 10, 0.12);
 }
 
 .linkButton {
@@ -116,9 +101,9 @@
   justify-content: center;
   min-height: 48px;
   padding: 0 16px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  color: var(--theme-on-accent);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: #ffffff;
   font-weight: 700;
   text-decoration: none;
 }
@@ -143,8 +128,8 @@
   justify-content: center;
   width: 46px;
   height: 46px;
-  border-radius: 16px;
-  color: var(--accent-strong);
+  border-radius: var(--radius-md);
+  color: var(--accent-dark);
   background: var(--accent-soft);
 }
 
@@ -160,7 +145,7 @@
 }
 
 .statHelper {
-  color: var(--muted);
+  color: var(--ink-muted);
   font-size: 0.84rem;
   line-height: 1.5;
 }
@@ -168,10 +153,10 @@
 .notice {
   margin-top: 18px;
   padding: 14px 16px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--danger-soft);
   background: var(--danger-soft);
-  color: var(--danger-text);
+  color: var(--danger);
   font-weight: 700;
 }
 
@@ -219,9 +204,9 @@
   gap: 12px;
   align-items: center;
   padding: 14px 16px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--line);
-  background: var(--surface-soft);
+  background: var(--surface-alt);
 }
 
 .detailBlock {
@@ -237,7 +222,7 @@
 }
 
 .legendLivre {
-  background: var(--surface-strong);
+  background: var(--surface);
   border: 1px solid var(--line);
 }
 
@@ -258,9 +243,9 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-sm);
   background: var(--success-soft);
-  color: var(--success-text);
+  color: var(--success);
   font-weight: 700;
 }
 
@@ -275,7 +260,7 @@
   width: 68px;
   height: 68px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(195, 107, 45, 0.8), rgba(195, 107, 45, 0.16));
+  background: var(--accent-soft);
   animation: pulse 1.2s ease-in-out infinite;
 }
 
@@ -316,7 +301,7 @@
   .panel,
   .statCard {
     padding: 20px;
-    border-radius: 24px;
+    border-radius: var(--radius-lg);
   }
 }
 
