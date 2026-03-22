@@ -1,4 +1,4 @@
-import { getAuthSession } from "./auth";
+import { getAuthSession, logout } from "./auth";
 
 const DEFAULT_API_URL = "https://api.virtualbarber.shop";
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL?.trim() || DEFAULT_API_URL).replace(/\/+$/, "");
@@ -171,14 +171,24 @@ async function apiFetch(path: string, init?: RequestInit): Promise<Response> {
     headers.set("X-Barbearia-Id", tenantId);
   }
 
+  let res: Response;
   try {
-    return await fetch(`${API_URL}${path}`, {
+    res = await fetch(`${API_URL}${path}`, {
       ...init,
       headers,
     });
   } catch {
     throw new Error("Nao foi possivel conectar com a API. Verifique a URL e a disponibilidade do backend.");
   }
+
+  if (res.status === 401) {
+    logout();
+    if (typeof window !== "undefined") {
+      window.location.replace("/login");
+    }
+  }
+
+  return res;
 }
 
 async function parseOrThrow(res: Response, fallbackMessage: string) {
