@@ -58,3 +58,16 @@ def tenant_id_from_header(
         raise HTTPException(status_code=404, detail="Barbearia nao encontrada.")
 
     return tenant_id
+
+
+def verificar_plano_premium(
+    tenant_id: int = Depends(tenant_id_from_header),
+    db: Session = Depends(get_db),
+) -> int:
+    barbearia = db.query(Barbearia.plano).filter(Barbearia.id == tenant_id).first()
+    if not barbearia or barbearia.plano != "premium":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Recurso disponivel apenas para o plano Premium.",
+        )
+    return tenant_id
