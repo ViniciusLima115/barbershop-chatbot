@@ -44,7 +44,7 @@ export default function LoginPage() {
           plan: "premium",
           accessToken: resposta.access_token,
         });
-        router.replace("/admin");
+        router.replace("/");
         return;
       }
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
         accessToken: resposta.access_token,
       });
 
-      router.replace("/admin");
+      router.replace("/");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Nao foi possivel iniciar sessao.");
     } finally {
