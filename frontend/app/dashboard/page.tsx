@@ -196,7 +196,7 @@ export default function DashboardPage() {
                       width={52}
                     />
                     <Tooltip
-                      formatter={(value: number) => [brl(value), "Faturamento"]}
+                      formatter={(value) => [brl(Number(value)), "Faturamento"]}
                       contentStyle={{
                         background: "var(--surface)",
                         border: "1px solid var(--line)",
