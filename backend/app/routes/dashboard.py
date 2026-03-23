@@ -31,6 +31,15 @@ def financeiro(
     if barbearia_id != tenant_id:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
 
+    try:
+        return _financeiro(db, tenant_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {exc}") from exc
+
+
+def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
     hoje = date.today()
     inicio_atual = hoje.replace(day=1)
     # Primeiro dia do mês anterior
@@ -114,6 +123,15 @@ def servicos_mais_vendidos(
     if barbearia_id != tenant_id:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
 
+    try:
+        return _servicos_mais_vendidos(db, tenant_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {exc}") from exc
+
+
+def _servicos_mais_vendidos(db: Session, tenant_id: int) -> ServicosMaisVendidosResponse:
     data_30d = date.today() - timedelta(days=30)
 
     rows = (
@@ -157,6 +175,15 @@ def clientes(
     if barbearia_id != tenant_id:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
 
+    try:
+        return _clientes(db, tenant_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {exc}") from exc
+
+
+def _clientes(db: Session, tenant_id: int) -> ClientesResponse:
     hoje = date.today()
     data_30d = hoje - timedelta(days=30)
 
