@@ -1,5 +1,6 @@
 from app.models.barbearia import Barbearia
 import app.routes.auth as auth_module
+from app.security import hash_senha
 
 
 def test_auth_admin_check_ok_e_invalido(client):
@@ -26,7 +27,7 @@ def test_auth_login_tenant_sucesso_e_senha_invalida(client, db_session):
     barbearia = Barbearia(
         nome="Barbearia Login",
         login="barbearia.login",
-        senha="senha123",
+        senha=hash_senha("senha123"),
         plano="basico",
         endereco="Rua A",
     )
