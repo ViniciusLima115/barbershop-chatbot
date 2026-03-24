@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.barbearia import Barbearia
 from app.schemas.auth import AdminCheckRequest, AdminCheckResponse, LoginRequest, LoginResponse
-from app.security import create_access_token
+from app.security import create_access_token, verificar_senha
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -47,7 +47,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not barbearia or not barbearia.senha:
         raise HTTPException(status_code=401, detail="Usuario ou senha invalidos.")
 
-    if not secrets.compare_digest(barbearia.senha, senha):
+    if not verificar_senha(senha, barbearia.senha):
         raise HTTPException(status_code=401, detail="Usuario ou senha invalidos.")
 
     token = create_access_token(
