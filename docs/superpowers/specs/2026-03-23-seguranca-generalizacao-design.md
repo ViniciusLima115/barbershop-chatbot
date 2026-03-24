@@ -28,9 +28,23 @@ A abordagem escolhida é **Fase 1 antes da Fase 2**: segurança primeiro (deploy
 - Adicionar `passlib[bcrypt]` ao `backend/requirements.txt`
 - Criar funções `hash_senha(plain: str) -> str` e `verificar_senha(plain: str, hashed: str) -> bool` em `backend/app/security.py`
 - Sem alteração de schema: a coluna `senha String(255)` comporta o hash bcrypt (`$2b$...`, ~60 chars)
-- Script de migração one-shot: lê todos os registros de `barbearias`, aplica `hash_senha()` e salva — executado uma única vez no deploy da Fase 1
 - `backend/app/routers/auth.py`: login passa a usar `verificar_senha()` em vez de comparação direta
-- Criação de novo estabelecimento (`POST /estabelecimentos/`) também passa a usar `hash_senha()`
+- Paths de escrita que precisam usar `hash_senha()`:
+  - `POST /barbearias/` (criação)
+  - `PUT /barbearias/{id}` (atualização — campo `senha` opcional; só hashear se enviado)
+
+**Script de migração one-shot de senhas existentes:**
+
+- Executar **após** o deploy do código (para que `hash_senha` já exista no ambiente), **antes** de qualquer login novo
+- Ordem exata de deploy:
+  1. Deploy do código com `passlib`, `hash_senha`, `verificar_senha`, login usando `verificar_senha`
+  2. Executar script de migração: lê cada registro de `barbearias`, aplica `hash_senha()`, salva
+  3. A partir deste ponto, todos os logins passam pela verificação bcrypt
+- O script deve processar registros em transação individual por registro — se falhar em um, os demais já migrados continuam válidos (bcrypt hash não conflita com a nova lógica de login)
+- O script deve registrar em log quais IDs foram migrados com sucesso e quais falharam
+- Antes de executar: criar snapshot/branch do banco Neon via `neonctl branch create` para rollback seguro se necessário
+
+**Credencial admin (`ADMIN_SENHA`):** A senha do admin é uma variável de ambiente plaintext no VPS. Esse é um vetor de ataque diferente (acesso ao servidor, não ao banco). Está **fora do escopo** deste spec — mitigação recomendada é garantir que o VPS só seja acessível via SSH com chave e que o `.env` de produção tenha permissões restritas (chmod 600).
 
 **Impacto:** Nenhuma mudança de interface. Usuários continuam logando normalmente.
 
@@ -44,20 +58,25 @@ A abordagem escolhida é **Fase 1 antes da Fase 2**: segurança primeiro (deploy
 
 - Adicionar `PyJWT` ao `backend/requirements.txt`
 - Refatorar `backend/app/security.py`: `create_access_token()` e `decode_access_token()` passam a usar `jwt.encode()` / `jwt.decode()` — mesma interface pública, apenas a implementação interna muda
-- Adicionar campo `jti` (JWT ID, UUID v4) ao payload de cada token
-- Nova tabela `token_blacklist`:
-  ```
-  token_blacklist(
-    jti       VARCHAR(36) PRIMARY KEY,
-    expires_at TIMESTAMP NOT NULL,
-    INDEX(expires_at)
-  )
-  ```
-- `decode_access_token()` verifica se o `jti` está na blacklist antes de aceitar o token
-- Novo endpoint `POST /auth/logout`: insere o `jti` na blacklist e retorna 200
-- Job de limpeza periódica: deleta registros com `expires_at < now()` (pode ser uma rota interna chamada por cron no VPS, similar ao `ReminderJob` existente)
+- Adicionar campo `jti` (JWT ID, UUID v4) ao payload de cada token novo
+- Nova tabela `token_blacklist` (modelo SQLAlchemy):
 
-**Impacto:** Interface de login/logout inalterada. Tokens existentes continuam válidos até expirar (sem blacklist retroativa).
+  ```python
+  class TokenBlacklist(Base):
+      __tablename__ = "token_blacklist"
+      __table_args__ = (Index("ix_token_blacklist_expires_at", "expires_at"),)
+
+      jti = Column(String(36), primary_key=True)
+      expires_at = Column(DateTime, nullable=False)
+  ```
+
+- `decode_access_token()`:
+  - Se o token não tiver campo `jti` (tokens emitidos antes do deploy), **ignorar a checagem de blacklist** e aceitar o token normalmente — sem quebrar usuários já logados no momento do deploy
+  - Se tiver `jti`, verificar na blacklist antes de aceitar
+- Novo endpoint `POST /auth/logout`: insere o `jti` do token corrente na blacklist e retorna 200
+- Job de limpeza periódica: deleta registros com `expires_at < now()` via rota interna (padrão similar ao `ReminderJob` existente), chamada por cron no VPS
+
+**Impacto:** Tokens emitidos antes do deploy continuam válidos até expirar (sem blacklist retroativa). Novos tokens terão suporte a logout real.
 
 ---
 
@@ -75,6 +94,25 @@ A abordagem escolhida é **Fase 1 antes da Fase 2**: segurança primeiro (deploy
   - Demais endpoints autenticados: sem limite adicional (JWT já é barreira suficiente)
 - Valores configuráveis via env vars: `RATE_LIMIT_LOGIN=5/minute`, `RATE_LIMIT_PUBLIC=30/minute`
 - Resposta em caso de limite excedido: `429 Too Many Requests` com header `Retry-After`
+
+**Configuração para proxy reverso (nginx no VPS):**
+
+O sistema roda atrás de nginx, então `request.client.host` retornaria `127.0.0.1` para todas as requisições, tornando o rate limit ineficaz. Solução:
+
+```python
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+# Configurar o Limiter para ler X-Forwarded-For / X-Real-IP:
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+# No nginx.conf, garantir que o header é passado:
+# proxy_set_header X-Real-IP $remote_addr;
+# proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+A configuração do nginx deve ser verificada/atualizada no deploy da Fase 1.
 
 ---
 
@@ -97,7 +135,7 @@ A abordagem escolhida é **Fase 1 antes da Fase 2**: segurança primeiro (deploy
 
 ### 2.1 Renomeação no Banco de Dados
 
-Uma única migration Alembic com as seguintes renomeações:
+Uma única migration Alembic encadeada ao `head` atual com as seguintes renomeações:
 
 | De | Para |
 |---|---|
@@ -107,17 +145,19 @@ Uma única migration Alembic com as seguintes renomeações:
 | Coluna `barbeiro_id` (em `agendamentos`) | `profissional_id` |
 | Coluna `barbershop_id` (em `profissionais`) | `estabelecimento_id` |
 
-Synonyms SQLAlchemy (`barbearia_id`, `barbeiro_id`, `barbershop_id`) mantidos no modelo durante a transição para não quebrar código legado durante o deploy, depois removidos em cleanup.
+Synonyms SQLAlchemy (`barbearia_id`, `barbeiro_id`, `barbershop_id`) — já usados parcialmente no modelo `Barbeiro` — mantidos nos modelos durante o deploy da Fase 2 para não quebrar código interno que ainda referencia os nomes antigos. Serão removidos em um commit de cleanup **na mesma PR da Fase 2**, após confirmar que nenhum código usa os nomes antigos diretamente.
 
 ---
 
 ### 2.2 Campo `tipo_servico`
 
-Nova coluna em `estabelecimentos`:
+Nova coluna adicionada na mesma migration da 2.1:
 
+```python
+tipo_servico = Column(String(50), nullable=False, server_default="barbearia")
 ```
-tipo_servico VARCHAR(50) NOT NULL DEFAULT 'barbearia'
-```
+
+Migration seta `tipo_servico = 'barbearia'` para todos os registros existentes via `op.execute("UPDATE estabelecimentos SET tipo_servico = 'barbearia' WHERE tipo_servico IS NULL")`.
 
 Valores iniciais suportados (extensível, sem enum forçado no BD):
 
@@ -127,52 +167,63 @@ Valores iniciais suportados (extensível, sem enum forçado no BD):
 | `salao_beleza` | Atendente | Serviço |
 | `estetica_automotiva` | Detailer | Serviço |
 
-A migration seta `tipo_servico = 'barbearia'` para todos os registros existentes.
-
 ---
 
 ### 2.3 Vocabulário Adaptativo no Frontend
 
-- Novo arquivo `frontend/lib/vocab.ts` — único lugar para definir o vocabulário por `tipo_servico`:
+**Decisão:** `tipo_servico` será retornado em um **endpoint de perfil** (`GET /auth/me`), não embutido no JWT. Motivo: um admin pode alterar o `tipo_servico` de um tenant a qualquer momento; embutir no JWT exigiria re-login para refletir a mudança. O endpoint de perfil é chamado uma vez no carregamento do app e armazenado no contexto React — o custo de rede é mínimo.
+
+- Novo arquivo `frontend/lib/vocab.ts`:
   ```ts
-  export const vocab = {
-    barbearia: { profissional: "Barbeiro", servico: "Corte" },
-    salao_beleza: { profissional: "Atendente", servico: "Serviço" },
-    estetica_automotiva: { profissional: "Detailer", servico: "Serviço" },
+  export const vocab: Record<string, { profissional: string; estabelecimento: string }> = {
+    barbearia: { profissional: "Barbeiro", estabelecimento: "Barbearia" },
+    salao_beleza: { profissional: "Atendente", estabelecimento: "Salão" },
+    estetica_automotiva: { profissional: "Detailer", estabelecimento: "Estética" },
+  }
+  export function getVocab(tipo: string) {
+    return vocab[tipo] ?? vocab["barbearia"]
   }
   ```
-- O `tipo_servico` do estabelecimento logado é retornado no payload do JWT ou num endpoint de perfil
-- Componentes que exibem "Barbeiro", "Barbearia" etc. passam a consultar `vocab[tipo_servico]`
+- Componentes que exibem "Barbeiro", "Barbearia" etc. passam a consultar `getVocab(tipo_servico)`
+- `GET /auth/me` retorna `{ id, nome, tipo_servico, plano, ... }` — novo endpoint leve no backend
 
 ---
 
-### 2.4 Atualização de Código
+### 2.4 Inventário Completo de Arquivos a Renomear/Atualizar
 
-**Backend:**
+**Backend — models:**
+- `backend/app/models/barbearia.py` → `estabelecimento.py` (classe `Barbearia` → `Estabelecimento`)
+- `backend/app/models/barbeiro.py` → `profissional.py` (classe `Barbeiro` → `Profissional`)
 
-- Models: `Barbearia` → `Estabelecimento`, `Barbeiro` → `Profissional`
-- Routers: `/barbearias/` → `/estabelecimentos/`, `/barbeiros/` → `/profissionais/`
-- Schemas Pydantic: renomeados correspondentemente
-- `deps.py`: `get_current_barbearia` → `get_current_estabelecimento`
-- Variável de ambiente `ADMIN_USUARIO` permanece; apenas nomes internos mudam
+**Backend — routers:**
+- `backend/app/routes/barbearias.py` → `estabelecimentos.py`
+- `backend/app/routes/barbeiros.py` → `profissionais.py`
+- `backend/app/routes/barbearia_funcionamento.py` → `estabelecimento_funcionamento.py`
+
+**Backend — services:**
+- `backend/app/services/barbershop_hours_service.py` → `estabelecimento_hours_service.py`
+
+**Backend — deps, schemas, main:**
+- `backend/app/routes/deps.py`: `get_current_barbearia` → `get_current_estabelecimento`
+- Todos os schemas Pydantic em `backend/app/schemas/` com prefixo `Barbearia`/`Barbeiro`
+- `backend/app/main.py`: atualizar includes de routers
 
 **Frontend:**
-
-- Chamadas de API para `/barbearias/` → `/estabelecimentos/`, `/barbeiros/` → `/profissionais/`
-- Labels e textos passam a usar `vocab.ts`
-- Rotas de páginas (`/admin`, `/gestao`, etc.) não mudam — são opacas ao tipo de serviço
-- Nenhuma mudança visual além dos textos
+- Chamadas de API: `/barbearias/` → `/estabelecimentos/`, `/barbeiros/` → `/profissionais/`
+- Labels e textos: usar `vocab.ts`
+- Rotas de páginas (`/admin`, `/gestao`, etc.) não mudam
 
 ---
 
-## Relatório de Mudanças (a gerar no final da implementação)
+## Relatório de Mudanças
 
-Ao fim de cada fase, será gerado um relatório em texto com:
+Ao fim de cada fase, gerar arquivo em `docs/superpowers/reports/YYYY-MM-DD-fase-N-changelog.md` com:
 - Lista de arquivos modificados
-- Migrations executadas
-- Dependências adicionadas
-- Endpoints novos/modificados
-- Instruções de deploy (ordem de execução, env vars novas)
+- Migrations executadas (revision IDs Alembic)
+- Dependências adicionadas ao `requirements.txt`
+- Endpoints novos/modificados/removidos
+- Env vars novas e seus valores padrão
+- Instruções de deploy (ordem de execução)
 
 ---
 
@@ -180,5 +231,6 @@ Ao fim de cada fase, será gerado um relatório em texto com:
 
 - Rebrand (novo nome/identidade visual) — spec futuro
 - Página de Configurações (senha, tema) — Spec 2
+- Proteção da credencial `ADMIN_SENHA` (env var plaintext no VPS) — mitigação via hardening do servidor, fora do escopo de código
 - Integração com gateway de pagamento
 - Sistema de notificações além do WhatsApp existente
