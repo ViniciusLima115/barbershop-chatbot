@@ -38,6 +38,11 @@ def make_app(session_factory):
 def test_login_retorna_429_apos_limite(session_factory):
     """Verify that the login endpoint returns 429 after exceeding the rate limit."""
     # Reset the limiter storage to start fresh (avoids state from other tests)
+    # NOTE: reseta o storage interno do limiter para isolar o teste.
+    # O decorator @limiter.limit() está vinculado ao singleton do módulo no momento
+    # do import, então não é possível trocar o limiter por um de teste.
+    # Os atributos _storage e _limiter são privados da lib `limits`; se quebrarem
+    # em um upgrade, atualize o teste (ou adicione um método público de reset).
     limiter._storage = MemoryStorage()
     limiter._limiter = FixedWindowRateLimiter(limiter._storage)
 
