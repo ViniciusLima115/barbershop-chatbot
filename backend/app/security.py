@@ -3,9 +3,28 @@ import hashlib
 import hmac
 import json
 import os
+import secrets as _secrets
 import time
 
+from passlib.context import CryptContext
 from pydantic import BaseModel
+
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash_senha(plain: str) -> str:
+    return _pwd_context.hash(plain)
+
+
+def verificar_senha(plain: str, hashed: str) -> bool:
+    """
+    Verifica senha suportando transição: aceita bcrypt ($2b$) ou plaintext legado.
+    O fallback plaintext é removido após rodar migrate_senhas.py em produção.
+    """
+    if hashed and hashed.startswith("$2b$"):
+        return _pwd_context.verify(plain, hashed)
+    # Fallback para senhas ainda não migradas (plaintext)
+    return _secrets.compare_digest(plain, hashed or "")
 
 
 JWT_SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
