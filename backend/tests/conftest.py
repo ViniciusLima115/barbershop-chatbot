@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.database import Base, get_db
 from app.models import Barbearia, Barbeiro, Servico
 from app.routes import agenda, agendamentos, chatbot, barbeiros, barbearia_funcionamento, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal, webhook
-from app.security import create_access_token, hash_senha
+from app.security import create_access_token
 
 
 @pytest.fixture
