@@ -212,6 +212,7 @@ def test_logout_invalida_token(client):
     # Logout
     resp_logout = client.post("/auth/logout", headers=headers)
     assert resp_logout.status_code == 200
+    assert resp_logout.json()["detail"] == "Logout realizado com sucesso."
 
     # After logout: token rejected
     resp_depois = client.get("/barbearias/", headers=headers)

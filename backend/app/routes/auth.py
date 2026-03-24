@@ -1,6 +1,6 @@
 import secrets
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -74,7 +74,7 @@ def logout(
     db: Session = Depends(get_db),
 ):
     if claims.jti:
-        expires_at = datetime.utcfromtimestamp(claims.exp)  # UTC naive, consistent with utcnow()
+        expires_at = datetime.fromtimestamp(claims.exp, tz=timezone.utc).replace(tzinfo=None)  # UTC naive, consistent with utcnow()
         blacklisted = TokenBlacklist(jti=claims.jti, expires_at=expires_at)
         db.merge(blacklisted)  # merge to avoid error if jti already exists
         db.commit()
