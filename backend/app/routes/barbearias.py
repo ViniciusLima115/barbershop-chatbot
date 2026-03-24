@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.barbearia import Barbearia
 from app.routes.deps import require_admin
+from app.security import hash_senha
 from app.schemas.barbearia import (
     BarbeariaAdminCreate,
     BarbeariaAdminResponse,
@@ -56,7 +57,7 @@ def criar(dados: BarbeariaAdminCreate, db: Session = Depends(get_db)):
         nome=dados.nome.strip(),
         slug=slug,
         login=login,
-        senha=dados.senha,
+        senha=hash_senha(dados.senha),
         plano=dados.plano,
         status_manual=dados.status_manual,
         vencimento_em=dados.vencimento_em,
@@ -92,7 +93,7 @@ def atualizar(barbearia_id: int, dados: BarbeariaAdminUpdate, db: Session = Depe
     barbearia.nome = dados.nome.strip()
     barbearia.slug = slug
     barbearia.login = login
-    barbearia.senha = dados.senha
+    barbearia.senha = hash_senha(dados.senha)
     barbearia.plano = dados.plano
     barbearia.status_manual = dados.status_manual
     barbearia.vencimento_em = dados.vencimento_em

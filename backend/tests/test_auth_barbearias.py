@@ -140,6 +140,66 @@ def test_barbearias_valida_duplicidades(client, make_tenant_headers):
     assert r_ok.status_code == 200
 
 
+def test_barbearias_crud_cria_com_senha_hasheada(client, db_session, make_tenant_headers):
+    from app.security import verificar_senha
+    admin_headers = make_tenant_headers(is_admin=True)
+
+    payload = {
+        "nome": "Teste Hash",
+        "login": "teste.hash",
+        "senha": "senha_plain",
+        "plano": "basico",
+        "status_manual": "ativo",
+        "vencimento_em": "2027-01-01",
+        "trial_ativo": False,
+        "pagamento_recusado": False,
+        "endereco": "Rua B",
+    }
+    resp = client.post("/barbearias/", json=payload, headers=admin_headers)
+    assert resp.status_code == 200
+
+    from app.models.barbearia import Barbearia
+    criada = db_session.query(Barbearia).filter(Barbearia.login == "teste.hash").first()
+    assert criada is not None
+    assert criada.senha != "senha_plain"  # not plaintext
+    assert verificar_senha("senha_plain", criada.senha)  # valid bcrypt hash
+
+
+def test_barbearias_crud_atualiza_com_senha_hasheada(client, db_session, make_tenant_headers):
+    from app.security import verificar_senha, hash_senha
+    from app.models.barbearia import Barbearia
+
+    admin_headers = make_tenant_headers(is_admin=True)
+    barbearia = Barbearia(
+        nome="Para Atualizar",
+        login="para.atualizar",
+        senha=hash_senha("senha_original"),
+        plano="basico",
+        endereco="Rua C",
+    )
+    db_session.add(barbearia)
+    db_session.commit()
+    db_session.refresh(barbearia)
+
+    payload = {
+        "nome": "Para Atualizar",
+        "login": "para.atualizar",
+        "senha": "senha_nova",
+        "plano": "basico",
+        "status_manual": "ativo",
+        "vencimento_em": "2027-01-01",
+        "trial_ativo": False,
+        "pagamento_recusado": False,
+        "endereco": "Rua C",
+    }
+    resp = client.put(f"/barbearias/{barbearia.id}", json=payload, headers=admin_headers)
+    assert resp.status_code == 200
+
+    db_session.refresh(barbearia)
+    assert barbearia.senha != "senha_nova"
+    assert verificar_senha("senha_nova", barbearia.senha)
+
+
 def test_tenant_header_mismatch_retorna_403(client, dados_base, make_tenant_headers):
     token_tenant_correto = make_tenant_headers(dados_base["barbearia"].id)
     headers_mismatch = {
