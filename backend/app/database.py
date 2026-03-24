@@ -37,6 +37,23 @@ def get_db():
         db.close()
 
 
+def _ensure_token_blacklist_table():
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(
+                "CREATE TABLE IF NOT EXISTS token_blacklist ("
+                "  jti VARCHAR(36) PRIMARY KEY,"
+                "  expires_at TIMESTAMP NOT NULL"
+                ")"
+            ))
+            conn.execute(text(
+                "CREATE INDEX IF NOT EXISTS ix_token_blacklist_expires_at "
+                "ON token_blacklist (expires_at)"
+            ))
+    except Exception:
+        pass
+
+
 def init_db():
     from app.models import (
         barbeiro,
@@ -47,6 +64,7 @@ def init_db():
         conversa,
         reminder_job,
         webhook_event,
+        token_blacklist,
     )
     if _should_run_create_all():
         Base.metadata.create_all(bind=engine)
@@ -64,6 +82,7 @@ def init_db():
         _ensure_conversas_multi_tenant()
         _ensure_agendamentos_barbearia_column()
     _backfill_agendamentos_notification_defaults()
+    _ensure_token_blacklist_table()
 
 
 def _ensure_barbearias_working_hours_column():

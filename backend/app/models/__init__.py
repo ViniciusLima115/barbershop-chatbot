@@ -5,6 +5,7 @@ from app.models.cliente import Cliente
 from app.models.conversa import Conversa
 from app.models.reminder_job import ReminderJob
 from app.models.servico import Servico
+from app.models.token_blacklist import TokenBlacklist
 from app.models.webhook_event import WebhookEvent
 
 __all__ = [
@@ -15,5 +16,6 @@ __all__ = [
     "Conversa",
     "ReminderJob",
     "Servico",
+    "TokenBlacklist",
     "WebhookEvent",
 ]

@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base, get_db
 from app.models import Barbearia, Barbeiro, Servico
+from app.models.token_blacklist import TokenBlacklist  # registers in SQLite metadata
 from app.routes import agenda, agendamentos, chatbot, barbeiros, barbearia_funcionamento, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal, webhook
 from app.security import create_access_token
 
