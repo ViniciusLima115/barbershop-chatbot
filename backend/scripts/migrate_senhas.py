@@ -37,13 +37,19 @@ def is_already_hashed(senha: str | None) -> bool:
 
 def main():
     print(f"{'[DRY-RUN] ' if DRY_RUN else ''}Iniciando migração de senhas...")
+    if not DRY_RUN:
+        print("  AVISO: Crie um snapshot Neon antes de prosseguir:")
+        print("  neonctl branch create --name pre-bcrypt-migration")
+        print()
+
+    total = 0
+    migradas = 0
+    ignoradas = 0
+    erros = 0
     db: Session = SessionLocal()
     try:
         barbearias = db.query(Barbearia).all()
         total = len(barbearias)
-        migradas = 0
-        ignoradas = 0
-        erros = 0
 
         for b in barbearias:
             if not b.senha:
@@ -64,7 +70,7 @@ def main():
                 migradas += 1
             except Exception as exc:
                 db.rollback()
-                print(f"  [ERRO]  id={b.id} login={b.login} — {exc}")
+                print(f"  [ERRO]  id={b.id} login={b.login} — {type(exc).__name__}: {str(exc)[:100]}")
                 erros += 1
 
     finally:
