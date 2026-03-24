@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import secrets as _secrets
 import time
@@ -24,6 +25,7 @@ def verificar_senha(plain: str, hashed: str) -> bool:
     if hashed and hashed.startswith("$2b$"):
         return _pwd_context.verify(plain, hashed)
     # Fallback para senhas ainda não migradas (plaintext)
+    logging.warning("verificar_senha: senha plaintext detectada — conta ainda não migrada para bcrypt.")
     return _secrets.compare_digest(plain, hashed or "")
 
 

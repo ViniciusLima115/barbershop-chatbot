@@ -1,4 +1,3 @@
-import pytest
 from app.security import hash_senha, verificar_senha
 
 
@@ -21,3 +20,13 @@ def test_hashes_diferentes_para_mesma_senha():
     h1 = hash_senha("abc")
     h2 = hash_senha("abc")
     assert h1 != h2  # salt diferente a cada chamada
+
+
+def test_verificar_senha_plaintext_correto():
+    """Fallback: aceita plaintext ainda não migrado."""
+    assert verificar_senha("abc", "abc") is True
+
+
+def test_verificar_senha_plaintext_errado():
+    """Fallback: rejeita plaintext errado."""
+    assert verificar_senha("abc", "xyz") is False
