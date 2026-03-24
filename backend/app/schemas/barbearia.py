@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 PlanoBarbearia = Literal["basico", "premium"]
@@ -45,7 +45,7 @@ class BarbeariaAdminResponse(BaseModel):
     nome: str
     slug: str | None = None
     login: str | None = None
-    senha: str | None = None
+    senha: str | None = Field(default=None, exclude=True)
     plano: PlanoBarbearia | None = "basico"
     status_manual: StatusManualBarbearia | None = "ativo"
     vencimento_em: date | None = None

@@ -1,6 +1,6 @@
 from app.models.barbearia import Barbearia
 import app.routes.auth as auth_module
-from app.security import hash_senha
+from app.security import hash_senha, verificar_senha
 
 
 def test_auth_admin_check_ok_e_invalido(client):
@@ -141,7 +141,6 @@ def test_barbearias_valida_duplicidades(client, make_tenant_headers):
 
 
 def test_barbearias_crud_cria_com_senha_hasheada(client, db_session, make_tenant_headers):
-    from app.security import verificar_senha
     admin_headers = make_tenant_headers(is_admin=True)
 
     payload = {
@@ -158,7 +157,6 @@ def test_barbearias_crud_cria_com_senha_hasheada(client, db_session, make_tenant
     resp = client.post("/barbearias/", json=payload, headers=admin_headers)
     assert resp.status_code == 200
 
-    from app.models.barbearia import Barbearia
     criada = db_session.query(Barbearia).filter(Barbearia.login == "teste.hash").first()
     assert criada is not None
     assert criada.senha != "senha_plain"  # not plaintext
@@ -166,9 +164,6 @@ def test_barbearias_crud_cria_com_senha_hasheada(client, db_session, make_tenant
 
 
 def test_barbearias_crud_atualiza_com_senha_hasheada(client, db_session, make_tenant_headers):
-    from app.security import verificar_senha, hash_senha
-    from app.models.barbearia import Barbearia
-
     admin_headers = make_tenant_headers(is_admin=True)
     barbearia = Barbearia(
         nome="Para Atualizar",
