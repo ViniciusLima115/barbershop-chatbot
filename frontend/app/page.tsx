@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CalendarDays, CheckCircle2, Scissors, Settings2, Users } from "lucide-react";
 import { listAgendamentos, listClientes, listServicos } from "@/services/api";
 import { useAuthSession } from "@/services/auth";
@@ -68,6 +69,7 @@ function Panel({
 
 export default function Home() {
   const session = useAuthSession();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DashboardData>({
@@ -102,12 +104,13 @@ export default function Home() {
       }
     };
 
-    if (!session || session.tenantId === "admin") {
-      setLoading(false);
+    if (!session) return;
+    if (session.tenantId === "admin") {
+      router.replace("/admin");
       return;
     }
     carregarResumo();
-  }, [session]);
+  }, [session, router]);
 
   const taxaConfirmacao = useMemo(() => {
     if (data.totalAgendamentos === 0) return "0%";
