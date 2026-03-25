@@ -102,8 +102,12 @@ export default function Home() {
       }
     };
 
+    if (!session || session.tenantId === "admin") {
+      setLoading(false);
+      return;
+    }
     carregarResumo();
-  }, []);
+  }, [session]);
 
   const taxaConfirmacao = useMemo(() => {
     if (data.totalAgendamentos === 0) return "0%";
