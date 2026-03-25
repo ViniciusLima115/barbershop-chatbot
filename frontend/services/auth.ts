@@ -1,4 +1,25 @@
 import { useSyncExternalStore } from "react";
+import { API_URL } from "./api";
+
+export type MeResponse = {
+  id?: number;
+  nome: string;
+  plano: string;
+  is_admin: boolean;
+  tipo_servico?: string | null;
+};
+
+export async function fetchMe(accessToken: string): Promise<MeResponse | null> {
+  try {
+    const resp = await fetch(`${API_URL}/auth/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!resp.ok) return null;
+    return resp.json();
+  } catch {
+    return null;
+  }
+}
 
 export const AUTH_STORAGE_KEY = "barbershop_auth_session";
 const AUTH_CHANGE_EVENT = "barbershop_auth_changed";
