@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.database import Base, get_db
-from app.models import Barbearia, Barbeiro, Servico
+from app.models import Estabelecimento, Profissional, Servico
 from app.models.token_blacklist import TokenBlacklist  # registers in SQLite metadata
 from app.routes import agenda, agendamentos, chatbot, barbeiros, barbearia_funcionamento, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal, webhook, estabelecimentos, profissionais, estabelecimento_funcionamento
 from app.security import create_access_token
@@ -85,12 +85,12 @@ def client(app):
 
 @pytest.fixture
 def dados_base(db_session):
-    barbearia = Barbearia(nome="Barbearia Teste", endereco="Rua Teste, 123")
+    barbearia = Estabelecimento(nome="Barbearia Teste", endereco="Rua Teste, 123")
     db_session.add(barbearia)
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro = Barbeiro(nome="Joao", barbearia_id=barbearia.id)
+    barbeiro = Profissional(nome="Joao", barbearia_id=barbearia.id)
     servico = Servico(
         nome="corte social",
         duracao_minutos=40,

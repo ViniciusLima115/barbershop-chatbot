@@ -8,9 +8,6 @@ from app.routes import (
     agenda,
     agendamentos,
     auth,
-    barbearia_funcionamento,
-    barbearias,
-    barbeiros,
     chatbot,
     clientes,
     dashboard,
@@ -141,9 +138,6 @@ app.add_middleware(
 
 app.include_router(agendamentos.router)
 app.include_router(clientes.router)
-app.include_router(barbearias.router)
-app.include_router(barbearia_funcionamento.router)
-app.include_router(barbeiros.router)
 app.include_router(servicos.router)
 app.include_router(agenda.router)
 app.include_router(dashboard.router)
