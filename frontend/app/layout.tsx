@@ -36,6 +36,14 @@ const themeScript = `
       document.documentElement.dataset.theme = "light";
       document.documentElement.style.colorScheme = "light";
     }
+    try {
+      var raw = localStorage.getItem("barbershop_auth_session");
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (s.accentColor) document.documentElement.style.setProperty("--accent", s.accentColor);
+        if (s.bgColor) document.documentElement.style.setProperty("--bg-tenant", s.bgColor);
+      }
+    } catch (e) {}
   })();
 `;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BarChart2, CalendarDays, LayoutDashboard, Scissors, Settings2, Shield, LogOut } from "lucide-react";
+import { BarChart2, CalendarDays, LayoutDashboard, Scissors, Settings, Settings2, Shield, LogOut } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { logout, useAuthSession } from "@/services/auth";
 import styles from "./Header.module.css";
@@ -23,6 +23,7 @@ export default function Header() {
     { href: "/agenda", label: "Agenda", icon: CalendarDays },
     { href: "/gestao", label: "Gestao", icon: Settings2 },
     ...(!isAdmin && session?.plan === "premium" ? [{ href: "/dashboard", label: "Dashboard", icon: BarChart2 }] : []),
+    ...(!isAdmin ? [{ href: "/configuracoes", label: "Config.", icon: Settings }] : []),
     ...(isAdmin && !inAdminPage ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ];
 

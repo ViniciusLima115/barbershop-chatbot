@@ -7,6 +7,11 @@ export type MeResponse = {
   plano: string;
   is_admin: boolean;
   tipo_servico?: string | null;
+  accent_color?: string;
+  bg_color?: string;
+  logo_url?: string | null;
+  notif_ativo?: boolean;
+  notif_horas_antes?: number;
 };
 
 export async function fetchMe(accessToken: string): Promise<MeResponse | null> {
@@ -34,6 +39,10 @@ export type AuthSession = {
   tenantName: string;
   plan: "basico" | "premium";
   accessToken: string;
+  // Tema por tenant (opcionais — ausentes para admin)
+  accentColor?: string;
+  bgColor?: string;
+  logoUrl?: string | null;
 };
 
 export function getAuthSession(): AuthSession | null {
@@ -65,6 +74,9 @@ export function getAuthSession(): AuthSession | null {
       tenantName: parsed.tenantName,
       plan,
       accessToken: parsed.accessToken,
+      accentColor: parsed.accentColor,
+      bgColor: parsed.bgColor,
+      logoUrl: parsed.logoUrl ?? null,
     };
     return cachedParsedSession;
   } catch {
