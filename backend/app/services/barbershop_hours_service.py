@@ -120,10 +120,27 @@ def get_working_window(barbearia, target_date: date, barbeiro=None) -> tuple[tim
     return start, end
 
 
-def build_day_slots(barbearia, target_date: date, duration_minutes: int, barbeiro=None) -> list[datetime]:
+def build_day_slots(
+    barbearia,
+    target_date: date,
+    duration_minutes: int,
+    barbeiro=None,
+    interval_minutes: int | None = None,
+) -> list[datetime]:
+    """
+    Gera lista de slots disponíveis no dia.
+
+    Args:
+        duration_minutes: duração do serviço — usado para checar se o slot cabe antes do fim.
+        interval_minutes: passo entre slots. Se None, lê de barbearia.intervalo_minutos,
+                          com fallback para INTERVALO_MINUTOS global.
+    """
     window = get_working_window(barbearia, target_date, barbeiro=barbeiro)
     if not window:
         return []
+
+    if interval_minutes is None:
+        interval_minutes = getattr(barbearia, "intervalo_minutos", None) or INTERVALO_MINUTOS
 
     start, end = window
     current = datetime.combine(target_date, start)
@@ -132,7 +149,7 @@ def build_day_slots(barbearia, target_date: date, duration_minutes: int, barbeir
 
     while current + timedelta(minutes=duration_minutes) <= finish:
         slots.append(current)
-        current += timedelta(minutes=INTERVALO_MINUTOS)
+        current += timedelta(minutes=interval_minutes)
 
     return slots
 

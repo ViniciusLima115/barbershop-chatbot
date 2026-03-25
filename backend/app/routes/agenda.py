@@ -3,7 +3,6 @@ from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session, joinedload
 
-from app.config import INTERVALO_MINUTOS
 from app.database import get_db
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
@@ -51,7 +50,7 @@ def agenda_dia(
     horarios_por_barbeiro = {
         barbeiro.id: [
             slot.strftime("%H:%M")
-            for slot in build_day_slots(barbearia, data.date(), INTERVALO_MINUTOS, barbeiro=barbeiro)
+            for slot in build_day_slots(barbearia, data.date(), duration_minutes=1, barbeiro=barbeiro)
         ]
         for barbeiro in barbeiros
     }
