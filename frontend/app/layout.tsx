@@ -41,6 +41,7 @@ const themeScript = `
       if (raw) {
         var s = JSON.parse(raw);
         if (s.accentColor) document.documentElement.style.setProperty("--accent", s.accentColor);
+        if (s.accentColor) document.documentElement.style.setProperty("--accent-tenant", s.accentColor);
         if (s.bgColor) document.documentElement.style.setProperty("--bg-tenant", s.bgColor);
       }
     } catch (e) {}
