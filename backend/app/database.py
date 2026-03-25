@@ -83,6 +83,8 @@ def init_db():
         _ensure_agendamentos_barbearia_column()
     _backfill_agendamentos_notification_defaults()
     _ensure_token_blacklist_table()
+    _ensure_rename_para_estabelecimentos()
+    _ensure_tipo_servico_column()
 
 
 def _ensure_barbearias_working_hours_column():
@@ -338,6 +340,42 @@ def _ensure_agendamentos_notification_columns():
             "CREATE UNIQUE INDEX ux_agendamentos_confirmation_token ON agendamentos (confirmation_token)",
         ]
     )
+
+
+def _ensure_rename_para_estabelecimentos():
+    """Renomeia tabelas e colunas para a nomenclatura genérica."""
+    _run_best_effort([
+        # Renomear tabelas
+        "ALTER TABLE barbearias RENAME TO estabelecimentos",
+        "ALTER TABLE barbeiros RENAME TO profissionais",
+
+        # Renomear colunas em agendamentos
+        "ALTER TABLE agendamentos RENAME COLUMN barbearia_id TO estabelecimento_id",
+        "ALTER TABLE agendamentos RENAME COLUMN barbeiro_id TO profissional_id",
+
+        # Renomear colunas em profissionais (ex-barbeiros)
+        "ALTER TABLE profissionais RENAME COLUMN barbershop_id TO estabelecimento_id",
+
+        # Renomear colunas em clientes
+        "ALTER TABLE clientes RENAME COLUMN barbearia_id TO estabelecimento_id",
+
+        # Renomear colunas em servicos
+        "ALTER TABLE servicos RENAME COLUMN barbearia_id TO estabelecimento_id",
+
+        # Renomear colunas em conversas
+        "ALTER TABLE conversas RENAME COLUMN tenant_id TO estabelecimento_id",
+
+        # Renomear colunas em reminder_jobs
+        "ALTER TABLE reminder_jobs RENAME COLUMN tenant_id TO estabelecimento_id",
+    ])
+
+
+def _ensure_tipo_servico_column():
+    """Adiciona coluna tipo_servico em estabelecimentos."""
+    _run_best_effort([
+        "ALTER TABLE estabelecimentos ADD COLUMN tipo_servico VARCHAR(50) NOT NULL DEFAULT 'barbearia'",
+        "UPDATE estabelecimentos SET tipo_servico = 'barbearia' WHERE tipo_servico IS NULL",
+    ])
 
 
 def _backfill_agendamentos_notification_defaults():
