@@ -10,6 +10,7 @@ from app.routes import (
     auth,
     chatbot,
     clientes,
+    configuracoes,
     dashboard,
     estabelecimento_funcionamento,
     estabelecimentos,
@@ -151,6 +152,7 @@ app.include_router(auth.router)
 app.include_router(estabelecimentos.router)
 app.include_router(profissionais.router)
 app.include_router(estabelecimento_funcionamento.router)
+app.include_router(configuracoes.router)
 
 @app.get("/")
 def home():
