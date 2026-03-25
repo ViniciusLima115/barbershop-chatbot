@@ -30,3 +30,9 @@ class MeResponse(BaseModel):
     plano: str
     is_admin: bool
     tipo_servico: str | None = None  # None para admin
+    # Tema por tenant (admin retorna defaults)
+    accent_color: str = "#d4930a"
+    bg_color: str = "#ffffff"
+    logo_url: str | None = None
+    notif_ativo: bool = True
+    notif_horas_antes: int = 2
