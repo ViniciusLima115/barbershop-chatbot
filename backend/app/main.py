@@ -14,7 +14,10 @@ from app.routes import (
     chatbot,
     clientes,
     dashboard,
+    estabelecimento_funcionamento,
+    estabelecimentos,
     internal,
+    profissionais,
     public,
     servicos,
     webhook,
@@ -151,6 +154,9 @@ app.include_router(webhook.router)
 app.include_router(public.router)
 app.include_router(internal.router)
 app.include_router(auth.router)
+app.include_router(estabelecimentos.router)
+app.include_router(profissionais.router)
+app.include_router(estabelecimento_funcionamento.router)
 
 @app.get("/")
 def home():
