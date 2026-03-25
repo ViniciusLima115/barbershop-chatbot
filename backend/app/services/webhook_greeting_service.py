@@ -1,3 +1,4 @@
+import os
 import re
 
 from sqlalchemy.orm import Session
@@ -13,6 +14,7 @@ from app.services.webhook_payload_service import (
 
 
 PROVIDER_META_WEBHOOK = "meta-webhook"
+_BOOKING_BASE = os.getenv("BOOKING_PUBLIC_BASE_URL", "https://app.virtualbarber.shop")
 
 
 def _normalizar_telefone(telefone: str) -> str:
@@ -26,7 +28,7 @@ def montar_mensagem_saudacao(nome_barbearia: str, barbearia_id: int) -> str:
     return (
         f"Ola 👋 Seja bem-vindo a {nome_barbearia}!\n"
         "Clique aqui para agendar:\n"
-        f"https://app.virtualbarber.shop/agendar/{barbearia_id}"
+        f"{_BOOKING_BASE.rstrip('/')}/agendar/{barbearia_id}"
     )
 
 

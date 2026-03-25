@@ -20,6 +20,7 @@ EMAIL_FROM = (
     or os.getenv("RESEND_FROM_EMAIL")
     or "noreply@virtualbarber.shop"
 ).strip()
+EMAIL_FROM_NAME = os.getenv("EMAIL_FROM_NAME", "Virtual Barber")
 EMAIL_REPLY_TO = os.getenv("EMAIL_REPLY_TO", "").strip() or None
 EMAIL_ACTION_BASE_URL = (
     os.getenv("EMAIL_ACTION_BASE_URL")
@@ -155,7 +156,7 @@ def _montar_html_base(
             <td style="padding:0;">
               <div style="background:linear-gradient(135deg,#16120f,#34261c);border-radius:24px;padding:32px;color:#fff7ef;">
                 <div style="display:inline-block;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,0.12);font-size:12px;letter-spacing:0.08em;text-transform:uppercase;">
-                  Virtual Barber
+                  {escape(EMAIL_FROM_NAME)}
                 </div>
                 <h1 style="margin:18px 0 8px;font-size:28px;line-height:1.15;">{escape(titulo)}</h1>
                 <p style="margin:0;color:#ead9cb;font-size:15px;line-height:1.6;">{escape(subtitulo)}</p>
