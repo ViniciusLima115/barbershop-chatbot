@@ -8,15 +8,15 @@ from app.database import Base
 class Agendamento(Base):
     __tablename__ = "agendamentos"
     __table_args__ = (
-        Index("ix_agendamentos_tenant_data_barbeiro", "barbearia_id", "data", "barbeiro_id"),
+        Index("ix_agendamentos_tenant_data_barbeiro", "estabelecimento_id", "data", "profissional_id"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
 
     cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
-    barbeiro_id = Column(Integer, ForeignKey("barbeiros.id"), nullable=False)
+    profissional_id = Column(Integer, ForeignKey("profissionais.id"), nullable=False)
     servico_id = Column(Integer, ForeignKey("servicos.id"), nullable=False)
-    barbearia_id = Column(Integer, ForeignKey("barbearias.id"), nullable=True, index=True)
+    estabelecimento_id = Column(Integer, ForeignKey("estabelecimentos.id"), nullable=True, index=True)
     cliente_nome = Column(String(255), nullable=True)
     cliente_telefone = Column(String(30), nullable=True, index=True)
     cliente_email = Column(String(255), nullable=True, index=True)
@@ -29,9 +29,17 @@ class Agendamento(Base):
     confirmation_token = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(uuid4()))
     lembrete_24h_enviado = Column(Boolean, nullable=False, default=False)
     lembrete_2h_enviado = Column(Boolean, nullable=False, default=False)
-    tenant_id = synonym("barbearia_id")
+
+    # Aliases de compatibilidade com código legado (colunas físicas renomeadas)
+    barbearia_id = synonym("estabelecimento_id")
+    barbeiro_id = synonym("profissional_id")
+    tenant_id = synonym("estabelecimento_id")
 
     cliente = relationship("Cliente")
-    barbeiro = relationship("Barbeiro")
+    profissional = relationship("Profissional", foreign_keys=[profissional_id])
     servico = relationship("Servico")
-    barbearia = relationship("Barbearia")
+    estabelecimento = relationship("Estabelecimento", foreign_keys=[estabelecimento_id])
+
+    # Aliases de relacionamento para código legado que acessa .barbeiro / .barbearia
+    barbeiro = relationship("Profissional", foreign_keys=[profissional_id], overlaps="profissional")
+    barbearia = relationship("Estabelecimento", foreign_keys=[estabelecimento_id], overlaps="estabelecimento")

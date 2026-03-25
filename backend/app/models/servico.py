@@ -10,5 +10,8 @@ class Servico(Base):
     nome = Column(String(255), nullable=False)
     duracao_minutos = Column(Integer, nullable=False)
     preco = Column(Float, nullable=False)
-    barbearia_id = Column(Integer, ForeignKey("barbearias.id"), nullable=True, index=True)
-    tenant_id = synonym("barbearia_id")
+    estabelecimento_id = Column(Integer, ForeignKey("estabelecimentos.id"), nullable=True, index=True)
+
+    # Aliases de compatibilidade com código legado
+    barbearia_id = synonym("estabelecimento_id")
+    tenant_id = synonym("estabelecimento_id")
