@@ -89,11 +89,11 @@ def me(
         plano=(est.plano or "basico").lower(),
         is_admin=False,
         tipo_servico=getattr(est, "tipo_servico", "barbearia") or "barbearia",
-        accent_color=getattr(est, "accent_color", None) or "#d4930a",
-        bg_color=getattr(est, "bg_color", None) or "#ffffff",
-        logo_url=getattr(est, "logo_url", None),
-        notif_ativo=getattr(est, "notif_ativo", True),
-        notif_horas_antes=getattr(est, "notif_horas_antes", 2),
+        accent_color=est.accent_color or "#d4930a",
+        bg_color=est.bg_color or "#ffffff",
+        logo_url=est.logo_url,
+        notif_ativo=est.notif_ativo if est.notif_ativo is not None else True,
+        notif_horas_antes=est.notif_horas_antes if est.notif_horas_antes is not None else 2,
     )
 
 

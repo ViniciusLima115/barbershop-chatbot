@@ -13,22 +13,21 @@ router = APIRouter(prefix="/configuracoes", tags=["configuracoes"])
 def _get_tenant_estabelecimento(
     claims: TokenClaims = Depends(get_current_claims),
     db: Session = Depends(get_db),
-) -> tuple[TokenClaims, Estabelecimento]:
+) -> tuple[TokenClaims, Estabelecimento, Session]:
     if claims.is_admin:
         raise HTTPException(status_code=403, detail="Endpoint exclusivo para tenants.")
     est = db.query(Estabelecimento).filter(Estabelecimento.id == claims.tenant_id).first()
     if not est:
         raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
-    return claims, est
+    return claims, est, db
 
 
 @router.patch("/perfil")
 def atualizar_perfil(
     dados: PerfilUpdate,
-    pair: tuple = Depends(_get_tenant_estabelecimento),
-    db: Session = Depends(get_db),
+    pair: tuple[TokenClaims, Estabelecimento, Session] = Depends(_get_tenant_estabelecimento),
 ):
-    _, est = pair
+    _, est, db = pair
     if dados.slug is not None and dados.slug != est.slug:
         existente = db.query(Estabelecimento).filter(
             Estabelecimento.slug == dados.slug,
@@ -50,10 +49,9 @@ def atualizar_perfil(
 @router.patch("/senha")
 def trocar_senha(
     dados: SenhaUpdate,
-    pair: tuple = Depends(_get_tenant_estabelecimento),
-    db: Session = Depends(get_db),
+    pair: tuple[TokenClaims, Estabelecimento, Session] = Depends(_get_tenant_estabelecimento),
 ):
-    _, est = pair
+    _, est, db = pair
     if not est.senha or not verificar_senha(dados.senha_atual, est.senha):
         raise HTTPException(status_code=400, detail="Senha atual incorreta.")
     est.senha = hash_senha(dados.nova_senha)
@@ -64,10 +62,9 @@ def trocar_senha(
 @router.patch("/tema")
 def atualizar_tema(
     dados: TemaUpdate,
-    pair: tuple = Depends(_get_tenant_estabelecimento),
-    db: Session = Depends(get_db),
+    pair: tuple[TokenClaims, Estabelecimento, Session] = Depends(_get_tenant_estabelecimento),
 ):
-    _, est = pair
+    _, est, db = pair
     if dados.accent_color is not None:
         est.accent_color = dados.accent_color
     if dados.bg_color is not None:
@@ -81,10 +78,9 @@ def atualizar_tema(
 @router.patch("/notificacoes")
 def atualizar_notificacoes(
     dados: NotificacoesUpdate,
-    pair: tuple = Depends(_get_tenant_estabelecimento),
-    db: Session = Depends(get_db),
+    pair: tuple[TokenClaims, Estabelecimento, Session] = Depends(_get_tenant_estabelecimento),
 ):
-    _, est = pair
+    _, est, db = pair
     if dados.notif_ativo is not None:
         est.notif_ativo = dados.notif_ativo
     if dados.notif_horas_antes is not None:
