@@ -80,6 +80,7 @@ class BarbeariaFuncionamento(BaseModel):
     sex: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
     sab: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
     dom: BarbeariaFuncionamentoDia = BarbeariaFuncionamentoDia()
+    intervalo_minutos: int | None = None  # 5–120, step 5
 
     @model_validator(mode="after")
     def validar_intervalos(self):

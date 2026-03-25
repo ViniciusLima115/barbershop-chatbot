@@ -19,7 +19,9 @@ def obter_funcionamento(
     estabelecimento = db.query(Estabelecimento).filter(Estabelecimento.id == tenant_id).first()
     if not estabelecimento:
         raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
-    return normalize_working_hours(estabelecimento.horarios_funcionamento)
+    result = normalize_working_hours(estabelecimento.horarios_funcionamento)
+    result["intervalo_minutos"] = getattr(estabelecimento, "intervalo_minutos", 30) or 30
+    return result
 
 
 @router.put("", response_model=BarbeariaFuncionamento)
@@ -32,7 +34,13 @@ def atualizar_funcionamento(
     if not estabelecimento:
         raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
 
-    estabelecimento.horarios_funcionamento = dados.model_dump()
+    if dados.intervalo_minutos is not None:
+        valor = max(5, min(120, dados.intervalo_minutos))  # clamp 5–120
+        estabelecimento.intervalo_minutos = valor
+
+    estabelecimento.horarios_funcionamento = dados.model_dump(exclude={"intervalo_minutos"})
     db.commit()
     db.refresh(estabelecimento)
-    return normalize_working_hours(estabelecimento.horarios_funcionamento)
+    result = normalize_working_hours(estabelecimento.horarios_funcionamento)
+    result["intervalo_minutos"] = getattr(estabelecimento, "intervalo_minutos", 30) or 30
+    return result
