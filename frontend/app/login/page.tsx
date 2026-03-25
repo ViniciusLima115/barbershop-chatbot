@@ -49,7 +49,7 @@ export default function LoginPage() {
       }
 
       if (!resposta.tenant_id || !resposta.tenant_name) {
-        setError("Nao foi possivel identificar a barbearia do usuario.");
+        setError("Nao foi possivel identificar o estabelecimento do usuario.");
         return;
       }
 
@@ -89,7 +89,7 @@ export default function LoginPage() {
         </div>
 
         <div className={styles.leftCopy}>
-          <h1 className={styles.leftTitle}>Sua barbearia,<br />bem gerida.</h1>
+          <h1 className={styles.leftTitle}>Seu negócio,<br />bem gerido.</h1>
           <div className={styles.leftDivider} />
           <div className={styles.socialProof}>
             <div className={styles.avatars}>
@@ -98,7 +98,7 @@ export default function LoginPage() {
               <div className={styles.avatar}>+</div>
             </div>
             <div className={styles.socialText}>
-              <strong>+50 barbearias</strong><br />já usam o sistema
+              <strong>+50 estabelecimentos</strong><br />já usam o sistema
             </div>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function LoginPage() {
       <div className={styles.right}>
         <p className={styles.formEyebrow}>Área restrita</p>
         <h2 className={styles.formTitle}>Bem-vindo<br />de volta.</h2>
-        <p className={styles.formSub}>Acesse o painel da sua barbearia.</p>
+        <p className={styles.formSub}>Acesse o painel do seu estabelecimento.</p>
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>

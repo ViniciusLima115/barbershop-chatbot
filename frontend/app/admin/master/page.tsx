@@ -18,7 +18,7 @@ import {
   StatusManualBarbearia,
   StatusAssinaturaBarbearia,
   updateBarbeariaAdmin,
-} from "@/services/barbershops-admin";
+} from "@/services/estabelecimentos-admin";
 
 function plusDaysISO(days: number): string {
   const date = new Date();
@@ -239,11 +239,11 @@ export default function AdminPage() {
 
     try {
       await createBarbeariaAdmin(form);
-      setSuccess("Barbearia cadastrada com sucesso!");
+      setSuccess("Estabelecimento cadastrado com sucesso!");
       setForm(initialForm);
       await recarregar();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao cadastrar barbearia.");
+      setError(err instanceof Error ? err.message : "Falha ao cadastrar estabelecimento.");
     }
   }
 
@@ -293,27 +293,27 @@ export default function AdminPage() {
         ultimoAcessoEm: editForm.ultimoAcessoEm ? `${editForm.ultimoAcessoEm}T00:00:00.000Z` : null,
         pagamentoRecusado: editForm.pagamentoRecusado,
       });
-      setSuccess(`Barbearia "${selected.nome}" atualizada com sucesso.`);
+      setSuccess(`Estabelecimento "${selected.nome}" atualizado com sucesso.`);
       setSelected(null);
       await recarregar();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao atualizar barbearia.");
+      setError(err instanceof Error ? err.message : "Falha ao atualizar estabelecimento.");
     }
   }
 
   async function excluirBarbearia(item: BarbeariaAdmin) {
     limparMensagens();
     const confirmar = window.confirm(
-      `Tem certeza que deseja excluir a barbearia "${item.nome}"? Essa acao nao pode ser desfeita.`
+      `Tem certeza que deseja excluir o estabelecimento "${item.nome}"? Essa acao nao pode ser desfeita.`
     );
     if (!confirmar) return;
 
     try {
       await deleteBarbeariaAdmin(item.id);
-      setSuccess(`Barbearia "${item.nome}" excluida com sucesso.`);
+      setSuccess(`Estabelecimento "${item.nome}" excluido com sucesso.`);
       await recarregar();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao excluir barbearia.");
+      setError(err instanceof Error ? err.message : "Falha ao excluir estabelecimento.");
     }
   }
 
@@ -324,23 +324,23 @@ export default function AdminPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Painel do Administrador</h1>
             <p className="mt-1 text-gray-600">
-              Gerencie barbearias, planos, login e senha de todos os clientes.
+              Gerencie estabelecimentos, planos, login e senha de todos os clientes.
             </p>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <StatCard label="Total de Barbearias" value={barbearias.length} icon={<Building2 size={22} />} color="blue" />
+            <StatCard label="Total de Estabelecimentos" value={barbearias.length} icon={<Building2 size={22} />} color="blue" />
             <StatCard label="Plano Basico" value={totalBasico} icon={<ShieldCheck size={22} />} color="amber" />
             <StatCard label="Plano Premium" value={totalPremium} icon={<ShieldCheck size={22} />} color="green" />
             <StatCard label="Em Trial" value={totalTrial} icon={<ShieldCheck size={22} />} color="blue" />
-            <StatCard label="Bloqueadas" value={totalBloqueadas} icon={<Lock size={22} />} color="red" />
+            <StatCard label="Bloqueados" value={totalBloqueadas} icon={<Lock size={22} />} color="red" />
           </div>
 
           {error && <Alert type="error" message={error} onClose={() => setError(null)} />}
           {success && <Alert type="success" message={success} onClose={() => setSuccess(null)} />}
 
           {loading && (
-            <Card title="Carregando" subtitle="Buscando barbearias no backend">
+            <Card title="Carregando" subtitle="Buscando estabelecimentos no backend">
               <p className="text-sm text-gray-600">Aguarde...</p>
             </Card>
           )}
@@ -377,21 +377,21 @@ export default function AdminPage() {
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Card
-              title="Cadastrar Barbearia"
-              subtitle="Crie login/senha e defina o plano da nova barbearia"
+              title="Cadastrar Estabelecimento"
+              subtitle="Crie login/senha e defina o plano do novo estabelecimento"
             >
               <form onSubmit={submitCadastro} className="space-y-4">
                 <FormInput
-                  label="Nome da Barbearia"
+                  label="Nome do Estabelecimento"
                   value={form.nome}
-                  placeholder="Ex: Barbearia Central"
+                  placeholder="Ex: Barbearia Central / Salão Beleza"
                   onChange={(e) => setForm((prev) => ({ ...prev, nome: e.target.value }))}
                   required
                 />
                 <FormInput
                   label="Login"
                   value={form.login}
-                  placeholder="Ex: barbearia.central"
+                  placeholder="Ex: estabelecimento.central"
                   onChange={(e) => setForm((prev) => ({ ...prev, login: e.target.value }))}
                   required
                 />
@@ -452,7 +452,7 @@ export default function AdminPage() {
                 <div className="pt-3">
                   <Button type="submit">
                     <Building2 size={17} />
-                    Cadastrar Barbearia
+                    Cadastrar Estabelecimento
                   </Button>
                 </div>
               </form>
@@ -488,7 +488,7 @@ export default function AdminPage() {
           <Card title="Busca e Filtros" subtitle="Filtre por plano, status, nome/login, periodo e atividade">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               <FormInput
-                label="Busca (Barbearia)"
+                label="Busca (Estabelecimento)"
                 value={filtros.busca}
                 placeholder="Ex: Barbearia Central"
                 onChange={(e) => setFiltros((prev) => ({ ...prev, busca: e.target.value }))}
@@ -542,15 +542,15 @@ export default function AdminPage() {
             </div>
           </Card>
 
-          <Card title="Barbearias Cadastradas" subtitle="Visualize login/senha e altere senha quando necessario">
+          <Card title="Estabelecimentos Cadastrados" subtitle="Visualize login/senha e altere senha quando necessario">
             {barbeariasFiltradas.length === 0 ? (
-              <p className="text-sm text-gray-600">Nenhuma barbearia cadastrada ainda.</p>
+              <p className="text-sm text-gray-600">Nenhum estabelecimento cadastrado ainda.</p>
             ) : (
               <div className="table-wrapper">
                 <table className="table">
                   <thead>
                     <tr>
-                      <th>Barbearia</th>
+                      <th>Estabelecimento</th>
                       <th>Login</th>
                       <th>Senha</th>
                       <th>Plano</th>

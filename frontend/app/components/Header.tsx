@@ -15,7 +15,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const session = useAuthSession();
-  const tenantName = session?.tenantName ?? "Barbearia";
+  const tenantName = session?.tenantName ?? "Estabelecimento";
   const isAdmin = session?.tenantId === "admin";
   const inAdminPage = pathname.startsWith("/admin");
   const navItems = [

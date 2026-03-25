@@ -59,7 +59,7 @@ export default function PublicBookingPage() {
         setServicoId(primeiroServico);
       } catch (err) {
         if (!ativo) return;
-        setErro(err instanceof Error ? err.message : "Nao foi possivel carregar a barbearia.");
+        setErro(err instanceof Error ? err.message : "Nao foi possivel carregar o estabelecimento.");
       } finally {
         if (ativo) setLoading(false);
       }
@@ -168,7 +168,7 @@ export default function PublicBookingPage() {
       <main className="min-h-screen bg-slate-100 px-4 py-10">
         <div className="mx-auto max-w-4xl rounded-2xl bg-white p-6 shadow-sm">
           <p className="text-sm font-medium text-red-600">
-            {erro ?? "Barbearia nao encontrada para este link."}
+            {erro ?? "Estabelecimento nao encontrado para este link."}
           </p>
         </div>
       </main>

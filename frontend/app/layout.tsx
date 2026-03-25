@@ -20,8 +20,8 @@ const jost = Jost({
 });
 
 export const metadata: Metadata = {
-  title: "Painel da Barbearia",
-  description: "Agenda e gestão de agendamentos da barbearia",
+  title: "VirtualBarber — Painel de Gestão",
+  description: "Plataforma de gestão de agendamentos para estabelecimentos",
 };
 
 const themeScript = `

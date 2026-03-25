@@ -123,7 +123,7 @@ export default function Home() {
         <header className={styles.hero}>
           <div className={styles.heroCopy}>
             <span className={styles.eyebrow}>Painel operacional</span>
-            <h1 className={styles.heroTitle}>{session?.tenantName ?? "Barbearia"}</h1>
+            <h1 className={styles.heroTitle}>{session?.tenantName ?? "Estabelecimento"}</h1>
             <p className={styles.heroText}>
               Acompanhe a operacao do dia, veja o volume da agenda e avance rapido para os modulos
               mais usados.
