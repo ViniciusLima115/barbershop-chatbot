@@ -37,5 +37,6 @@ class Estabelecimento(Base):
     logo_url = Column(String(500), nullable=True)
     notif_ativo = Column(Boolean, nullable=False, default=True)
     notif_horas_antes = Column(Integer, nullable=False, default=2)
+    intervalo_minutos = Column(Integer, nullable=False, server_default="30")
 
     profissionais = relationship("Profissional", back_populates="estabelecimento")

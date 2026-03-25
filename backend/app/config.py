@@ -76,4 +76,4 @@ DATABASE_URL = _get_database_url()
 
 HORARIO_ABERTURA = int(os.getenv("HORARIO_ABERTURA", "8"))
 HORARIO_FECHAMENTO = int(os.getenv("HORARIO_FECHAMENTO", "19"))
-INTERVALO_MINUTOS = int(os.getenv("INTERVALO_MINUTOS", "40"))
+INTERVALO_MINUTOS = int(os.getenv("INTERVALO_MINUTOS", "30"))

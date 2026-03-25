@@ -86,6 +86,7 @@ def init_db():
     _ensure_rename_para_estabelecimentos()
     _ensure_tipo_servico_column()
     _ensure_configuracoes_columns()
+    _ensure_intervalo_minutos_column()
 
 
 def _ensure_configuracoes_columns():
@@ -96,6 +97,13 @@ def _ensure_configuracoes_columns():
         "ALTER TABLE estabelecimentos ADD COLUMN logo_url VARCHAR(500)",
         "ALTER TABLE estabelecimentos ADD COLUMN notif_ativo BOOLEAN NOT NULL DEFAULT TRUE",
         "ALTER TABLE estabelecimentos ADD COLUMN notif_horas_antes INTEGER NOT NULL DEFAULT 2",
+    ])
+
+
+def _ensure_intervalo_minutos_column():
+    """Adiciona coluna intervalo_minutos em estabelecimentos (default 30 min)."""
+    _run_best_effort([
+        "ALTER TABLE estabelecimentos ADD COLUMN intervalo_minutos INTEGER NOT NULL DEFAULT 30",
     ])
 
 
