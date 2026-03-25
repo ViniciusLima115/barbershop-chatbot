@@ -280,7 +280,7 @@ export async function deleteServico(id: number): Promise<void> {
 }
 
 export async function listBarbeiros(): Promise<Barbeiro[]> {
-  const res = await apiFetch("/barbeiros/", { cache: "no-store" });
+  const res = await apiFetch("/profissionais/", { cache: "no-store" });
   return parseOrThrow(res, "Falha ao carregar barbeiros.");
 }
 
@@ -288,7 +288,7 @@ export async function createBarbeiro(payload: {
   nome: string;
   horarios_funcionamento?: BarbershopWorkingHours | null;
 }): Promise<Barbeiro> {
-  const res = await apiFetch("/barbeiros/", {
+  const res = await apiFetch("/profissionais/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -303,7 +303,7 @@ export async function updateBarbeiro(
     horarios_funcionamento?: BarbershopWorkingHours | null;
   }
 ): Promise<Barbeiro> {
-  const res = await apiFetch(`/barbeiros/${id}`, {
+  const res = await apiFetch(`/profissionais/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -312,7 +312,7 @@ export async function updateBarbeiro(
 }
 
 export async function deleteBarbeiro(id: number): Promise<void> {
-  const res = await apiFetch(`/barbeiros/${id}`, { method: "DELETE" });
+  const res = await apiFetch(`/profissionais/${id}`, { method: "DELETE" });
   await parseOrThrow(res, "Falha ao remover barbeiro.");
 }
 
@@ -376,14 +376,14 @@ export function defaultBarbershopWorkingHours(): BarbershopWorkingHours {
 }
 
 export async function getBarbershopWorkingHours(): Promise<BarbershopWorkingHours> {
-  const res = await apiFetch("/barbearias/me/funcionamento", { cache: "no-store" });
+  const res = await apiFetch("/estabelecimentos/me/funcionamento", { cache: "no-store" });
   return parseOrThrow(res, "Falha ao carregar horarios de funcionamento.");
 }
 
 export async function updateBarbershopWorkingHours(
   payload: BarbershopWorkingHours
 ): Promise<BarbershopWorkingHours> {
-  const res = await apiFetch("/barbearias/me/funcionamento", {
+  const res = await apiFetch("/estabelecimentos/me/funcionamento", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
