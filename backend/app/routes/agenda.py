@@ -54,7 +54,6 @@ def agenda_dia(
         ]
         for barbeiro in barbeiros
     }
-    horarios = sorted({hora for itens in horarios_por_barbeiro.values() for hora in itens})
 
     janelas = [
         get_working_window(barbearia, data.date(), barbeiro=barbeiro)
@@ -79,6 +78,12 @@ def agenda_dia(
             )
             .all()
         )
+
+    # Horários da grade
+    _grade_times = {hora for itens in horarios_por_barbeiro.values() for hora in itens}
+    # Horários reais dos agendamentos (inclui horários fora da grade)
+    _booking_times = {ag.data_hora_inicio.strftime("%H:%M") for ag in agendamentos}
+    horarios = sorted(_grade_times | _booking_times)
 
     por_barbeiro = {b.id: [] for b in barbeiros}
 

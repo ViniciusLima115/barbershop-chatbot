@@ -138,3 +138,28 @@ def test_agenda_dia_retorna_horarios_independentes_por_barbeiro(
     assert body["barbeiros"][0]["horarios"]
     assert "08:00" not in body["barbeiros"][0]["horarios"]
     assert "13:00" in body["barbeiros"][0]["horarios"]
+
+
+def test_agenda_dia_inclui_horario_fora_da_grade(client, dados_base, tenant_headers, db_session):
+    """Agendamento criado em horário não alinhado com a grade deve aparecer na agenda visual."""
+    data = _proxima_segunda(dados_base["amanha"]).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # 09:15 — fora de grades típicas de 30 min a partir das 08:00
+    inicio = data.replace(hour=9, minute=15)
+    _criar_agendamento(
+        client,
+        tenant_headers,
+        dados_base["barbeiro"].id,
+        dados_base["servico"].id,
+        "5582977777777",
+        "Cliente Fora Grade",
+        inicio.isoformat(),
+    )
+
+    resp = client.get("/agenda/dia", params={"data": data.isoformat()}, headers=tenant_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+
+    assert "09:15" in body["horarios"], f"09:15 deveria estar em horarios, got: {body['horarios']}"
+    ags = body["barbeiros"][0]["agendamentos"]
+    assert any(item["hora"] == "09:15" for item in ags)
