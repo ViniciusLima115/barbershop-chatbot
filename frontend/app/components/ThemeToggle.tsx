@@ -18,7 +18,7 @@ const labels: Record<ThemeMode, string> = {
 const options: ThemeMode[] = ["light", "dark", "system"];
 
 export default function ThemeToggle({ floating = false }: ThemeToggleProps) {
-  const { theme, resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   return (
     <div className={`${styles.group} ${floating ? styles.floating : ""}`}>
@@ -47,7 +47,6 @@ export default function ThemeToggle({ floating = false }: ThemeToggleProps) {
           </button>
         );
       })}
-      <span className={styles.status}>{resolvedTheme === "dark" ? "Dark" : "Light"}</span>
     </div>
   );
 }
