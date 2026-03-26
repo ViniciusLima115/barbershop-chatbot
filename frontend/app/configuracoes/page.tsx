@@ -23,13 +23,13 @@ type Preset = {
 };
 
 const PRESETS: Preset[] = [
-  { label: "Âmbar", accent: "#d4930a", bg: "#ffffff" },
-  { label: "Índigo", accent: "#4f46e5", bg: "#ffffff" },
-  { label: "Teal", accent: "#0d9488", bg: "#ffffff" },
-  { label: "Rosa", accent: "#db2777", bg: "#ffffff" },
-  { label: "Ardósia", accent: "#475569", bg: "#f8fafc" },
-  { label: "Coral", accent: "#e2522b", bg: "#fffaf8" },
-  { label: "Noturno", accent: "#e5a820", bg: "#0f0f0e" },
+  { label: "Índigo",   accent: "#4f46e5", bg: "#ffffff" },
+  { label: "Teal",     accent: "#0d9488", bg: "#ffffff" },
+  { label: "Rosa",     accent: "#db2777", bg: "#ffffff" },
+  { label: "Âmbar",    accent: "#d4930a", bg: "#ffffff" },
+  { label: "Ardósia",  accent: "#475569", bg: "#f8fafc" },
+  { label: "Coral",    accent: "#e2522b", bg: "#fffaf8" },
+  { label: "Noturno",  accent: "#e5a820", bg: "#0f0f0e" },
 ];
 
 async function patchConfiguracao(
@@ -73,8 +73,8 @@ export default function ConfiguracoesPage() {
   const [confirmarSenha, setConfirmarSenha] = useState("");
 
   // Tema
-  const [accentColor, setAccentColor] = useState(session?.accentColor ?? "#d4930a");
-  const [bgColor, setBgColor] = useState(session?.bgColor ?? "#ffffff");
+  const [accentColor, setAccentColor] = useState(session?.accentColor ?? "#4f46e5");
+  const [bgColor, setBgColor]         = useState(session?.bgColor     ?? "#ffffff");
   const [logoUrl, setLogoUrl] = useState(session?.logoUrl ?? "");
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
