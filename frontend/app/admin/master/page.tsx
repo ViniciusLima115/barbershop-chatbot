@@ -8,6 +8,7 @@ import Card from "../../components/Card";
 import FormInput from "../../components/FormInput";
 import Modal from "../../components/Modal";
 import StatCard from "../../components/StatCard";
+import styles from "./master.module.css";
 import {
   BarbeariaAdmin,
   PlanoBarbearia,
@@ -318,12 +319,11 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="py-8">
-        <div className="app-container space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Painel do Administrador</h1>
-            <p className="mt-1 text-gray-600">
+    <main className={styles.page}>
+      <div className="app-container space-y-6">
+          <div className={styles.header}>
+            <h1>Painel do Administrador</h1>
+            <p className={styles.subtitle}>
               Gerencie estabelecimentos, planos, login e senha de todos os clientes.
             </p>
           </div>
@@ -341,7 +341,7 @@ export default function AdminPage() {
 
           {loading && (
             <Card title="Carregando" subtitle="Buscando estabelecimentos no backend">
-              <p className="text-sm text-gray-600">Aguarde...</p>
+              <p className={styles.empty}>Aguarde...</p>
             </Card>
           )}
 
@@ -350,24 +350,20 @@ export default function AdminPage() {
             subtitle="Alertas de vencimento, pagamento recusado e baixa atividade"
           >
             {notificacoes.length === 0 ? (
-              <p className="text-sm text-gray-600">Nenhuma notificacao no momento.</p>
+              <p className={styles.empty}>Nenhuma notificacao no momento.</p>
             ) : (
               <div className="space-y-3">
                 {notificacoes.map((n) => (
                   <div
                     key={n.id}
-                    className={`flex items-start gap-3 rounded-lg border p-3 ${
-                      n.tipo === "danger"
-                        ? "border-red-200 bg-red-50"
-                        : "border-amber-200 bg-amber-50"
-                    }`}
+                    className={`${styles.notifItem} ${n.tipo === "danger" ? styles.notifDanger : styles.notifWarning}`}
                   >
-                    <div className={`mt-0.5 ${n.tipo === "danger" ? "text-red-600" : "text-amber-600"}`}>
+                    <div className={n.tipo === "danger" ? styles.notifIconDanger : styles.notifIconWarning}>
                       {n.tipo === "danger" ? <AlertTriangle size={16} /> : <BellRing size={16} />}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">{n.titulo}</p>
-                      <p className="text-sm text-gray-700">{n.descricao}</p>
+                      <p className={styles.notifTitle}>{n.titulo}</p>
+                      <p className={styles.notifDesc}>{n.descricao}</p>
                     </div>
                   </div>
                 ))}
@@ -421,7 +417,7 @@ export default function AdminPage() {
                   onChange={(e) => setForm((prev) => ({ ...prev, vencimentoEm: e.target.value }))}
                   required
                 />
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                <label className={styles.checkLabel}>
                   <input
                     type="checkbox"
                     checked={form.trialAtivo}
@@ -438,7 +434,7 @@ export default function AdminPage() {
                     required
                   />
                 )}
-                <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+                <label className={styles.checkLabel}>
                   <input
                     type="checkbox"
                     checked={form.pagamentoRecusado}
@@ -544,7 +540,7 @@ export default function AdminPage() {
 
           <Card title="Estabelecimentos Cadastrados" subtitle="Visualize login/senha e altere senha quando necessario">
             {barbeariasFiltradas.length === 0 ? (
-              <p className="text-sm text-gray-600">Nenhum estabelecimento cadastrado ainda.</p>
+              <p className={styles.empty}>Nenhum estabelecimento cadastrado ainda.</p>
             ) : (
               <div className="table-wrapper">
                 <table className="table">
@@ -572,7 +568,7 @@ export default function AdminPage() {
                         <td>
                           <span
                             className={`badge ${
-                              item.plano === "premium" ? "badge-success" : "badge-pending"
+                              item.plano === "premium" ? "badge-confirmado" : "badge-livre"
                             }`}
                           >
                             {item.plano === "premium" ? "Premium" : "Basico"}
@@ -582,12 +578,12 @@ export default function AdminPage() {
                           <span
                             className={`badge ${
                               status === "bloqueado_atraso"
-                                ? "badge-danger"
+                                ? "badge-cancelado"
                                 : status === "trial"
-                                  ? "badge-pending"
+                                  ? "badge-pendente"
                                   : status === "inativo"
-                                    ? "badge-danger"
-                                    : "badge-success"
+                                    ? "badge-cancelado"
+                                    : "badge-confirmado"
                             }`}
                           >
                             {statusLabel(status)}
@@ -615,26 +611,25 @@ export default function AdminPage() {
               </div>
             )}
           </Card>
-        </div>
       </div>
 
       <Modal
         isOpen={Boolean(selected)}
         onClose={() => setSelected(null)}
-        title="Editar Barbearia"
+        title="Editar Estabelecimento"
       >
         {!selected ? null : (
           <form onSubmit={salvarNovaSenha} className="space-y-4">
-            <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
-              <p className="font-semibold text-gray-900">{selected.nome}</p>
-              <p className="mt-1 inline-flex items-center gap-1">
+            <div className={styles.modalInfoBox}>
+              <p className={styles.modalInfoName}>{selected.nome}</p>
+              <p className={styles.modalInfoLogin}>
                 <UserRound size={14} />
                 Login: {selected.login}
               </p>
             </div>
 
             <FormInput
-              label="Nome da Barbearia"
+              label="Nome do Estabelecimento"
               value={editForm.nome}
               onChange={(e) => setEditForm((prev) => ({ ...prev, nome: e.target.value }))}
               required
@@ -681,7 +676,7 @@ export default function AdminPage() {
               onChange={(e) => setEditForm((prev) => ({ ...prev, vencimentoEm: e.target.value }))}
               required
             />
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+            <label className={styles.checkLabel}>
               <input
                 type="checkbox"
                 checked={editForm.trialAtivo}
@@ -698,7 +693,7 @@ export default function AdminPage() {
                 required
               />
             )}
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700">
+            <label className={styles.checkLabel}>
               <input
                 type="checkbox"
                 checked={editForm.pagamentoRecusado}
