@@ -198,7 +198,7 @@ export default function Home() {
                 </div>
                 <div>
                   <strong className={styles.shortcutTitle}>Agenda do dia</strong>
-                  <p className={styles.shortcutText}>Veja os horarios e a disponibilidade por barbeiro.</p>
+                  <p className={styles.shortcutText}>Veja os horarios e a disponibilidade por profissional.</p>
                 </div>
               </Link>
               <Link href="/gestao" className={styles.shortcutCard}>
@@ -251,7 +251,7 @@ export default function Home() {
               <span className={styles.timelineIndex}>1</span>
               <div>
                 <strong className={styles.timelineTitle}>Comece pela agenda</strong>
-                <p className={styles.timelineText}>Confira horarios livres, bloqueios e ajustes por barbeiro.</p>
+                <p className={styles.timelineText}>Confira horarios livres, bloqueios e ajustes por profissional.</p>
               </div>
             </div>
             <div className={styles.timelineStep}>

@@ -120,7 +120,7 @@ export default function DashboardPage() {
           <p className={styles.eyebrow}>Analytics Premium</p>
           <h1 className={styles.heroTitle}>Dashboard</h1>
           <p className={styles.heroSubtitle}>
-            Visão financeira e comportamento de clientes da sua barbearia.
+            Visão financeira e comportamento de clientes do seu estabelecimento.
           </p>
         </section>
 

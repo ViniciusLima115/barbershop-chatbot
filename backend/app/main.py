@@ -121,7 +121,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 def custom_swagger_ui(credentials: HTTPBasicCredentials = Depends(verify_docs)):
     return get_swagger_ui_html(
         openapi_url="/openapi.json",
-        title="Barbearia Chatbot API - Documentação"
+        title="Gestao de Estabelecimentos API - Documentação"
     )
 @app.get("/openapi.json")
 def openapi(credentials: HTTPBasicCredentials = Depends(verify_docs)):

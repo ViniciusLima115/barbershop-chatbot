@@ -385,7 +385,7 @@ export default function BookingTokenActionCard({
                     textDecoration: "none",
                   }}
                 >
-                  Voltar para o site da barbearia →
+                  Voltar para o site do estabelecimento →
                 </Link>
               )}
             </>

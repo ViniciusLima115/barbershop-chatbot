@@ -88,7 +88,7 @@ export async function listBarbeariasAdmin(): Promise<BarbeariaAdmin[]> {
     cache: "no-store",
     headers: getAdminHeaders(),
   });
-  const data = (await parseOrThrow(res, "Falha ao carregar barbearias.")) as BarbeariaApi[];
+  const data = (await parseOrThrow(res, "Falha ao carregar estabelecimentos.")) as BarbeariaApi[];
   return data.map(toUi);
 }
 
@@ -120,7 +120,7 @@ export async function createBarbeariaAdmin(payload: {
     }),
   });
 
-  const data = (await parseOrThrow(res, "Falha ao cadastrar barbearia.")) as BarbeariaApi;
+  const data = (await parseOrThrow(res, "Falha ao cadastrar estabelecimento.")) as BarbeariaApi;
   return toUi(data);
 }
 
@@ -157,7 +157,7 @@ export async function updateBarbeariaAdmin(
     }),
   });
 
-  const data = (await parseOrThrow(res, "Falha ao atualizar barbearia.")) as BarbeariaApi;
+  const data = (await parseOrThrow(res, "Falha ao atualizar estabelecimento.")) as BarbeariaApi;
   return toUi(data);
 }
 
@@ -166,7 +166,7 @@ export async function deleteBarbeariaAdmin(id: number): Promise<void> {
     method: "DELETE",
     headers: getAdminHeaders(),
   });
-  await parseOrThrow(res, "Falha ao excluir barbearia.");
+  await parseOrThrow(res, "Falha ao excluir estabelecimento.");
 }
 
 export function getStatusAssinaturaBarbearia(item: BarbeariaAdmin): StatusAssinaturaBarbearia {

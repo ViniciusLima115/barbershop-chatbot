@@ -63,7 +63,7 @@ const tabs: Array<{
   {
     key: "clientes",
     label: "Clientes",
-    description: "Base de contatos da barbearia",
+    description: "Base de contatos do estabelecimento",
     icon: Users,
   },
   {
@@ -638,7 +638,7 @@ export default function GestaoPage() {
       setShowBarbeiroModal(false);
       await carregarTudo();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao salvar barbeiro.");
+      setError(e instanceof Error ? e.message : "Erro ao salvar profissional.");
     }
   }
 
@@ -767,7 +767,7 @@ export default function GestaoPage() {
   };
 
   const deleteBarbeiroHandler = async (id: number) => {
-    if (!confirm("Tem certeza que deseja remover este barbeiro?")) return;
+    if (!confirm("Tem certeza que deseja remover este profissional?")) return;
 
     try {
       limparMensagens();
@@ -775,7 +775,7 @@ export default function GestaoPage() {
       setSuccess("Barbeiro removido com sucesso!");
       await carregarTudo();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erro ao remover barbeiro.");
+      setError(e instanceof Error ? e.message : "Erro ao remover profissional.");
     }
   };
 
@@ -784,8 +784,8 @@ export default function GestaoPage() {
       <div className={styles.shell}>
         <header className={styles.hero}>
           <div className={styles.heroContent}>
-            <span className={styles.eyebrow}>Painel da barbearia</span>
-            <h1 className={styles.heroTitle}>{authSession?.tenantName ?? "Gestao da Barbearia"}</h1>
+            <span className={styles.eyebrow}>Painel de gestao</span>
+            <h1 className={styles.heroTitle}>{authSession?.tenantName ?? "Gestao do Estabelecimento"}</h1>
             <p className={styles.heroSubtitle}>
               Organize agenda, equipe, servicos e horarios em um painel claro para o dia a dia.
             </p>
@@ -885,12 +885,12 @@ export default function GestaoPage() {
               <div className={styles.sectionStack}>
                 <Panel
                   eyebrow="Equipe"
-                  title="Barbeiros ativos"
+                  title="Profissionais ativos"
                   description="Cadastre quem aparece na agenda e acompanhe o limite do seu plano."
                   actions={
                     <ActionButton variant="primary" onClick={() => abrirModalBarbeiro()}>
                       <Plus size={16} />
-                      Adicionar barbeiro
+                      Adicionar profissional
                     </ActionButton>
                   }
                 >
@@ -910,21 +910,21 @@ export default function GestaoPage() {
                   {!isPremiumPlan && limiteBarbeirosAtingido ? (
                     <Notice
                       tone="warning"
-                      message="Limite do plano basico atingido. Para mais barbeiros, faca upgrade para o premium."
+                      message="Limite do plano basico atingido. Para mais profissionais, faca upgrade para o premium."
                     />
                   ) : null}
                   {isPremiumPlan && limiteBarbeirosAtingido ? (
-                    <Notice tone="warning" message="Limite de 3 barbeiros ativos atingido no plano premium." />
+                    <Notice tone="warning" message="Limite de 3 profissionais ativos atingido no plano premium." />
                   ) : null}
 
                   {barbeiros.length === 0 ? (
                     <EmptyState
-                      title="Nenhum barbeiro cadastrado"
+                      title="Nenhum profissional cadastrado"
                       description="Adicione a equipe para liberar criacao de agendamentos com responsavel definido."
                       action={
                         <ActionButton variant="secondary" onClick={() => abrirModalBarbeiro()}>
                           <Plus size={16} />
-                          Criar primeiro barbeiro
+                          Criar primeiro profissional
                         </ActionButton>
                       }
                     />
@@ -939,11 +939,11 @@ export default function GestaoPage() {
                             </p>
                           </div>
                           <div className={styles.rowActions}>
-                            <IconActionButton label="Editar barbeiro" onClick={() => abrirModalBarbeiro(barbeiro)}>
+                            <IconActionButton label="Editar profissional" onClick={() => abrirModalBarbeiro(barbeiro)}>
                               <Edit2 size={16} />
                             </IconActionButton>
                             <IconActionButton
-                              label="Remover barbeiro"
+                              label="Remover profissional"
                               tone="danger"
                               onClick={() => deleteBarbeiroHandler(barbeiro.id)}
                             >
@@ -974,7 +974,7 @@ export default function GestaoPage() {
                   {clientes.length === 0 || servicos.length === 0 || barbeiros.length === 0 ? (
                     <Notice
                       tone="warning"
-                      message="Cadastre clientes, servicos e barbeiros antes de criar um agendamento."
+                      message="Cadastre clientes, servicos e profissionais antes de criar um agendamento."
                     />
                   ) : null}
 
@@ -1000,7 +1000,7 @@ export default function GestaoPage() {
                           <tr>
                             <th>Cliente</th>
                             <th>Servico</th>
-                            <th>Barbeiro</th>
+                            <th>Profissional</th>
                             <th>Horario</th>
                             <th>Status</th>
                             <th className={styles.actionsColumn}>Acoes</th>
@@ -1196,7 +1196,7 @@ export default function GestaoPage() {
 
                 <Panel
                   eyebrow="Configuracao"
-                  title="Funcionamento da barbearia"
+                  title="Funcionamento do estabelecimento"
                   description="Ative cada dia de trabalho e defina a janela de horarios em que a agenda pode aceitar reservas."
                 >
                   <form onSubmit={salvarFuncionamento} className={styles.workingForm}>
@@ -1376,12 +1376,12 @@ export default function GestaoPage() {
       <Modal
         isOpen={showBarbeiroModal}
         onClose={fecharBarbeiroModal}
-        title={editBarbeiroId ? "Editar barbeiro" : "Novo barbeiro"}
+        title={editBarbeiroId ? "Editar profissional" : "Novo profissional"}
         subtitle="Quem estiver aqui pode aparecer como responsavel pelo atendimento."
         size="lg"
       >
         <form onSubmit={submitBarbeiro} className={styles.formStack}>
-          <Field label="Nome do barbeiro" required>
+          <Field label="Nome do profissional" required>
             <input
               className={styles.input}
               placeholder="Ex: Carlos"
@@ -1393,8 +1393,8 @@ export default function GestaoPage() {
           <div className={styles.inlineInfoCard}>
             <p className={styles.inlineInfoTitle}>Disponibilidade individual</p>
             <p className={styles.inlineInfoText}>
-              Esses horarios refinam o funcionamento geral da barbearia. Exemplo: se a barbearia abre
-              08:00 e o barbeiro comeca 13:00, a manha nao aparece para ele.
+              Esses horarios refinam o funcionamento geral do estabelecimento. Exemplo: se o estabelecimento abre
+              08:00 e o profissional comeca 13:00, a manha nao aparece para ele.
             </p>
           </div>
           <div className={styles.workingDaysGrid}>
@@ -1481,7 +1481,7 @@ export default function GestaoPage() {
             <ActionButton variant="ghost" onClick={fecharBarbeiroModal}>
               Cancelar
             </ActionButton>
-            <ActionButton type="submit">{editBarbeiroId ? "Atualizar barbeiro" : "Criar barbeiro"}</ActionButton>
+            <ActionButton type="submit">{editBarbeiroId ? "Atualizar profissional" : "Criar profissional"}</ActionButton>
           </div>
         </form>
       </Modal>
@@ -1512,14 +1512,14 @@ export default function GestaoPage() {
                 ))}
               </select>
             </Field>
-            <Field label="Barbeiro" required>
+            <Field label="Profissional" required>
               <select
                 className={styles.select}
                 value={formAgendamento.barbeiroId}
                 onChange={(e) => setFormAgendamento((prev) => ({ ...prev, barbeiroId: e.target.value }))}
                 required
               >
-                <option value="">Selecione um barbeiro</option>
+                <option value="">Selecione um profissional</option>
                 {barbeiros.map((barbeiro) => (
                   <option key={barbeiro.id} value={barbeiro.id}>
                     {barbeiro.nome}
@@ -1580,7 +1580,7 @@ export default function GestaoPage() {
 
           {dicaFuncionamentoBarbeiro ? (
             <div className={styles.inlineInfoCard}>
-              <p className={styles.inlineInfoTitle}>Horario do barbeiro</p>
+              <p className={styles.inlineInfoTitle}>Horario do profissional</p>
               <p className={styles.inlineInfoText}>{dicaFuncionamentoBarbeiro}</p>
             </div>
           ) : null}

@@ -1,0 +1,452 @@
+/* ─── SHELL ──────────────────────────────────────────────── */
+.page {
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+.shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 72px;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+/* ─── SIDEBAR ────────────────────────────────────────────── */
+.sidebar {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 14px;
+  position: sticky;
+  top: 80px;
+}
+
+.sidebarHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  background: transparent;
+  color: var(--ink-muted);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.navItem:hover {
+  background: var(--surface-alt);
+  color: var(--ink);
+}
+
+.navItemActive {
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+  font-weight: 700;
+}
+
+/* ─── CONTENT ────────────────────────────────────────────── */
+.content {
+  display: grid;
+  gap: 16px;
+}
+
+/* ─── ALERTS ─────────────────────────────────────────────── */
+.alertSuccess {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--success-line);
+  background: var(--success-soft);
+  color: var(--success);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.alertError {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--danger-line);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+/* ─── CARD ───────────────────────────────────────────────── */
+.card {
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.cardHeader {
+  padding: 24px 28px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-dark);
+  margin: 0 0 6px;
+}
+
+.cardTitle {
+  margin: 0 0 6px;
+  font-size: 1.45rem;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+}
+
+.cardDesc {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ink-muted);
+  line-height: 1.6;
+}
+
+.cardBody {
+  padding: 24px 28px;
+}
+
+/* ─── FORM GROUPS ────────────────────────────────────────── */
+.fieldGroup {
+  display: grid;
+  gap: 18px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.fieldLabel {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.fieldHint {
+  font-size: 0.78rem;
+  color: var(--ink-subtle);
+  margin-top: 2px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 4px 0;
+}
+
+/* ─── TEMA SECTION ───────────────────────────────────────── */
+.presetGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.presetChip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.presetChip:hover {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.presetChipActive {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.presetDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.10);
+}
+
+.colorPickerRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.colorPickerField {
+  display: grid;
+  gap: 8px;
+}
+
+.colorPickerTrigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  position: relative;
+}
+
+.colorPickerTrigger:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(212,147,10,0.12);
+}
+
+.colorSwatch {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(0,0,0,0.12);
+  flex-shrink: 0;
+}
+
+.colorPickerInput {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.colorHex {
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  font-weight: 600;
+  flex: 1;
+}
+
+.colorName {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Preview card */
+.previewCard {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+
+.previewHeader {
+  padding: 10px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-subtle);
+  background: var(--surface-alt);
+  border-bottom: 1px solid var(--line);
+}
+
+.previewBody {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.previewNav {
+  display: flex;
+  gap: 6px;
+}
+
+.previewNavItem {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.previewNavActive {
+  color: #fff;
+}
+
+.previewNavInactive {
+  color: var(--ink-muted);
+  border: 1px solid var(--line);
+}
+
+.previewActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.previewBtnPrimary {
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  cursor: default;
+}
+
+.previewBtnOutline {
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: transparent;
+  cursor: default;
+}
+
+/* ─── LOGO ───────────────────────────────────────────────── */
+.logoPreview {
+  height: 56px;
+  object-fit: contain;
+  margin-top: 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  padding: 4px;
+}
+
+/* ─── CHECKBOX ───────────────────────────────────────────── */
+.checkboxRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface-alt);
+  cursor: pointer;
+}
+
+.checkboxRow input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.checkboxLabel {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.checkboxHint {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+
+/* ─── FOOTER ─────────────────────────────────────────────── */
+.cardFooter {
+  padding: 16px 28px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-alt);
+}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 14px 12px;
+  }
+
+  .navList {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .colorPickerRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .shell {
+    padding: 16px 12px 48px;
+  }
+
+  .cardHeader,
+  .cardBody,
+  .cardFooter {
+    padding-inline: 18px;
+  }
+
+  .fieldRow {
+    grid-template-columns: 1fr;
+  }
+}

@@ -515,7 +515,7 @@ export default function ReagendarPage() {
                     textDecoration: "none",
                   }}
                 >
-                  Voltar para o site da barbearia →
+                  Voltar para o site do estabelecimento →
                 </Link>
               )}
             </>

@@ -56,11 +56,11 @@ def tenant_id_from_header(
     db: Session = Depends(get_db),
 ) -> int:
     if not x_barbearia_id:
-        raise HTTPException(status_code=400, detail="X-Barbearia-Id obrigatorio.")
+        raise HTTPException(status_code=400, detail="X-Tenant-Id obrigatorio.")
     try:
         tenant_id = int(x_barbearia_id)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail="X-Barbearia-Id invalido.") from exc
+        raise HTTPException(status_code=400, detail="X-Tenant-Id invalido.") from exc
 
     if claims.is_admin or claims.tenant_id is None:
         raise HTTPException(status_code=403, detail="Tenant obrigatorio para este recurso.")
@@ -69,7 +69,7 @@ def tenant_id_from_header(
 
     barbearia = db.query(Barbearia.id).filter(Barbearia.id == tenant_id).first()
     if not barbearia:
-        raise HTTPException(status_code=404, detail="Barbearia nao encontrada.")
+        raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
 
     return tenant_id
 

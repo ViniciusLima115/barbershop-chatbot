@@ -59,7 +59,7 @@ class PublicAgendamentoCreate(BaseModel):
     @model_validator(mode="after")
     def validar_tenant_identificador(self):
         if not self.slug and not self.barbearia_id:
-            raise ValueError("Informe slug ou barbearia_id para identificar a barbearia.")
+            raise ValueError("Informe slug ou estabelecimento_id para identificar o estabelecimento.")
         return self
 
 

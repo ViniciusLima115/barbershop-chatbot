@@ -16,7 +16,7 @@ MAX_BARBEIROS_PREMIUM = 3
 def _get_barbearia(db: Session, tenant_id: int) -> Barbearia:
     barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
     if not barbearia:
-        raise HTTPException(status_code=404, detail="Barbearia nao encontrada.")
+        raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
     return barbearia
 
 
@@ -35,11 +35,11 @@ def criar(
     if total >= limite and plano != "premium":
         raise HTTPException(
             status_code=403,
-            detail="Deseja adicionar mais barbeiros? Faca o upgrade para o plano premium.",
+            detail="Deseja adicionar mais profissionais? Faca o upgrade para o plano premium.",
         )
 
     if total >= limite and plano == "premium":
-        raise HTTPException(status_code=400, detail="Limite de 3 barbeiros ativos atingido.")
+        raise HTTPException(status_code=400, detail="Limite de 3 profissionais ativos atingido.")
 
     payload = {
         "nome": dados.nome.strip(),
@@ -81,7 +81,7 @@ def atualizar(
 
     barbeiro = query.first()
     if not barbeiro:
-        raise HTTPException(status_code=404, detail="Barbeiro nao encontrado.")
+        raise HTTPException(status_code=404, detail="Profissional nao encontrado.")
 
     barbeiro.nome = dados.nome.strip()
     barbeiro.ativo = dados.ativo
@@ -108,7 +108,7 @@ def remover(
 
     barbeiro = query.first()
     if not barbeiro:
-        raise HTTPException(status_code=404, detail="Barbeiro nao encontrado.")
+        raise HTTPException(status_code=404, detail="Profissional nao encontrado.")
 
     db.delete(barbeiro)
     db.commit()

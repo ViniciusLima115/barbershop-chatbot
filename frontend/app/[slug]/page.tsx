@@ -182,7 +182,7 @@ export default function PublicBookingPage() {
           <p className="text-xs uppercase tracking-[0.2em] text-amber-300">Agendamento Online</p>
           <h1 className="mt-2 text-3xl font-black leading-tight">{lookup.nome}</h1>
           <p className="mt-3 text-sm text-zinc-300">
-            Preencha seus dados, escolha o corte e selecione um horario.
+            Preencha seus dados, escolha o servico e selecione um horario.
           </p>
           <div className="mt-6 rounded-xl border border-zinc-700 bg-zinc-950/80 p-4">
             <p className="text-xs text-zinc-400">Servico selecionado</p>

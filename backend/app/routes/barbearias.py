@@ -20,7 +20,7 @@ router = APIRouter(prefix="/barbearias", dependencies=[Depends(require_admin)])
 def _slugify(texto: str) -> str:
     base = unicodedata.normalize("NFKD", texto.strip().lower()).encode("ascii", "ignore").decode("ascii")
     base = re.sub(r"[^a-z0-9]+", "-", base).strip("-")
-    return base or "barbearia"
+    return base or "estabelecimento"
 
 
 def _gerar_slug_unico(db: Session, nome: str, slug_informado: str | None, *, excluir_id: int | None = None) -> str:
@@ -51,7 +51,7 @@ def criar(dados: BarbeariaAdminCreate, db: Session = Depends(get_db)):
 
     login_existente = db.query(Barbearia).filter(Barbearia.login == login).first()
     if login_existente:
-        raise HTTPException(status_code=400, detail="Ja existe uma barbearia com esse login.")
+        raise HTTPException(status_code=400, detail="Ja existe um estabelecimento com esse login.")
 
     barbearia = Barbearia(
         nome=dados.nome.strip(),
@@ -77,7 +77,7 @@ def criar(dados: BarbeariaAdminCreate, db: Session = Depends(get_db)):
 def atualizar(barbearia_id: int, dados: BarbeariaAdminUpdate, db: Session = Depends(get_db)):
     barbearia = db.query(Barbearia).filter(Barbearia.id == barbearia_id).first()
     if not barbearia:
-        raise HTTPException(status_code=404, detail="Barbearia nao encontrada.")
+        raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
 
     slug = _gerar_slug_unico(db, dados.nome, dados.slug, excluir_id=barbearia_id)
     login = dados.login.strip().lower()
@@ -88,7 +88,7 @@ def atualizar(barbearia_id: int, dados: BarbeariaAdminUpdate, db: Session = Depe
         .first()
     )
     if conflito_login:
-        raise HTTPException(status_code=400, detail="Ja existe outra barbearia com esse login.")
+        raise HTTPException(status_code=400, detail="Ja existe outro estabelecimento com esse login.")
 
     barbearia.nome = dados.nome.strip()
     barbearia.slug = slug
@@ -111,7 +111,7 @@ def atualizar(barbearia_id: int, dados: BarbeariaAdminUpdate, db: Session = Depe
 def remover(barbearia_id: int, db: Session = Depends(get_db)):
     barbearia = db.query(Barbearia).filter(Barbearia.id == barbearia_id).first()
     if not barbearia:
-        raise HTTPException(status_code=404, detail="Barbearia nao encontrada.")
+        raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
 
     db.delete(barbearia)
     db.commit()

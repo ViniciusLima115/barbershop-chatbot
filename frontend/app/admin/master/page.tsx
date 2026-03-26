@@ -84,7 +84,7 @@ export default function AdminPage() {
       const items = await listBarbeariasAdmin();
       setBarbearias(items);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao carregar barbearias.");
+      setError(err instanceof Error ? err.message : "Falha ao carregar estabelecimentos.");
     } finally {
       setLoading(false);
     }
