@@ -231,9 +231,9 @@ export default function PublicBookingPage() {
               </label>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-[1fr_2fr]">
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Barbeiro</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700">Profissional</span>
                 <select
                   className="select"
                   value={barbeiroId ?? ""}
@@ -252,7 +252,7 @@ export default function PublicBookingPage() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Tipo de corte</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700">Serviço</span>
                 <select
                   className="select"
                   value={servicoId ?? ""}
@@ -269,21 +269,21 @@ export default function PublicBookingPage() {
                   ))}
                 </select>
               </label>
-
-              <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Data</span>
-                <input
-                  className="input"
-                  type="date"
-                  min={hojeISO()}
-                  value={data}
-                  onChange={(event) => {
-                    setData(event.target.value);
-                    setHoraInicio(null);
-                  }}
-                />
-              </label>
             </div>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-slate-700">Data</span>
+              <input
+                className="input w-48"
+                type="date"
+                min={hojeISO()}
+                value={data}
+                onChange={(event) => {
+                  setData(event.target.value);
+                  setHoraInicio(null);
+                }}
+              />
+            </label>
 
             <div>
               <div className="mb-2 flex items-center justify-between">
