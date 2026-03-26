@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import synonym
 
 from app.database import Base
 
@@ -13,7 +14,8 @@ class ReminderJob(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
-    tenant_id = Column(Integer, nullable=False, index=True)
+    estabelecimento_id = Column(Integer, nullable=False, index=True)
+    tenant_id = synonym("estabelecimento_id")
     agendamento_id = Column(Integer, ForeignKey("agendamentos.id"), nullable=False, index=True)
     tipo = Column(String(20), nullable=False)  # reminder_24h | reminder_2h
     canal = Column(String(20), nullable=False, default="whatsapp")
