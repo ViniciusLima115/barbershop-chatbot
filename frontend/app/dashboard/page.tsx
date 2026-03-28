@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Lock, TrendingUp, Users, Scissors, DollarSign } from "lucide-react";
+import { Lock, TrendingUp, Users, Scissors, DollarSign, ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import {
   LineChart,
   Line,
@@ -119,6 +120,12 @@ export default function DashboardPage() {
   return (
     <div className={styles.page}>
       <div className={`app-container ${styles.shell}`}>
+        {/* Back button */}
+        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--ink-muted)", fontSize: "0.88rem", fontWeight: 600, marginBottom: "16px", textDecoration: "none" }}>
+          <ArrowLeft size={16} />
+          Voltar
+        </Link>
+
         {/* Hero */}
         <section className={styles.hero}>
           <p className={styles.eyebrow}>Analytics Premium</p>
