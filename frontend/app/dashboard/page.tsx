@@ -21,6 +21,7 @@ import {
   type ClientesResponse,
 } from "@/services/api";
 import styles from "./page.module.css";
+import AnaliseTab from "./AnaliseTab";
 
 const brl = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
@@ -47,11 +48,14 @@ function UpgradeScreen() {
   );
 }
 
+type Tab = "visao-geral" | "analise";
+
 export default function DashboardPage() {
   const session = useAuthSession();
   const isPremium = session?.plan === "premium";
   const tenantId = session?.tenantId ?? "";
 
+  const [activeTab, setActiveTab] = useState<Tab>("visao-geral");
   const [financeiro, setFinanceiro] = useState<FinanceiroResponse | null>(null);
   const [servicos, setServicos] = useState<ServicosMaisVendidosResponse | null>(null);
   const [clientes, setClientes] = useState<ClientesResponse | null>(null);
@@ -124,6 +128,26 @@ export default function DashboardPage() {
           </p>
         </section>
 
+        {/* Tab bar */}
+        <div className={styles.tabBar}>
+          <button
+            className={`${styles.tabBtn}${activeTab === "visao-geral" ? ` ${styles.tabBtnActive}` : ""}`}
+            onClick={() => setActiveTab("visao-geral")}
+          >
+            Visão geral
+          </button>
+          <button
+            className={`${styles.tabBtn}${activeTab === "analise" ? ` ${styles.tabBtnActive}` : ""}`}
+            onClick={() => setActiveTab("analise")}
+          >
+            Análise
+          </button>
+        </div>
+
+        {activeTab === "analise" && <AnaliseTab />}
+
+        {activeTab === "visao-geral" && (
+        <>
         {/* Stat cards */}
         <div className={styles.statsGrid}>
           <article className={styles.statCard}>
@@ -293,6 +317,8 @@ export default function DashboardPage() {
             </div>
           </section>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

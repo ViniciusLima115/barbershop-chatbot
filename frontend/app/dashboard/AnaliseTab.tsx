@@ -1,3 +1,5 @@
+"use client";
+
 import { BarChart2, DollarSign, Scissors, TrendingUp } from "lucide-react";
 import styles from "./page.module.css";
 
