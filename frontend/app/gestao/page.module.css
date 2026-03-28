@@ -971,3 +971,21 @@
     font-size: 1.75rem;
   }
 }
+
+/* ── Upgrade upsell modal ─────────────────────────────────── */
+.upgradeModalBody {
+  display: grid;
+  gap: 24px;
+}
+
+.upgradeModalText {
+  margin: 0;
+  color: var(--ink-muted);
+  line-height: 1.65;
+}
+
+.upgradeModalActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

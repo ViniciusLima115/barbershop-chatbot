@@ -28,6 +28,7 @@ import {
   updateServico,
 } from "@/services/api";
 import { useAuthSession } from "@/services/auth";
+import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   CheckCircle2,
@@ -404,6 +405,7 @@ function Modal({
 
 export default function GestaoPage() {
   const authSession = useAuthSession();
+  const router = useRouter();
   const isPremiumPlan = authSession?.plan === "premium";
   const [tab, setTab] = useState<Tab>("agendamentos");
   const [loading, setLoading] = useState(false);
@@ -414,6 +416,7 @@ export default function GestaoPage() {
   const [showServicoModal, setShowServicoModal] = useState(false);
   const [showAgendamentoModal, setShowAgendamentoModal] = useState(false);
   const [showBarbeiroModal, setShowBarbeiroModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [servicos, setServicos] = useState<Servico[]>([]);
@@ -658,6 +661,14 @@ export default function GestaoPage() {
     setShowBarbeiroModal(true);
   }
 
+  function abrirModalOuUpgrade() {
+    if (!isPremiumPlan && limiteBarbeirosAtingido) {
+      setShowUpgradeModal(true);
+    } else {
+      abrirModalBarbeiro();
+    }
+  }
+
   async function submitAgendamento(e: FormEvent) {
     e.preventDefault();
     limparMensagens();
@@ -888,7 +899,7 @@ export default function GestaoPage() {
                   title="Profissionais ativos"
                   description="Cadastre quem aparece na agenda e acompanhe o limite do seu plano."
                   actions={
-                    <ActionButton variant="primary" onClick={() => abrirModalBarbeiro()}>
+                    <ActionButton variant="primary" onClick={abrirModalOuUpgrade}>
                       <Plus size={16} />
                       Adicionar profissional
                     </ActionButton>
@@ -1371,6 +1382,29 @@ export default function GestaoPage() {
             <ActionButton type="submit">{editServicoId ? "Atualizar servico" : "Criar servico"}</ActionButton>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        title="Limite do plano básico atingido"
+        size="sm"
+      >
+        <div className={styles.upgradeModalBody}>
+          <p className={styles.upgradeModalText}>
+            O plano básico permite <strong>1 profissional</strong> ativo. Com o{" "}
+            <strong>Premium</strong> você pode cadastrar até 3 profissionais e ter acesso
+            a dashboard financeiro, análise de clientes e suporte prioritário.
+          </p>
+          <div className={styles.upgradeModalActions}>
+            <ActionButton variant="primary" onClick={() => router.push("/upgrade")}>
+              Fazer upgrade
+            </ActionButton>
+            <ActionButton variant="ghost" onClick={() => setShowUpgradeModal(false)}>
+              Agora não
+            </ActionButton>
+          </div>
+        </div>
       </Modal>
 
       <Modal
