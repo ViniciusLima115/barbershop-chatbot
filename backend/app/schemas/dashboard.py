@@ -42,3 +42,40 @@ class ClientesResponse(BaseModel):
     clientes_recorrentes: int   # mais de 1 visita
     taxa_cancelamento: float    # 0.0 a 100.0 (percentual)
     top_5_clientes: list[TopCliente]
+
+
+class ResumoMes(BaseModel):
+    agendamentos: int
+    faturamento: float
+    ticket_medio: float
+    ocupacao: int           # 0–100 (percentual inteiro)
+
+
+class DiaSemana(BaseModel):
+    dia: str                # "Seg", "Ter", ..., "Dom"
+    clientes: int
+
+
+class HorarioCheio(BaseModel):
+    hora: str               # "09:00", "18:00", etc.
+    atendimentos: int
+
+
+class ServicoAnalise(BaseModel):
+    nome: str
+    total: int
+
+
+class ClientesAnalise(BaseModel):
+    novos: int
+    recorrentes: int
+    cancelamentos: int
+    no_show: int
+
+
+class AnaliseResponse(BaseModel):
+    resumo: ResumoMes
+    semana: list[DiaSemana]
+    horarios: list[HorarioCheio]
+    servicos: list[ServicoAnalise]
+    clientes: ClientesAnalise
