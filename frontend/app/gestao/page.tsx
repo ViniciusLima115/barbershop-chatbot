@@ -933,7 +933,7 @@ export default function GestaoPage() {
                       title="Nenhum profissional cadastrado"
                       description="Adicione a equipe para liberar criacao de agendamentos com responsavel definido."
                       action={
-                        <ActionButton variant="secondary" onClick={() => abrirModalBarbeiro()}>
+                        <ActionButton variant="secondary" onClick={abrirModalOuUpgrade}>
                           <Plus size={16} />
                           Criar primeiro profissional
                         </ActionButton>
