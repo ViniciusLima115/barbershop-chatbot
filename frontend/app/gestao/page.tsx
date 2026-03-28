@@ -1388,7 +1388,7 @@ export default function GestaoPage() {
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         title="Limite do plano básico atingido"
-        size="sm"
+        size="md"
       >
         <div className={styles.upgradeModalBody}>
           <p className={styles.upgradeModalText}>
