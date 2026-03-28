@@ -544,8 +544,8 @@
 
 /* ── Bloco 5 — métrica danger ────────────────────────────── */
 .clienteStatItemDanger {
-  background: #fff5f5;
-  border-color: #fecaca;
+  background: var(--danger-soft, #fef2f2);
+  border-color: var(--danger-line, #fecaca);
 }
 
 .clienteStatValueDanger {
