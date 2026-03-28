@@ -2,30 +2,102 @@
 
 import Link from "next/link";
 import { ArrowLeft, Check, Minus } from "lucide-react";
+import { useAuthSession } from "@/services/auth";
 import styles from "./page.module.css";
+
+type PlanKey = "gratis" | "basico" | "premium";
 
 type Feature = {
   label: string;
-  basico: boolean;
-  premium: boolean;
+  gratis: boolean | string;
+  basico: boolean | string;
+  premium: boolean | string;
 };
 
 const FEATURES: Feature[] = [
-  { label: "Agendamentos ilimitados", basico: true, premium: true },
-  { label: "Dashboard financeiro", basico: false, premium: true },
-  { label: "Análise de clientes", basico: false, premium: true },
-  { label: "Ranking de serviços", basico: false, premium: true },
-  { label: "Suporte prioritário", basico: false, premium: true },
+  {
+    label: "Profissionais ativos",
+    gratis: "1",
+    basico: "2",
+    premium: "3+",
+  },
+  {
+    label: "Agendamentos por mês",
+    gratis: "30",
+    basico: "Ilimitados",
+    premium: "Ilimitados",
+  },
+  {
+    label: "Dashboard básico",
+    gratis: false,
+    basico: true,
+    premium: true,
+  },
+  {
+    label: "Dashboard financeiro completo",
+    gratis: false,
+    basico: false,
+    premium: true,
+  },
+  {
+    label: "Análise de clientes",
+    gratis: false,
+    basico: false,
+    premium: true,
+  },
+  {
+    label: "Ranking de serviços",
+    gratis: false,
+    basico: false,
+    premium: true,
+  },
+  {
+    label: "Notificações WhatsApp",
+    gratis: false,
+    basico: true,
+    premium: true,
+  },
+  {
+    label: "Chatbot automático",
+    gratis: false,
+    basico: true,
+    premium: true,
+  },
+  {
+    label: "Suporte prioritário",
+    gratis: false,
+    basico: false,
+    premium: true,
+  },
 ];
 
-function FeatureIcon({ has }: { has: boolean }) {
-  if (has) {
+function FeatureValue({ value }: { value: boolean | string }) {
+  if (typeof value === "string") {
+    return <span className={styles.featureText}>{value}</span>;
+  }
+  if (value) {
     return <Check size={16} className={`${styles.featureIcon} ${styles.featureIconCheck}`} />;
   }
   return <Minus size={16} className={`${styles.featureIcon} ${styles.featureIconMissing}`} />;
 }
 
 export default function UpgradePage() {
+  const session = useAuthSession();
+  const currentPlan = (session?.plan ?? "gratis") as PlanKey;
+
+  function planButton(plan: PlanKey, price: string, label: string) {
+    const isCurrent = currentPlan === plan;
+    return isCurrent ? (
+      <button disabled className={`${styles.ctaButton} ${styles.ctaButtonSecondary}`}>
+        Plano atual
+      </button>
+    ) : (
+      <button disabled className={`${styles.ctaButton} ${styles.ctaButtonPrimary}`}>
+        {label} — Em breve
+      </button>
+    );
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.shell}>
@@ -43,40 +115,59 @@ export default function UpgradePage() {
         </div>
 
         <div className={styles.plansGrid}>
-          {/* Plano Básico */}
+          {/* Plano Grátis */}
           <div className={styles.planCard}>
             <div className={styles.planCardHeader}>
               <div className={styles.planBadgeRow}>
-                <h2 className={styles.planName}>Básico</h2>
+                <h2 className={styles.planName}>Grátis</h2>
               </div>
-              <p className={styles.planPrice}>
-                Grátis
-              </p>
+              <p className={styles.planPrice}>R$ 0</p>
               <p className={styles.planDescription}>
-                Para quem está começando e precisa do essencial.
+                Para experimentar a plataforma com o essencial.
               </p>
             </div>
 
             <ul className={styles.featureList}>
-              <li className={styles.featureItem}>
-                <FeatureIcon has={true} />
-                1 profissional ativo
-              </li>
               {FEATURES.map((f) => (
                 <li key={f.label} className={styles.featureItem}>
-                  <FeatureIcon has={f.basico} />
+                  <FeatureValue value={f.gratis} />
                   {f.label}
                 </li>
               ))}
             </ul>
 
-            <button disabled className={styles.ctaButton + " " + styles.ctaButtonSecondary}>
-              Plano atual
-            </button>
+            {planButton("gratis", "R$0", "Usar Grátis")}
+          </div>
+
+          {/* Plano Básico */}
+          <div className={`${styles.planCard} ${currentPlan === "basico" ? styles.planCardHighlight : ""}`}>
+            <div className={styles.planCardHeader}>
+              <div className={styles.planBadgeRow}>
+                <h2 className={styles.planName}>Básico</h2>
+                {currentPlan !== "basico" && <span className={styles.planBadge}>Popular</span>}
+              </div>
+              <p className={styles.planPrice}>
+                R$ 29<span className={styles.planPriceSub}>/mês</span>
+              </p>
+              <p className={styles.planDescription}>
+                Para quem quer crescer com WhatsApp, chatbot e mais profissionais.
+              </p>
+            </div>
+
+            <ul className={styles.featureList}>
+              {FEATURES.map((f) => (
+                <li key={f.label} className={styles.featureItem}>
+                  <FeatureValue value={f.basico} />
+                  {f.label}
+                </li>
+              ))}
+            </ul>
+
+            {planButton("basico", "R$29", "Assinar Básico")}
           </div>
 
           {/* Plano Premium */}
-          <div className={`${styles.planCard} ${styles.planCardHighlight}`}>
+          <div className={`${styles.planCard} ${currentPlan === "premium" ? styles.planCardHighlight : styles.planCardPremium}`}>
             <div className={styles.planCardHeader}>
               <div className={styles.planBadgeRow}>
                 <h2 className={styles.planName}>Premium</h2>
@@ -86,28 +177,26 @@ export default function UpgradePage() {
                 R$ 49<span className={styles.planPriceSub}>/mês</span>
               </p>
               <p className={styles.planDescription}>
-                Para estabelecimentos que querem crescer com dados e mais equipe.
+                Para estabelecimentos que querem crescer com dados e análises completas.
               </p>
             </div>
 
             <ul className={styles.featureList}>
-              <li className={styles.featureItem}>
-                <FeatureIcon has={true} />
-                Até 3 profissionais ativos
-              </li>
               {FEATURES.map((f) => (
                 <li key={f.label} className={styles.featureItem}>
-                  <FeatureIcon has={f.premium} />
+                  <FeatureValue value={f.premium} />
                   {f.label}
                 </li>
               ))}
             </ul>
 
-            <button disabled className={styles.ctaButton + " " + styles.ctaButtonPrimary}>
-              Em breve
-            </button>
+            {planButton("premium", "R$49", "Assinar Premium")}
           </div>
         </div>
+
+        <p className={styles.footerNote}>
+          Pagamento online em breve. Por enquanto, entre em contato com o suporte para fazer upgrade.
+        </p>
       </div>
     </div>
   );

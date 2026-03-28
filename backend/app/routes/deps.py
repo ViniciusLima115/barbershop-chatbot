@@ -99,3 +99,18 @@ def verificar_plano_premium(
             detail="Recurso disponivel apenas para o plano Premium.",
         )
     return tenant_id
+
+
+def verificar_plano_minimo_basico(
+    tenant_id: int = Depends(tenant_id_from_header),
+    db: Session = Depends(get_db),
+) -> int:
+    """Permite acesso para planos 'basico' e 'premium'. Bloqueia 'gratis'."""
+    barbearia = db.query(Barbearia.plano).filter(Barbearia.id == tenant_id).first()
+    plano = (barbearia.plano or "gratis").lower() if barbearia else "gratis"
+    if plano not in ("basico", "premium"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Recurso disponivel apenas para os planos Basico e Premium.",
+        )
+    return tenant_id

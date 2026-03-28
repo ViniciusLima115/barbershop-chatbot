@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.agendamento import Agendamento
 from app.models.servico import Servico
-from app.routes.deps import verificar_plano_premium
+from app.routes.deps import verificar_plano_minimo_basico, verificar_plano_premium
 from app.schemas.dashboard import (
     AnaliseResponse,
     ClientesAnalise,
@@ -18,6 +18,7 @@ from app.schemas.dashboard import (
     FinanceiroResponse,
     HistoricoMes,
     HorarioCheio,
+    ResumoBasicoResponse,
     ResumoMes,
     ServicoAnalise,
     ServicoMaisVendido,
@@ -26,6 +27,103 @@ from app.schemas.dashboard import (
 )
 
 router = APIRouter(prefix="/dashboard")
+
+
+@router.get("/{barbearia_id}/resumo-basico", response_model=ResumoBasicoResponse)
+def resumo_basico(
+    barbearia_id: int,
+    tenant_id: int = Depends(verificar_plano_minimo_basico),
+    db: Session = Depends(get_db),
+):
+    """Dashboard simplificado acessível pelos planos Básico e Premium."""
+    if barbearia_id != tenant_id:
+        raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
+    try:
+        return _resumo_basico(db, tenant_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Erro interno: {exc}") from exc
+
+
+def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
+    hoje = date.today()
+    inicio_mes = hoje.replace(day=1)
+
+    total_mes = (
+        db.query(func.count(Agendamento.id))
+        .filter(
+            Agendamento.barbearia_id == tenant_id,
+            Agendamento.data >= inicio_mes,
+            Agendamento.data <= hoje,
+        )
+        .scalar() or 0
+    )
+
+    confirmados_mes = (
+        db.query(func.count(Agendamento.id))
+        .filter(
+            Agendamento.barbearia_id == tenant_id,
+            Agendamento.status == "confirmado",
+            Agendamento.data >= inicio_mes,
+            Agendamento.data <= hoje,
+        )
+        .scalar() or 0
+    )
+
+    cancelados_mes = (
+        db.query(func.count(Agendamento.id))
+        .filter(
+            Agendamento.barbearia_id == tenant_id,
+            Agendamento.status == "cancelado",
+            Agendamento.data >= inicio_mes,
+            Agendamento.data <= hoje,
+        )
+        .scalar() or 0
+    )
+
+    faturamento = (
+        db.query(func.coalesce(func.sum(Servico.preco), 0.0))
+        .select_from(Agendamento)
+        .join(Servico, Servico.id == Agendamento.servico_id)
+        .filter(
+            Agendamento.barbearia_id == tenant_id,
+            Agendamento.status == "confirmado",
+            Agendamento.data >= inicio_mes,
+            Agendamento.data <= hoje,
+        )
+        .scalar() or 0.0
+    )
+
+    clientes_unicos = (
+        db.query(func.count(func.distinct(Agendamento.cliente_telefone)))
+        .filter(
+            Agendamento.barbearia_id == tenant_id,
+            Agendamento.status == "confirmado",
+            Agendamento.data >= inicio_mes,
+            Agendamento.data <= hoje,
+        )
+        .scalar() or 0
+    )
+
+    agendamentos_hoje = (
+        db.query(func.count(Agendamento.id))
+        .filter(
+            Agendamento.barbearia_id == tenant_id,
+            Agendamento.data == hoje,
+            Agendamento.status.in_(["confirmado", "pendente"]),
+        )
+        .scalar() or 0
+    )
+
+    return ResumoBasicoResponse(
+        total_agendamentos_mes=int(total_mes),
+        agendamentos_confirmados_mes=int(confirmados_mes),
+        agendamentos_cancelados_mes=int(cancelados_mes),
+        faturamento_estimado_mes=float(faturamento),
+        total_clientes_unicos_mes=int(clientes_unicos),
+        agendamentos_hoje=int(agendamentos_hoje),
+    )
 
 
 @router.get("/{barbearia_id}/financeiro", response_model=FinanceiroResponse)

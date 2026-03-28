@@ -1,7 +1,7 @@
 import { API_URL } from "./api";
 import { getAuthSession } from "./auth";
 
-export type PlanoEstabelecimento = "basico" | "premium";
+export type PlanoEstabelecimento = "gratis" | "basico" | "premium";
 export type StatusManualEstabelecimento = "ativo" | "inativo";
 export type StatusAssinaturaEstabelecimento = "ativo" | "trial" | "bloqueado_atraso" | "inativo";
 
@@ -60,7 +60,7 @@ function toUi(item: EstabelecimentoApi): EstabelecimentoAdmin {
     nome: item.nome,
     login: item.login ?? "",
     senha: item.senha ?? "",
-    plano: item.plano ?? "basico",
+    plano: item.plano ?? "gratis",
     statusManual: item.status_manual ?? "ativo",
     vencimentoEm: item.vencimento_em ?? plusDays(30),
     trialAtivo: Boolean(item.trial_ativo),

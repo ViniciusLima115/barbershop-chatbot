@@ -61,11 +61,17 @@
 /* ── Grid de planos ───────────────────────────────────────── */
 .plansGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 860px) {
+  .plansGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 560px) {
   .plansGrid {
     grid-template-columns: 1fr;
   }
@@ -166,6 +172,29 @@
 }
 
 .featureIconMissing {
+  color: var(--ink-muted);
+}
+
+/* ── Card premium (sem ser plano atual) ───────────────────── */
+.planCardPremium {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-soft), var(--shadow-md);
+}
+
+/* ── Feature text inline ──────────────────────────────────── */
+.featureText {
+  font-weight: 600;
+  color: var(--accent-dark);
+  font-size: 0.88rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* ── Footer note ──────────────────────────────────────────── */
+.footerNote {
+  text-align: center;
+  margin-top: 32px;
+  font-size: 0.82rem;
   color: var(--ink-muted);
 }
 

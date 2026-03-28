@@ -676,3 +676,19 @@ export async function getDashboardAnalise(barbeariaId: string): Promise<AnaliseR
   const res = await apiFetch(`/dashboard/${barbeariaId}/analise`);
   return parseOrThrow(res, "Falha ao carregar dados de análise do dashboard.");
 }
+
+// ─── DASHBOARD BÁSICO ──────────────────────────────────────────────────────
+
+export type ResumoBasicoResponse = {
+  total_agendamentos_mes: number;
+  agendamentos_confirmados_mes: number;
+  agendamentos_cancelados_mes: number;
+  faturamento_estimado_mes: number;
+  total_clientes_unicos_mes: number;
+  agendamentos_hoje: number;
+};
+
+export async function getDashboardResumoBasico(barbeariaId: string): Promise<ResumoBasicoResponse> {
+  const res = await apiFetch(`/dashboard/${barbeariaId}/resumo-basico`);
+  return parseOrThrow(res, "Falha ao carregar resumo do dashboard.");
+}

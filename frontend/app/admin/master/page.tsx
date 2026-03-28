@@ -39,7 +39,7 @@ const initialForm = {
   nome: "",
   login: "",
   senha: "",
-  plano: "basico" as PlanoBarbearia,
+  plano: "gratis" as PlanoBarbearia,
   vencimentoEm: plusDaysISO(30),
   trialAtivo: false,
   trialFimEm: plusDaysISO(7),
@@ -71,7 +71,7 @@ export default function AdminPage() {
     nome: "",
     login: "",
     senha: "",
-    plano: "basico" as PlanoBarbearia,
+    plano: "gratis" as PlanoBarbearia,
     statusManual: "ativo" as StatusManualBarbearia,
     vencimentoEm: plusDaysISO(30),
     trialAtivo: false,
@@ -102,6 +102,10 @@ export default function AdminPage() {
     return () => clearTimeout(t);
   }, [success]);
 
+  const totalGratis = useMemo(
+    () => barbearias.filter((b) => b.plano === "gratis").length,
+    [barbearias]
+  );
   const totalBasico = useMemo(
     () => barbearias.filter((b) => b.plano === "basico").length,
     [barbearias]
@@ -362,6 +366,13 @@ export default function AdminPage() {
           <div className={styles.statCard}>
             <div className={styles.statIcon}><ShieldCheck size={22} /></div>
             <div className={styles.statContent}>
+              <span className={styles.statLabel}>Plano Gratis</span>
+              <span className={styles.statValue}>{totalGratis}</span>
+            </div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><ShieldCheck size={22} /></div>
+            <div className={styles.statContent}>
               <span className={styles.statLabel}>Plano Basico</span>
               <span className={styles.statValue}>{totalBasico}</span>
             </div>
@@ -477,6 +488,7 @@ export default function AdminPage() {
                     setForm((prev) => ({ ...prev, plano: e.target.value as PlanoBarbearia }))
                   }
                 >
+                  <option value="gratis">Plano Gratis</option>
                   <option value="basico">Plano Basico</option>
                   <option value="premium">Plano Premium</option>
                 </FormInput>
@@ -576,6 +588,7 @@ export default function AdminPage() {
                 onChange={(e) => setFiltros((prev) => ({ ...prev, plano: e.target.value }))}
               >
                 <option value="todos">Todos</option>
+                <option value="gratis">Gratis</option>
                 <option value="basico">Basico</option>
                 <option value="premium">Premium</option>
               </FormInput>
@@ -678,8 +691,14 @@ export default function AdminPage() {
 
                       {/* Badges */}
                       <div className={styles.estabBadges}>
-                        <span className={`badge ${item.plano === "premium" ? "badge-confirmado" : "badge-livre"}`}>
-                          {item.plano === "premium" ? "Premium" : "Basico"}
+                        <span className={`badge ${
+                          item.plano === "premium"
+                            ? "badge-confirmado"
+                            : item.plano === "basico"
+                              ? "badge-pendente"
+                              : "badge-livre"
+                        }`}>
+                          {item.plano === "premium" ? "Premium" : item.plano === "basico" ? "Basico" : "Gratis"}
                         </span>
                         <span className={`badge ${
                           status === "bloqueado_atraso" || status === "inativo"
@@ -818,6 +837,7 @@ export default function AdminPage() {
                 setEditForm((prev) => ({ ...prev, plano: e.target.value as PlanoBarbearia }))
               }
             >
+              <option value="gratis">Plano Gratis</option>
               <option value="basico">Plano Basico</option>
               <option value="premium">Plano Premium</option>
             </FormInput>

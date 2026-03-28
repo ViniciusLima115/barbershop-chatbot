@@ -79,3 +79,13 @@ class AnaliseResponse(BaseModel):
     horarios: list[HorarioCheio]
     servicos: list[ServicoAnalise]
     clientes: ClientesAnalise
+
+
+# ── Dashboard Básico (plano Básico) ──────────────────────────────────────────
+class ResumoBasicoResponse(BaseModel):
+    total_agendamentos_mes: int
+    agendamentos_confirmados_mes: int
+    agendamentos_cancelados_mes: int
+    faturamento_estimado_mes: float
+    total_clientes_unicos_mes: int
+    agendamentos_hoje: int

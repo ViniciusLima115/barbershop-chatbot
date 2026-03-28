@@ -4,6 +4,8 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.agendamento import Agendamento as AgendamentoModel
+from app.models.estabelecimento import Estabelecimento
 from app.routes.deps import tenant_id_from_header
 from app.schemas.agendamento import (
     AgendamentoCreate,
@@ -33,6 +35,9 @@ from app.services.email_service import send_email_payload
 router = APIRouter(prefix="/agendamentos")
 
 
+LIMITE_AGENDAMENTOS_GRATIS = 30
+
+
 @router.post("/", response_model=AgendamentoResponse)
 def criar(
     dados: AgendamentoCreate,
@@ -40,6 +45,25 @@ def criar(
     tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
+    # Verificar limite mensal para plano Gratis
+    estab = db.query(Estabelecimento).filter(Estabelecimento.id == tenant_id).first()
+    if estab and (estab.plano or "gratis").lower() == "gratis":
+        hoje = date.today()
+        inicio_mes = hoje.replace(day=1)
+        total_mes = (
+            db.query(AgendamentoModel)
+            .filter(
+                AgendamentoModel.barbearia_id == tenant_id,
+                AgendamentoModel.data >= inicio_mes,
+            )
+            .count()
+        )
+        if total_mes >= LIMITE_AGENDAMENTOS_GRATIS:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Limite de {LIMITE_AGENDAMENTOS_GRATIS} agendamentos por mes atingido no plano Gratis. Faca o upgrade para continuar.",
+            )
+
     try:
         agendamento = criar_agendamento(db, dados, tenant_id=tenant_id)
         payload = obter_payload_email_confirmacao(db, agendamento_id=agendamento["id"])

@@ -9,7 +9,8 @@ from app.schemas.barbeiro import BarbeiroCreate, BarbeiroResponse, BarbeiroUpdat
 from app.services.estabelecimento_hours_service import get_working_hours
 
 router = APIRouter(prefix="/profissionais")
-MAX_BARBEIROS_BASICO = 1
+MAX_BARBEIROS_GRATIS = 1
+MAX_BARBEIROS_BASICO = 2
 MAX_BARBEIROS_PREMIUM = 3
 
 
@@ -29,17 +30,28 @@ def criar(
     estabelecimento = _get_estabelecimento(db, tenant_id)
 
     total = db.query(Profissional).filter(Profissional.estabelecimento_id == tenant_id).count()
-    plano = (estabelecimento.plano or "basico").lower()
-    limite = MAX_BARBEIROS_PREMIUM if plano == "premium" else MAX_BARBEIROS_BASICO
+    plano = (estabelecimento.plano or "gratis").lower()
 
-    if total >= limite and plano != "premium":
-        raise HTTPException(
-            status_code=403,
-            detail="Deseja adicionar mais profissionais? Faca o upgrade para o plano premium.",
-        )
+    if plano == "premium":
+        limite = MAX_BARBEIROS_PREMIUM
+    elif plano == "basico":
+        limite = MAX_BARBEIROS_BASICO
+    else:
+        limite = MAX_BARBEIROS_GRATIS
 
-    if total >= limite and plano == "premium":
-        raise HTTPException(status_code=400, detail="Limite de 3 profissionais ativos atingido.")
+    if total >= limite:
+        if plano == "premium":
+            raise HTTPException(status_code=400, detail="Limite de 3 profissionais ativos atingido no plano Premium.")
+        elif plano == "basico":
+            raise HTTPException(
+                status_code=403,
+                detail="Limite de 2 profissionais atingido. Faca o upgrade para o plano Premium para adicionar mais.",
+            )
+        else:
+            raise HTTPException(
+                status_code=403,
+                detail="Limite de 1 profissional atingido no plano Gratis. Faca o upgrade para adicionar mais profissionais.",
+            )
 
     payload = {
         "nome": dados.nome.strip(),

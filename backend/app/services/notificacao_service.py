@@ -142,6 +142,13 @@ def processar_lembretes_pendentes(db: Session, limite: int = 100) -> dict[str, i
             falhas += 1
             continue
 
+        # Plano Gratis nao tem notificacoes WhatsApp
+        plano = (barbearia.plano or "gratis").lower()
+        if plano == "gratis":
+            job.status = "nao_aplicavel"
+            job.ultimo_erro = "plano_gratis_sem_whatsapp"
+            continue
+
         ok = enviar_mensagem_whatsapp(barbearia, job.destinatario, job.mensagem)
         job.tentativas += 1
         if ok:

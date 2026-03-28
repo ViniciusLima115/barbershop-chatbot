@@ -17,9 +17,11 @@ import {
   getDashboardFinanceiro,
   getDashboardServicos,
   getDashboardClientes,
+  getDashboardResumoBasico,
   type FinanceiroResponse,
   type ServicosMaisVendidosResponse,
   type ClientesResponse,
+  type ResumoBasicoResponse,
 } from "@/services/api";
 import styles from "./page.module.css";
 import AnaliseTab from "./AnaliseTab";
@@ -32,18 +34,123 @@ const pct = (v: number | null) => {
   return `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
 };
 
-function UpgradeScreen() {
+function UpgradeScreen({ minPlan = "basico" }: { minPlan?: "basico" | "premium" }) {
   return (
     <div className={styles.upgradePage}>
       <div className={styles.upgradeCard}>
         <div className={styles.upgradeIcon}>
           <Lock size={28} />
         </div>
-        <h1 className={styles.upgradeTitle}>Dashboard Premium</h1>
+        <h1 className={styles.upgradeTitle}>
+          {minPlan === "premium" ? "Dashboard Premium" : "Dashboard"}
+        </h1>
         <p className={styles.upgradeText}>
-          Acesse analytics financeiros, ranking de serviços e análise de clientes
-          com o plano <strong>Premium</strong>. Fale com o suporte para fazer upgrade.
+          {minPlan === "premium"
+            ? <>Acesse analytics financeiros, ranking de serviços e análise de clientes com o plano <strong>Premium</strong>.</>
+            : <>Acesse métricas do seu estabelecimento a partir do plano <strong>Básico</strong>.</>
+          }
+          {" "}Fale com o suporte para fazer upgrade.
         </p>
+        <Link href="/upgrade" style={{ display: "inline-block", marginTop: "16px", padding: "10px 24px", background: "var(--accent)", color: "#fff", borderRadius: "8px", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none" }}>
+          Ver planos
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function DashboardBasico({ tenantId }: { tenantId: string }) {
+  const [resumo, setResumo] = useState<ResumoBasicoResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getDashboardResumoBasico(tenantId)
+      .then(setResumo)
+      .catch(() => setError("Erro ao carregar dados. Tente novamente."))
+      .finally(() => setLoading(false));
+  }, [tenantId]);
+
+  if (loading) {
+    return (
+      <div className={styles.loadingState}>
+        <div className={styles.loadingPulse} />
+        <p style={{ color: "var(--ink-muted)" }}>Carregando dados…</p>
+      </div>
+    );
+  }
+
+  if (error || !resumo) {
+    return (
+      <div className={styles.loadingState}>
+        <p style={{ color: "var(--danger)" }}>{error ?? "Erro desconhecido."}</p>
+      </div>
+    );
+  }
+
+  const brlFmt = (v: number) =>
+    new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
+
+  return (
+    <div className={styles.page}>
+      <div className={`app-container ${styles.shell}`}>
+        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--ink-muted)", fontSize: "0.88rem", fontWeight: 600, marginBottom: "16px", textDecoration: "none" }}>
+          <ArrowLeft size={16} />
+          Voltar
+        </Link>
+        <section className={styles.hero}>
+          <p className={styles.eyebrow}>Plano Básico</p>
+          <h1 className={styles.heroTitle}>Dashboard</h1>
+          <p className={styles.heroSubtitle}>Resumo do mês do seu estabelecimento.</p>
+        </section>
+
+        <div className={styles.statsGrid}>
+          <article className={styles.statCard}>
+            <div className={styles.statIcon}><Scissors size={22} /></div>
+            <div className={styles.statContent}>
+              <span className={styles.statLabel}>Agendamentos hoje</span>
+              <strong className={styles.statValue}>{resumo.agendamentos_hoje}</strong>
+              <span className={styles.statHelper}>confirmados ou pendentes</span>
+            </div>
+          </article>
+
+          <article className={styles.statCard}>
+            <div className={styles.statIcon}><TrendingUp size={22} /></div>
+            <div className={styles.statContent}>
+              <span className={styles.statLabel}>Agendamentos no mês</span>
+              <strong className={styles.statValue}>{resumo.total_agendamentos_mes}</strong>
+              <span className={styles.statHelper}>{resumo.agendamentos_confirmados_mes} confirmados · {resumo.agendamentos_cancelados_mes} cancelados</span>
+            </div>
+          </article>
+
+          <article className={styles.statCard}>
+            <div className={styles.statIcon}><DollarSign size={22} /></div>
+            <div className={styles.statContent}>
+              <span className={styles.statLabel}>Faturamento estimado</span>
+              <strong className={styles.statValue}>{brlFmt(resumo.faturamento_estimado_mes)}</strong>
+              <span className={styles.statHelper}>agendamentos confirmados no mês</span>
+            </div>
+          </article>
+
+          <article className={styles.statCard}>
+            <div className={styles.statIcon}><Users size={22} /></div>
+            <div className={styles.statContent}>
+              <span className={styles.statLabel}>Clientes únicos</span>
+              <strong className={styles.statValue}>{resumo.total_clientes_unicos_mes}</strong>
+              <span className={styles.statHelper}>confirmados no mês atual</span>
+            </div>
+          </article>
+        </div>
+
+        <div className={styles.panel} style={{ marginTop: "20px" }}>
+          <h2 className={styles.panelTitle} style={{ marginBottom: "12px" }}>Quer analytics avançados?</h2>
+          <p style={{ color: "var(--ink-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
+            Com o plano <strong>Premium</strong> você acessa dashboard financeiro completo, ranking de serviços, análise de clientes e muito mais.
+          </p>
+          <Link href="/upgrade" style={{ display: "inline-block", padding: "10px 20px", background: "var(--accent)", color: "#fff", borderRadius: "8px", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none" }}>
+            Ver plano Premium
+          </Link>
+        </div>
       </div>
     </div>
   );
@@ -53,7 +160,9 @@ type Tab = "visao-geral" | "analise";
 
 export default function DashboardPage() {
   const session = useAuthSession();
-  const isPremium = session?.plan === "premium";
+  const plano = session?.plan ?? "gratis";
+  const isPremium = plano === "premium";
+  const isBasico = plano === "basico";
   const tenantId = session?.tenantId ?? "";
 
   const [activeTab, setActiveTab] = useState<Tab>("visao-geral");
@@ -82,7 +191,10 @@ export default function DashboardPage() {
   }, [isPremium, tenantId]);
 
   if (!session) return null;
-  if (!isPremium) return <UpgradeScreen />;
+  // Plano gratis: pedir upgrade para basico
+  if (!isPremium && !isBasico) return <UpgradeScreen minPlan="basico" />;
+  // Plano basico: mostrar dashboard simplificado
+  if (isBasico) return <DashboardBasico tenantId={tenantId} />;
 
   if (loading) {
     return (
