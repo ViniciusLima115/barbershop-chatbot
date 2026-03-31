@@ -17,6 +17,7 @@ from app.schemas.agendamento import (
     AgendamentoUpdate,
 )
 from app.services.agendamento_service import (
+    _serializar_agendamento,
     aplicar_patch_agendamento,
     atualizar_agendamento,
     atualizar_status_agendamento,
@@ -258,7 +259,6 @@ def confirmar_presenca(
 
     db.commit()
     db.refresh(agendamento)
-    from app.services.agendamento_service import _serializar_agendamento
     return _serializar_agendamento(agendamento)
 
 
