@@ -63,6 +63,15 @@ def _tipos_de_lembrete_devidos(agendamento: Agendamento, agora: datetime) -> lis
     return devidos
 
 
+def _processar_notificacoes_pendentes():
+    from app.services.notificacao_inapp_service import processar_pendentes_confirmacao
+    db = SessionLocal()
+    try:
+        processar_pendentes_confirmacao(db)
+    finally:
+        db.close()
+
+
 def processar_lembretes_email_pendentes(limite: int = 200) -> dict[str, int]:
     db = SessionLocal()
     try:
@@ -149,6 +158,15 @@ def start_scheduler():
             "interval",
             minutes=1,
             id="email-reminders",
+            max_instances=1,
+            replace_existing=True,
+            coalesce=True,
+        )
+        scheduler.add_job(
+            _processar_notificacoes_pendentes,
+            "interval",
+            minutes=1,
+            id="inapp-notifications",
             max_instances=1,
             replace_existing=True,
             coalesce=True,
