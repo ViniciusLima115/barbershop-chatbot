@@ -93,7 +93,7 @@ def processar_pendentes_confirmacao(db: Session) -> int:
     Cria notificações pendente_confirmacao para agendamentos cujo horário já passou
     e que ainda não têm marcação de presença. Idempotente.
     """
-    agora = datetime.utcnow()
+    agora = datetime.now()
     try:
         agendamentos = (
             db.query(Agendamento)
