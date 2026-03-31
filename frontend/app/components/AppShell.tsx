@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Header from "./Header";
 import ThemeToggle from "./ThemeToggle";
 import { useTenantTheme } from "@/hooks/useTenantTheme";
+import { NotificacoesProvider } from "./NotificacoesProvider";
 
 type AppShellProps = {
   children: ReactNode;
@@ -26,11 +27,17 @@ export default function AppShell({ children }: AppShellProps) {
 
   const hideHeader = inLogin || isPublicBookingPath || isPublicBookingById || isTokenActionPage;
 
-  return (
+  const content = (
     <>
       {!hideHeader && <Header />}
       {(isPublicBookingPath || isPublicBookingById) && <ThemeToggle floating />}
       {children}
     </>
   );
+
+  if (hideHeader) {
+    return content;
+  }
+
+  return <NotificacoesProvider>{content}</NotificacoesProvider>;
 }
