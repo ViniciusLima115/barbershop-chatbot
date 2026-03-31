@@ -30,6 +30,10 @@ from app.services.agendamento_service import (
     remover_agendamento,
 )
 from app.services.email_service import send_email_payload
+from app.services.notificacao_inapp_service import (
+    task_notificacao_novo_agendamento,
+    task_notificacao_confirmado,
+)
 from datetime import datetime as _datetime
 
 from app.repositories import notificacao_repository as notif_repo
@@ -73,6 +77,7 @@ def criar(
         payload = obter_payload_email_confirmacao(db, agendamento_id=agendamento["id"])
         if payload:
             background_tasks.add_task(send_email_payload, payload)
+        background_tasks.add_task(task_notificacao_novo_agendamento, agendamento["id"])
         return agendamento
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -115,6 +120,10 @@ def confirmar_por_token(
         payload = obter_payload_email_status(db, token=token, tipo="confirmado")
         if payload:
             background_tasks.add_task(send_email_payload, payload)
+        # obtém o id do agendamento para a task
+        ag = db.query(AgendamentoModel).filter(AgendamentoModel.confirmation_token == token).first()
+        if ag:
+            background_tasks.add_task(task_notificacao_confirmado, ag.id)
         return dados
     except ValueError as exc:
         mensagem = str(exc)
