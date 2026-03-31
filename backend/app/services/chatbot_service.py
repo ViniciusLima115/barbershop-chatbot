@@ -14,6 +14,7 @@ from app.services.agendamento_service import (
     remarcar_agendamento,
 )
 from app.schemas.agendamento import AgendamentoCreate
+from app.services.notificacao_inapp_service import task_notificacao_novo_agendamento
 
 
 PERIODOS_VALIDOS = {
@@ -533,6 +534,7 @@ def responder_mensagem(db: Session, telefone, mensagem, tenant_id: int):
                     ),
                     tenant_id=tenant_id,
                 )
+                task_notificacao_novo_agendamento(agendamento["id"])
                 mensagem_confirmacao = (
                     f"Agendamento confirmado para "
                     f"{agendamento['data_hora_inicio'].strftime('%d/%m/%Y %H:%M')} ✅"

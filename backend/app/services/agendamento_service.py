@@ -20,7 +20,7 @@ from app.services.email_service import (
 logger = logging.getLogger(__name__)
 
 STATUS_ATIVOS = ["pendente", "confirmado"]
-STATUS_VALIDOS = {"pendente", "confirmado", "cancelado", "reagendamento_solicitado"}
+STATUS_VALIDOS = {"pendente", "confirmado", "cancelado", "reagendamento_solicitado", "compareceu", "no_show"}
 
 
 def _normalizar_email(email: str | None) -> str | None:

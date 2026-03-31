@@ -23,6 +23,7 @@ from app.services.public_booking_service import (
 )
 from app.services.agendamento_service import obter_payload_email_confirmacao
 from app.services.email_service import send_email_payload
+from app.services.notificacao_inapp_service import task_notificacao_novo_agendamento
 
 
 router = APIRouter(prefix="/public", tags=["public"])
@@ -143,6 +144,7 @@ def criar_agendamento_public(
         payload = obter_payload_email_confirmacao(db, agendamento_id=agendamento["id"])
         if payload:
             background_tasks.add_task(send_email_payload, payload)
+        background_tasks.add_task(task_notificacao_novo_agendamento, agendamento["id"])
         return agendamento
     except ValueError as exc:
         mensagem = str(exc)

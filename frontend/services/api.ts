@@ -63,11 +63,27 @@ export type Agendamento = {
   servico_nome: string;
   data_hora_inicio: string;
   data_hora_fim: string;
-  status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado";
+  status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado" | "compareceu" | "no_show";
 };
 
 export type AdminCheckResponse = {
   is_admin: boolean;
+};
+
+export type TipoNotificacao =
+  | "novo_agendamento"
+  | "agendamento_confirmado"
+  | "pendente_confirmacao";
+
+export type Notificacao = {
+  id: number;
+  agendamento_id: number | null;
+  tipo: TipoNotificacao;
+  titulo: string;
+  corpo: string | null;
+  lida: boolean;
+  criada_em: string;
+  lida_em: string | null;
 };
 
 export type LoginResponse = {
@@ -340,7 +356,7 @@ export async function createAgendamento(payload: {
   barbeiro_id: number;
   servico_id: number;
   data_hora_inicio: string;
-  status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado";
+  status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado" | "compareceu" | "no_show";
 }): Promise<Agendamento> {
   const res = await apiFetch("/agendamentos/", {
     method: "POST",
@@ -357,7 +373,7 @@ export async function updateAgendamento(
     servico_id: number;
     data_hora_inicio: string;
     cliente_email?: string;
-    status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado";
+    status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado" | "compareceu" | "no_show";
   }
 ): Promise<Agendamento> {
   const res = await apiFetch(`/agendamentos/${id}`, {
@@ -691,4 +707,42 @@ export type ResumoBasicoResponse = {
 export async function getDashboardResumoBasico(barbeariaId: string): Promise<ResumoBasicoResponse> {
   const res = await apiFetch(`/dashboard/${barbeariaId}/resumo-basico`);
   return parseOrThrow(res, "Falha ao carregar resumo do dashboard.");
+}
+
+// ─── NOTIFICAÇÕES ──────────────────────────────────────────────────────────
+
+export async function listNotificacoes(
+  apenas_nao_lidas: boolean = false,
+  limite: number = 30
+): Promise<Notificacao[]> {
+  const params = new URLSearchParams({
+    apenas_nao_lidas: String(apenas_nao_lidas),
+    limite: String(limite),
+  });
+  const res = await apiFetch(`/notificacoes?${params}`);
+  return parseOrThrow(res, "Falha ao listar notificações.");
+}
+
+export async function marcarNotificacaoLida(id: number): Promise<Notificacao> {
+  const res = await apiFetch(`/notificacoes/${id}/lida`, { method: "PATCH" });
+  return parseOrThrow(res, "Falha ao marcar notificação como lida.");
+}
+
+export async function marcarTodasNotificacoesLidas(): Promise<{ marcadas: number }> {
+  const res = await apiFetch("/notificacoes/marcar-todas-lidas", {
+    method: "POST",
+  });
+  return parseOrThrow(res, "Falha ao marcar todas as notificações como lidas.");
+}
+
+export async function confirmarPresenca(
+  agendamentoId: number,
+  compareceu: boolean
+): Promise<void> {
+  const res = await apiFetch(`/agendamentos/${agendamentoId}/confirmar-presenca`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ compareceu }),
+  });
+  await parseOrThrow(res, "Falha ao confirmar presença.");
 }

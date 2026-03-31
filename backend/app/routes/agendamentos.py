@@ -17,6 +17,7 @@ from app.schemas.agendamento import (
     AgendamentoUpdate,
 )
 from app.services.agendamento_service import (
+    _serializar_agendamento,
     aplicar_patch_agendamento,
     atualizar_agendamento,
     atualizar_status_agendamento,
@@ -30,6 +31,14 @@ from app.services.agendamento_service import (
     remover_agendamento,
 )
 from app.services.email_service import send_email_payload
+from app.services.notificacao_inapp_service import (
+    task_notificacao_novo_agendamento,
+    task_notificacao_confirmado,
+)
+from datetime import datetime as _datetime, timezone as _timezone
+
+from app.repositories import notificacao_repository as notif_repo
+from app.schemas.notificacao import ConfirmarPresencaPayload
 
 
 router = APIRouter(prefix="/agendamentos")
@@ -69,6 +78,7 @@ def criar(
         payload = obter_payload_email_confirmacao(db, agendamento_id=agendamento["id"])
         if payload:
             background_tasks.add_task(send_email_payload, payload)
+        background_tasks.add_task(task_notificacao_novo_agendamento, agendamento["id"])
         return agendamento
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -111,6 +121,10 @@ def confirmar_por_token(
         payload = obter_payload_email_status(db, token=token, tipo="confirmado")
         if payload:
             background_tasks.add_task(send_email_payload, payload)
+        # obtém o id do agendamento para a task
+        ag = db.query(AgendamentoModel).filter(AgendamentoModel.confirmation_token == token).first()
+        if ag:
+            background_tasks.add_task(task_notificacao_confirmado, ag.id)
         return dados
     except ValueError as exc:
         mensagem = str(exc)
@@ -219,6 +233,33 @@ def patch_agendamento(
         mensagem = str(exc)
         status_code = 404 if "não encontrado" in mensagem.lower() else 400
         raise HTTPException(status_code=status_code, detail=mensagem) from exc
+
+
+@router.post("/{agendamento_id}/confirmar-presenca", response_model=AgendamentoResponse)
+def confirmar_presenca(
+    agendamento_id: int,
+    dados: ConfirmarPresencaPayload,
+    tenant_id: int = Depends(tenant_id_from_header),
+    db: Session = Depends(get_db),
+):
+    agendamento = (
+        db.query(AgendamentoModel)
+        .filter(AgendamentoModel.id == agendamento_id, AgendamentoModel.estabelecimento_id == tenant_id)
+        .first()
+    )
+    if not agendamento:
+        raise HTTPException(status_code=404, detail="Agendamento não encontrado.")
+
+    agendamento.status = "compareceu" if dados.compareceu else "no_show"
+    agendamento.compareceu_em = _datetime.now(_timezone.utc)
+
+    notif_repo.marcar_lida_por_agendamento_e_tipo(
+        db, agendamento_id=agendamento_id, tipo="pendente_confirmacao"
+    )
+
+    db.commit()
+    db.refresh(agendamento)
+    return _serializar_agendamento(agendamento)
 
 
 @router.delete("/{agendamento_id}", status_code=204)

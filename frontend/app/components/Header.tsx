@@ -15,6 +15,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { logout, useAuthSession } from "@/services/auth";
 import styles from "./Header.module.css";
 import ThemeToggle from "./ThemeToggle";
+import { NotificacoesSino } from "./NotificacoesSino";
+import { useNotificacoesContext } from "./NotificacoesProvider";
 
 function cx(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
@@ -24,6 +26,7 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const session = useAuthSession();
+  const notif = useNotificacoesContext();
   const tenantName = session?.tenantName ?? "Estabelecimento";
   const isAdmin = session?.tenantId === "admin";
   const inAdminPage = pathname.startsWith("/admin");
@@ -76,6 +79,14 @@ export default function Header() {
           ) : null}
 
           <ThemeToggle />
+
+          <NotificacoesSino
+            notificacoes={notif.notificacoes}
+            naoLidas={notif.naoLidas}
+            marcarLida={notif.marcarLida}
+            marcarTodasLidas={notif.marcarTodasLidas}
+            confirmarPresencaNotif={notif.confirmarPresencaNotif}
+          />
 
           <button type="button" className={styles.logoutButton} onClick={handleLogout}>
             <LogOut size={16} />

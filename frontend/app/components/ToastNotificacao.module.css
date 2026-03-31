@@ -1,0 +1,84 @@
+.container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+}
+
+.toast {
+  background: #1e293b;
+  border-radius: 10px;
+  padding: 12px 14px;
+  border-left: 4px solid transparent;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  width: 260px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #475569;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.titulo {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.corpo {
+  color: #64748b;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.btnCompareceu {
+  flex: 1;
+  background: #22c55e;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnFaltou {
+  flex: 1;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}

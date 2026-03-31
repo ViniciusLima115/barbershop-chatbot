@@ -15,6 +15,7 @@ from app.routes import (
     estabelecimento_funcionamento,
     estabelecimentos,
     internal,
+    notificacoes,
     profissionais,
     public,
     servicos,
@@ -153,6 +154,7 @@ app.include_router(estabelecimentos.router)
 app.include_router(profissionais.router)
 app.include_router(estabelecimento_funcionamento.router)
 app.include_router(configuracoes.router)
+app.include_router(notificacoes.router)
 
 @app.get("/")
 def home():

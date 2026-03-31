@@ -14,7 +14,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.database import Base, get_db
 from app.models import Estabelecimento, Profissional, Servico
 from app.models.token_blacklist import TokenBlacklist  # registers in SQLite metadata
-from app.routes import agenda, agendamentos, chatbot, barbeiros, barbearia_funcionamento, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal, webhook, estabelecimentos, profissionais, estabelecimento_funcionamento, configuracoes, dashboard
+from app.routes import agenda, agendamentos, chatbot, barbeiros, barbearia_funcionamento, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal, webhook, estabelecimentos, profissionais, estabelecimento_funcionamento, configuracoes, dashboard, notificacoes
+from app.models.notificacao import Notificacao  # garante criação da tabela no SQLite
 from app.security import create_access_token
 
 
@@ -67,6 +68,7 @@ def app(session_factory):
     test_app.include_router(estabelecimento_funcionamento.router)
     test_app.include_router(configuracoes.router)
     test_app.include_router(dashboard.router)
+    test_app.include_router(notificacoes.router)
 
     def override_get_db():
         db = session_factory()

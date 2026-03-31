@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
-StatusAgendamento = Literal["pendente", "confirmado", "cancelado", "reagendamento_solicitado"]
+StatusAgendamento = Literal["pendente", "confirmado", "cancelado", "reagendamento_solicitado", "compareceu", "no_show"]
 
 
 class AgendamentoCreate(BaseModel):

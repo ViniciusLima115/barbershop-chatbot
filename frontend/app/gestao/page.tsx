@@ -441,7 +441,7 @@ export default function GestaoPage() {
     barbeiroId: "",
     servicoId: "",
     dataHora: "",
-    status: "confirmado" as "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado",
+    status: "confirmado" as "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado" | "compareceu" | "no_show",
   });
   const [editAgendamentoId, setEditAgendamentoId] = useState<number | null>(null);
 

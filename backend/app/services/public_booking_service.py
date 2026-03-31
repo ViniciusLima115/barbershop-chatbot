@@ -19,7 +19,7 @@ from app.services.notificacao_service import (
 
 
 BOOKING_PUBLIC_BASE_URL = os.getenv("BOOKING_PUBLIC_BASE_URL", "https://app.virtualbarber.shop")
-STATUS_VALIDOS = {"pendente", "confirmado", "cancelado", "reagendamento_solicitado"}
+STATUS_VALIDOS = {"pendente", "confirmado", "cancelado", "reagendamento_solicitado", "compareceu", "no_show"}
 
 
 def _normalizar_texto(texto: str) -> str:

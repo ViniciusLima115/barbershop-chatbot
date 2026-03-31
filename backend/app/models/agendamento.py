@@ -29,6 +29,7 @@ class Agendamento(Base):
     confirmation_token = Column(String(36), nullable=False, unique=True, index=True, default=lambda: str(uuid4()))
     lembrete_24h_enviado = Column(Boolean, nullable=False, default=False)
     lembrete_2h_enviado = Column(Boolean, nullable=False, default=False)
+    compareceu_em = Column(DateTime, nullable=True)
 
     # Aliases de compatibilidade com código legado (colunas físicas renomeadas)
     barbearia_id = synonym("estabelecimento_id")
