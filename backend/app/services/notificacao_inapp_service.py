@@ -109,16 +109,13 @@ def processar_pendentes_confirmacao(db: Session) -> int:
             if repo.existe_pendente_confirmacao(db, agendamento_id=ag.id):
                 continue
 
-            cliente = ag.cliente_nome or "Cliente"
-            servico = ag.servico.nome if ag.servico else "Serviço"
-            data_str = ag.data_hora_inicio.strftime("%d/%m %H:%M") if ag.data_hora_inicio else ""
             repo.criar(
                 db,
                 estabelecimento_id=ag.estabelecimento_id,
                 agendamento_id=ag.id,
                 tipo="pendente_confirmacao",
                 titulo="Confirmar presença",
-                corpo=f"{cliente} · {servico} · {data_str}",
+                corpo=_corpo_agendamento(ag),
             )
             criados += 1
 
