@@ -1,12 +1,9 @@
 import { getAuthSession, logout } from "./auth";
 
 const DEFAULT_API_URL = "https://api.virtualbarber.shop";
-const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || DEFAULT_API_URL;
-export const API_URL = _rawApiUrl.replace(/\/+$/, "").replace(/^http:\/\//i, "https://");
-if (typeof window !== "undefined") {
-  console.log("[api] NEXT_PUBLIC_API_URL env:", process.env.NEXT_PUBLIC_API_URL);
-  console.log("[api] API_URL resolvido:", API_URL);
-}
+export const API_URL = (process.env.NEXT_PUBLIC_API_URL?.trim() || DEFAULT_API_URL)
+  .replace(/\/+$/, "")
+  .replace(/^http:\/\//i, "https://");
 
 export type AgendaSlot = {
   hora: string;

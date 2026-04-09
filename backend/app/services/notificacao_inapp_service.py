@@ -1,5 +1,8 @@
 import logging
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+_TZ_BRASIL = ZoneInfo("America/Sao_Paulo")
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -97,7 +100,7 @@ def processar_pendentes_confirmacao(db: Session) -> int:
     Cria notificações pendente_confirmacao para agendamentos cujo horário já passou
     e que ainda não têm marcação de presença. Idempotente.
     """
-    agora = datetime.now()
+    agora = datetime.now(_TZ_BRASIL).replace(tzinfo=None)
     try:
         agendamentos = (
             db.query(Agendamento)

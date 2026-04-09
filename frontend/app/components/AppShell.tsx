@@ -19,11 +19,12 @@ export default function AppShell({ children }: AppShellProps) {
   const inLogin = pathname === "/login";
   const isPublicBookingById = pathname.startsWith("/agendar/");
   const isTokenActionPage = TOKEN_ACTION_PREFIXES.some((p) => pathname.startsWith(p));
+  const ADMIN_PATHS = ["/login", "/admin", "/agenda", "/gestao", "/dashboard", "/configuracoes", "/upgrade", "/painel"];
   const isPublicBookingPath =
     !isPublicBookingById &&
     !isTokenActionPage &&
     /^\/[^/]+$/.test(pathname) &&
-    !["/login", "/admin", "/agenda", "/gestao"].includes(pathname);
+    !ADMIN_PATHS.includes(pathname);
 
   const hideHeader = inLogin || isPublicBookingPath || isPublicBookingById || isTokenActionPage;
 
