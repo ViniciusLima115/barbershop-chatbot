@@ -5,13 +5,21 @@ import { Notificacao } from "@/services/api";
 import styles from "./NotificacoesSino.module.css";
 
 const TIPO_CONFIG = {
-  novo_agendamento:    { cor: "#3b82f6", labelCor: "#60a5fa", label: "📅 Novo agendamento" },
-  agendamento_confirmado: { cor: "#22c55e", labelCor: "#4ade80", label: "✅ Confirmado pelo cliente" },
-  pendente_confirmacao:   { cor: "#f59e0b", labelCor: "#fbbf24", label: "⏳ Confirmar presença" },
-};
+  novo_agendamento: { cor: "#3b82f6", labelCor: "#60a5fa", label: "Novo agendamento" },
+  agendamento_confirmado: { cor: "#22c55e", labelCor: "#4ade80", label: "Agendamento confirmado" },
+  pendente_confirmacao: { cor: "#f59e0b", labelCor: "#fbbf24", label: "Confirmar presenca" },
+  pagamento_aprovado: { cor: "#16a34a", labelCor: "#22c55e", label: "Pagamento aprovado" },
+  pagamento_expirado: { cor: "#d97706", labelCor: "#f59e0b", label: "Pagamento expirado" },
+  pagamento_falhou: { cor: "#dc2626", labelCor: "#ef4444", label: "Pagamento nao concluido" },
+  conta_pagamento_desconectada: {
+    cor: "#7c3aed",
+    labelCor: "#8b5cf6",
+    label: "Conta Mercado Pago desconectada",
+  },
+} as const;
 
-function formatHora(criada_em: string): string {
-  const d = new Date(criada_em);
+function formatHora(criadaEm: string): string {
+  const d = new Date(criadaEm);
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const yesterday = new Date(today.getTime() - 86_400_000);
@@ -63,6 +71,7 @@ export function NotificacoesSino({
 
   return (
     <div className={styles.wrapper} ref={ref}>
+<<<<<<< HEAD
       {/* Bell button */}
       <button
         className={styles.sinoBtn}
@@ -75,31 +84,39 @@ export function NotificacoesSino({
         aria-label="Notificações"
       >
         <span className={styles.sinoIcon}>🔔</span>
+=======
+      <button className={styles.sinoBtn} onClick={() => setAberto((v) => !v)} aria-label="Notificacoes">
+        <span className={styles.sinoIcon}>!</span>
+>>>>>>> d1b47bb (add-mercadoPago)
         {naoLidas > 0 && <span className={styles.badge}>{naoLidas}</span>}
       </button>
 
-      {/* Dropdown */}
       {aberto && (
         <div className={styles.dropdown}>
           <div className={styles.dropdownHeader}>
-            <span className={styles.dropdownTitle}>Notificações</span>
+            <span className={styles.dropdownTitle}>Notificacoes</span>
             <button className={styles.marcarTodasBtn} onClick={marcarTodasLidas}>
               Marcar todas como lidas
             </button>
           </div>
 
           <div className={styles.lista}>
-            {notificacoes.length === 0 && (
-              <div className={styles.vazio}>Sem notificações</div>
-            )}
+            {notificacoes.length === 0 && <div className={styles.vazio}>Sem notificacoes</div>}
             {notificacoes.map((n) => {
-              const config = TIPO_CONFIG[n.tipo];
+              const config =
+                TIPO_CONFIG[n.tipo] ?? {
+                  cor: "#64748b",
+                  labelCor: "#94a3b8",
+                  label: "Notificacao",
+                };
               return (
                 <div
                   key={n.id}
                   className={`${styles.item} ${n.lida ? styles.lida : ""}`}
                   style={{ borderLeftColor: config.cor, background: `${config.cor}08` }}
-                  onClick={() => { if (!n.lida) marcarLida(n.id); }}
+                  onClick={() => {
+                    if (!n.lida) void marcarLida(n.id);
+                  }}
                 >
                   <div className={styles.itemHeader}>
                     <div className={styles.itemLabel} style={{ color: config.labelCor }}>
@@ -109,21 +126,27 @@ export function NotificacoesSino({
                   </div>
                   <div className={`${styles.itemCorpo} ${n.lida ? styles.itemCorpoLido : ""}`}>
                     {n.titulo}
-                    {n.corpo && <span className={styles.itemCorpoExtra}> · {n.corpo}</span>}
+                    {n.corpo && <span className={styles.itemCorpoExtra}> - {n.corpo}</span>}
                   </div>
                   {n.tipo === "pendente_confirmacao" && !n.lida && (
                     <div className={styles.actions}>
                       <button
                         className={styles.btnCompareceu}
-                        onClick={(e) => { e.stopPropagation(); handlePresenca(n, true); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handlePresenca(n, true);
+                        }}
                       >
-                        ✓ Compareceu
+                        Compareceu
                       </button>
                       <button
                         className={styles.btnFaltou}
-                        onClick={(e) => { e.stopPropagation(); handlePresenca(n, false); }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void handlePresenca(n, false);
+                        }}
                       >
-                        ✕ Faltou
+                        Faltou
                       </button>
                     </div>
                   )}
@@ -133,7 +156,7 @@ export function NotificacoesSino({
           </div>
 
           <div className={styles.footer}>
-            <span className={styles.footerLink}>Ver todas as notificações →</span>
+            <span className={styles.footerLink}>Atualize para ver novos eventos</span>
           </div>
         </div>
       )}

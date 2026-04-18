@@ -7,6 +7,11 @@ backend/.env.*
 frontend/.env.local
 frontend/.env.*.local
 
+__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/pytest-cache-files-*/
+
 .superpowers/
 .worktrees/
 .claude/worktrees/

@@ -4,7 +4,8 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 
 
-StatusAgendamento = Literal["pendente", "confirmado", "cancelado", "reagendamento_solicitado", "compareceu", "no_show"]
+StatusAgendamento = Literal["pending_payment", "pendente", "confirmado", "cancelado", "failed", "reagendamento_solicitado", "compareceu", "no_show", "expired"]
+StatusPagamento = Literal["not_required", "pending", "approved", "rejected", "cancelled", "refunded", "expired"]
 
 
 class AgendamentoCreate(BaseModel):
@@ -52,6 +53,10 @@ class AgendamentoResponse(BaseModel):
     data_hora_inicio: datetime
     data_hora_fim: datetime
     status: StatusAgendamento
+    payment_status: StatusPagamento = "not_required"
+    payment_required: bool = False
+    payment_amount: float | None = None
+    payment_type: str | None = None
 
 
 class AgendamentoRemarcacaoRequest(BaseModel):

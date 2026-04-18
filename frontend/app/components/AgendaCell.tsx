@@ -23,6 +23,8 @@ export default function AgendaCell({
   onSelect,
 }: AgendaCellProps) {
   const confirmado = agendamento?.status === "confirmado";
+  const aguardandoPagamento =
+    agendamento?.status === "pending_payment" || agendamento?.payment_status === "pending";
   const bloqueado = !disponivel && !agendamento;
 
   return (
@@ -33,8 +35,9 @@ export default function AgendaCell({
       className={cx(
         styles.cell,
         confirmado && styles.cellConfirmado,
+        aguardandoPagamento && styles.cellPendingPayment,
         bloqueado && styles.cellIndisponivel,
-        !confirmado && !bloqueado && styles.cellLivre,
+        !confirmado && !aguardandoPagamento && !bloqueado && styles.cellLivre,
         isSelected && styles.cellSelected
       )}
       aria-label={`${profissionalNome} as ${hora}`}

@@ -6,6 +6,7 @@ import {
   createPublicBooking,
   lookupPublicBarbershop,
   PublicLookupResponse,
+  startPublicBookingPayment,
 } from "@/services/api";
 
 function hojeISO() {
@@ -110,6 +111,18 @@ export default function PublicBookingPage() {
     return lookup.servicos.find((item) => item.id === servicoId) ?? null;
   }, [lookup, servicoId]);
 
+  const barbeiroSelecionado = useMemo(() => {
+    if (!lookup || !barbeiroId) return null;
+    return lookup.barbeiros.find((item) => item.id === barbeiroId) ?? null;
+  }, [lookup, barbeiroId]);
+
+  const pagamentoAdiantadoObrigatorio = Boolean(servicoSelecionado?.pagamento_adiantado_obrigatorio_efetivo);
+  const tipoPagamentoAdiantado = servicoSelecionado?.advance_payment_type ?? "full";
+  const valorPagamentoAdiantado =
+    tipoPagamentoAdiantado === "signal"
+      ? Number(servicoSelecionado?.advance_payment_amount || 0)
+      : Number(servicoSelecionado?.preco || 0);
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!slug || !barbeiroId || !servicoId || !horaInicio) {
@@ -125,7 +138,7 @@ export default function PublicBookingPage() {
     setErro(null);
     setSucesso(null);
     try {
-      await createPublicBooking({
+      const payload = {
         slug,
         cliente_nome: nomeCliente.trim(),
         cliente_telefone: normalizarTelefone(telefoneCliente),
@@ -134,8 +147,16 @@ export default function PublicBookingPage() {
         servico_id: servicoId,
         data,
         hora_inicio: horaInicio,
-      });
+      };
 
+      if (pagamentoAdiantadoObrigatorio) {
+        setSucesso("Seu horario foi reservado por alguns minutos. Redirecionando para o checkout...");
+        const pagamento = await startPublicBookingPayment(payload);
+        window.location.href = pagamento.checkout_url;
+        return;
+      }
+
+      await createPublicBooking(payload);
       setSucesso("Agendamento criado. Enviamos a confirmacao por email.");
       setHoraInicio(null);
 
@@ -192,6 +213,11 @@ export default function PublicBookingPage() {
             <p className="text-xs text-zinc-400">
               Duracao: {servicoSelecionado ? `${servicoSelecionado.duracao} min` : "-"}
             </p>
+            {pagamentoAdiantadoObrigatorio ? (
+              <p className="mt-2 inline-flex rounded-full bg-amber-200/15 px-2 py-1 text-[11px] font-semibold text-amber-200">
+                {tipoPagamentoAdiantado === "signal" ? "Sinal online obrigatorio" : "Pagamento antecipado obrigatorio"}
+              </p>
+            ) : null}
           </div>
         </section>
 
@@ -319,11 +345,34 @@ export default function PublicBookingPage() {
               </div>
             </div>
 
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <h3 className="text-sm font-semibold text-slate-800">Resumo do agendamento</h3>
+              <div className="mt-2 grid gap-1 text-sm text-slate-700">
+                <p><strong>Servico:</strong> {servicoSelecionado?.nome ?? "-"}</p>
+                <p><strong>Profissional:</strong> {barbeiroSelecionado?.nome ?? "-"}</p>
+                <p><strong>Data:</strong> {data || "-"}</p>
+                <p><strong>Horario:</strong> {horaInicio ?? "-"}</p>
+                <p><strong>Valor:</strong> {servicoSelecionado ? moedaBRL(servicoSelecionado.preco) : "-"}</p>
+              </div>
+              {pagamentoAdiantadoObrigatorio && (
+                <p className="mt-3 rounded-lg bg-amber-100 px-3 py-2 text-xs font-medium text-amber-900">
+                  {tipoPagamentoAdiantado === "signal"
+                    ? `Sinal online obrigatorio (${moedaBRL(valorPagamentoAdiantado)}).`
+                    : "Pagamento antecipado obrigatorio para confirmar o agendamento."}
+                </p>
+              )}
+              {pagamentoAdiantadoObrigatorio && (
+                <p className="mt-2 rounded-lg bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+                  Seu horario ficara reservado por alguns minutos enquanto o pagamento e concluido.
+                </p>
+              )}
+            </div>
+
             {erro && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{erro}</p>}
             {sucesso && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{sucesso}</p>}
 
             <button className="btn btn-success w-full" type="submit" disabled={submitting}>
-              {submitting ? "Agendando..." : "Confirmar Agendamento"}
+              {submitting ? "Processando..." : pagamentoAdiantadoObrigatorio ? "Pagar e confirmar agendamento" : "Confirmar Agendamento"}
             </button>
           </form>
         </section>

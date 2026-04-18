@@ -149,6 +149,17 @@ function DashboardBasico({ tenantId }: { tenantId: string }) {
         </div>
 
         <div className={styles.panel} style={{ marginTop: "20px" }}>
+          <h2 className={styles.panelTitle} style={{ marginBottom: "8px" }}>Pagamentos online</h2>
+          <p style={{ color: "var(--ink-muted)", fontSize: "0.88rem", marginBottom: "10px" }}>
+            Valor recebido hoje: <strong>{brlFmt(resumo.valor_recebido_hoje ?? 0)}</strong>
+          </p>
+          <p style={{ color: "var(--ink-muted)", fontSize: "0.88rem", margin: 0 }}>
+            Pendentes: <strong>{resumo.pagamentos_pendentes ?? 0}</strong> · Expirados:{" "}
+            <strong>{resumo.pagamentos_expirados ?? 0}</strong>
+          </p>
+        </div>
+
+        <div className={styles.panel} style={{ marginTop: "20px" }}>
           <h2 className={styles.panelTitle} style={{ marginBottom: "12px" }}>Quer analytics avançados?</h2>
           <p style={{ color: "var(--ink-muted)", fontSize: "0.9rem", marginBottom: "16px" }}>
             Com o plano <strong>Premium</strong> você acessa dashboard financeiro completo, ranking de serviços, análise de clientes e muito mais.
@@ -180,7 +191,11 @@ export default function DashboardPage() {
 
   const carregarDadosPremium = useCallback(() => {
     if (!isPremium || !tenantId) return;
+<<<<<<< HEAD
     setLoading(true);
+=======
+
+>>>>>>> d1b47bb (add-mercadoPago)
     Promise.all([
       getDashboardFinanceiro(tenantId),
       getDashboardServicos(tenantId),
@@ -318,6 +333,32 @@ export default function DashboardPage() {
             </div>
           </article>
         </div>
+
+        <section className={styles.panel} style={{ marginBottom: "20px" }}>
+          <h2 className={styles.panelTitle}>Pagamentos online</h2>
+          <div className={styles.clienteStats}>
+            <div className={styles.clienteStatItem}>
+              <strong className={styles.clienteStatValue}>{brl(financeiro.valor_recebido_hoje ?? 0)}</strong>
+              <span className={styles.clienteStatLabel}>Recebido hoje</span>
+            </div>
+            <div className={styles.clienteStatItem}>
+              <strong className={styles.clienteStatValue}>{financeiro.agendamentos_pagos ?? 0}</strong>
+              <span className={styles.clienteStatLabel}>Pagamentos aprovados</span>
+            </div>
+            <div className={styles.clienteStatItem}>
+              <strong className={styles.clienteStatValue}>
+                {pct(financeiro.taxa_conversao_pagamento ?? null)}
+              </strong>
+              <span className={styles.clienteStatLabel}>Conversao pagamento</span>
+            </div>
+            <div className={styles.clienteStatItem}>
+              <strong className={styles.clienteStatValue}>
+                {financeiro.pagamentos_pendentes ?? 0} / {financeiro.pagamentos_expirados ?? 0}
+              </strong>
+              <span className={styles.clienteStatLabel}>Pendentes / Expirados</span>
+            </div>
+          </div>
+        </section>
 
         <div className={styles.contentGrid}>
           {/* Coluna principal */}

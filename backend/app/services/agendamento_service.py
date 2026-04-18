@@ -1,6 +1,7 @@
 import logging
 from datetime import date, datetime, time, timedelta
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.models.agendamento import Agendamento
@@ -19,8 +20,8 @@ from app.services.email_service import (
 
 logger = logging.getLogger(__name__)
 
-STATUS_ATIVOS = ["pendente", "confirmado"]
-STATUS_VALIDOS = {"pendente", "confirmado", "cancelado", "reagendamento_solicitado", "compareceu", "no_show"}
+STATUS_ATIVOS = ["pending_payment", "pendente", "confirmado", "reagendamento_solicitado"]
+STATUS_VALIDOS = {"pending_payment", "pendente", "confirmado", "cancelado", "failed", "reagendamento_solicitado", "compareceu", "no_show", "expired"}
 
 
 def _normalizar_email(email: str | None) -> str | None:
@@ -33,6 +34,19 @@ def _normalizar_status_saida(status: str | None) -> str:
     if valor in STATUS_VALIDOS:
         return valor
     return "pendente"
+
+
+def _filtro_status_ativos(agora: datetime):
+    return or_(
+        Agendamento.status.in_(["pendente", "confirmado", "reagendamento_solicitado"]),
+        and_(
+            Agendamento.status == "pending_payment",
+            or_(
+                Agendamento.payment_hold_expires_at.is_(None),
+                Agendamento.payment_hold_expires_at > agora,
+            ),
+        ),
+    )
 
 
 def _serializar_agendamento(agendamento: Agendamento):
@@ -48,6 +62,10 @@ def _serializar_agendamento(agendamento: Agendamento):
         "data_hora_inicio": agendamento.data_hora_inicio,
         "data_hora_fim": agendamento.data_hora_fim,
         "status": _normalizar_status_saida(agendamento.status),
+        "payment_status": (agendamento.payment_status or "not_required"),
+        "payment_required": bool(agendamento.payment_required_snapshot),
+        "payment_amount": agendamento.payment_amount_snapshot,
+        "payment_type": agendamento.payment_type_snapshot,
     }
 
 
@@ -104,6 +122,16 @@ def _resetar_flags_lembrete(agendamento: Agendamento):
     agendamento.lembrete_2h_enviado = False
 
 
+def _validar_confirmacao_com_pagamento(agendamento: Agendamento, status_destino: str) -> None:
+    if status_destino != "confirmado":
+        return
+    if not bool(agendamento.payment_required_snapshot):
+        return
+    if (agendamento.payment_status or "").lower() == "approved":
+        return
+    raise ValueError("Pagamento nao aprovado. O agendamento nao pode ser confirmado por este fluxo.")
+
+
 def criar_agendamento(db: Session, dados, tenant_id: int):
     barbearia = _obter_barbearia(db, tenant_id)
     servico_query = db.query(Servico).filter(
@@ -146,7 +174,7 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
         Agendamento.barbearia_id == tenant_id,
         Agendamento.data_hora_inicio < fim,
         Agendamento.data_hora_fim > dados.data_hora_inicio,
-        Agendamento.status.in_(STATUS_ATIVOS),
+        _filtro_status_ativos(datetime.utcnow()),
     )
     conflito = conflito_query.first()
 
@@ -165,7 +193,15 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
         hora_inicio=dados.data_hora_inicio.time().replace(microsecond=0),
         data_hora_inicio=dados.data_hora_inicio,
         data_hora_fim=fim,
-        status=dados.status,
+        status="pending_payment" if bool(getattr(servico, "pagamento_adiantado_obrigatorio", False)) else dados.status,
+        payment_required_snapshot=bool(getattr(servico, "pagamento_adiantado_obrigatorio", False)),
+        payment_type_snapshot=(getattr(servico, "advance_payment_type", None) or None),
+        payment_amount_snapshot=(
+            float(getattr(servico, "advance_payment_amount", 0) or 0)
+            if (getattr(servico, "advance_payment_type", "") or "").strip().lower() == "signal"
+            else float(servico.preco or 0)
+        ) if bool(getattr(servico, "pagamento_adiantado_obrigatorio", False)) else None,
+        payment_status="pending" if bool(getattr(servico, "pagamento_adiantado_obrigatorio", False)) else "not_required",
     )
 
     db.add(novo)
@@ -211,6 +247,7 @@ def atualizar_status_agendamento(
     if not agendamento:
         raise ValueError("Agendamento não encontrado")
 
+    _validar_confirmacao_com_pagamento(agendamento, status)
     agendamento.status = status
     db.commit()
     db.refresh(agendamento)
@@ -265,7 +302,7 @@ def remarcar_agendamento(
         Agendamento.barbearia_id == tenant_id,
         Agendamento.data_hora_inicio < nova_data_hora_fim,
         Agendamento.data_hora_fim > nova_data_hora_inicio,
-        Agendamento.status.in_(STATUS_ATIVOS),
+        _filtro_status_ativos(datetime.utcnow()),
     )
     conflito = conflito_query.first()
 
@@ -325,7 +362,7 @@ def atualizar_agendamento(
         Agendamento.barbearia_id == tenant_id,
         Agendamento.data_hora_inicio < novo_fim,
         Agendamento.data_hora_fim > dados.data_hora_inicio,
-        Agendamento.status.in_(STATUS_ATIVOS),
+        _filtro_status_ativos(datetime.utcnow()),
     )
     conflito = conflito_query.first()
 
@@ -333,6 +370,7 @@ def atualizar_agendamento(
         raise ValueError("Horário indisponível")
 
     houve_remarcacao = agendamento.data_hora_inicio != dados.data_hora_inicio
+    _validar_confirmacao_com_pagamento(agendamento, dados.status)
     agendamento.barbeiro_id = dados.barbeiro_id
     agendamento.servico_id = dados.servico_id
     agendamento.data_hora_inicio = dados.data_hora_inicio
@@ -480,6 +518,7 @@ def atualizar_status_agendamento_por_token(db: Session, token: str, status: str)
     if agendamento.status == "cancelado" and status != "cancelado":
         raise ValueError("Agendamento cancelado não pode ser alterado por este link")
 
+    _validar_confirmacao_com_pagamento(agendamento, status)
     agendamento.status = status
     if status == "reagendamento_solicitado":
         _resetar_flags_lembrete(agendamento)
@@ -529,7 +568,7 @@ def remarcar_agendamento_por_token(db: Session, token: str, nova_data_hora_inici
         Agendamento.barbearia_id == tenant_id,
         Agendamento.data_hora_inicio < nova_fim,
         Agendamento.data_hora_fim > nova_data_hora_inicio,
-        Agendamento.status.in_(STATUS_ATIVOS),
+        _filtro_status_ativos(datetime.utcnow()),
     ).first()
     if conflito:
         raise ValueError("Horário indisponível")
@@ -549,3 +588,5 @@ def remarcar_agendamento_por_token(db: Session, token: str, nova_data_hora_inici
         nova_data_hora_inicio,
     )
     return _serializar_dados_token(agendamento)
+
+

@@ -18,6 +18,10 @@ class PublicServicoItem(BaseModel):
     nome: str
     duracao: int = Field(validation_alias=AliasChoices("duracao", "duracao_minutos"))
     preco: float
+    pagamento_adiantado_obrigatorio: bool = False
+    pagamento_adiantado_obrigatorio_efetivo: bool = False
+    advance_payment_type: str | None = None
+    advance_payment_amount: float | None = None
 
 
 class PublicHorarioItem(BaseModel):
@@ -78,3 +82,22 @@ class PublicAgendamentoResponse(BaseModel):
     status: str
     confirmation_token: str
     lembretes_agendados: int
+
+
+class PublicPagamentoInitResponse(BaseModel):
+    agendamento_id: int
+    external_reference: str
+    preference_id: str
+    checkout_url: str
+    amount: float
+    pagamento_status: str
+    agendamento_status: str
+    expires_at: datetime | None = None
+
+
+class PublicPagamentoStatusResponse(BaseModel):
+    external_reference: str
+    agendamento_id: int
+    pagamento_status: str
+    agendamento_status: str
+    amount: float

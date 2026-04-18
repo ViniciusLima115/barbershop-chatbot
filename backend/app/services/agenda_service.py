@@ -1,5 +1,6 @@
 from datetime import datetime, time, timedelta
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.models.agendamento import Agendamento
@@ -59,11 +60,22 @@ def gerar_horarios_disponiveis(
     fim_dia = datetime.combine(data.date(), window[1])
     horarios = build_day_slots(barbearia, data.date(), duracao, barbeiro=barbeiro)
 
+    agora = datetime.utcnow()
     agendamentos_query = db.query(Agendamento).filter(
         Agendamento.barbeiro_id == barbeiro_id,
         Agendamento.barbearia_id == tenant_id,
         Agendamento.data_hora_inicio >= inicio_dia,
         Agendamento.data_hora_inicio < fim_dia,
+        or_(
+            Agendamento.status.in_(["pendente", "confirmado", "reagendamento_solicitado"]),
+            and_(
+                Agendamento.status == "pending_payment",
+                or_(
+                    Agendamento.payment_hold_expires_at.is_(None),
+                    Agendamento.payment_hold_expires_at > agora,
+                ),
+            ),
+        ),
     )
     agendamentos = agendamentos_query.all()
 

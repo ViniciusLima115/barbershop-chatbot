@@ -8,7 +8,11 @@ import {
   marcarTodasNotificacoesLidas,
   Notificacao,
 } from "@/services/api";
+<<<<<<< HEAD
 import { getAuthSession } from "@/services/auth";
+=======
+import { useAuthSession } from "@/services/auth";
+>>>>>>> d1b47bb (add-mercadoPago)
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -49,12 +53,15 @@ export interface UseNotificacoesReturn {
 }
 
 export function useNotificacoes(): UseNotificacoesReturn {
+  const session = useAuthSession();
+  const tenantIdValido = Boolean(session?.tenantId && /^\d+$/.test(session.tenantId));
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [toastsNovos, setToastsNovos] = useState<Notificacao[]>([]);
   const seenIds = useRef<Set<number>>(new Set());
   const initialized = useRef(false);
 
   const fetchNotificacoes = useCallback(async () => {
+    if (!tenantIdValido) return;
     try {
       const data = await listNotificacoes(false, 30);
       setNotificacoes(data);
@@ -77,13 +84,19 @@ export function useNotificacoes(): UseNotificacoesReturn {
     } catch (err) {
       console.error("[notificacoes] falha ao buscar notificações:", err);
     }
-  }, []);
+  }, [tenantIdValido]);
 
   useEffect(() => {
+    if (!tenantIdValido) {
+      setNotificacoes([]);
+      setToastsNovos([]);
+      seenIds.current = new Set();
+      return;
+    }
     fetchNotificacoes();
     const interval = setInterval(fetchNotificacoes, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
-  }, [fetchNotificacoes]);
+  }, [fetchNotificacoes, tenantIdValido]);
 
   const marcarLida = useCallback(async (id: number) => {
     const updated = await marcarNotificacaoLida(id);

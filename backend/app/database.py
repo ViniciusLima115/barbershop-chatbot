@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 import unicodedata
@@ -15,6 +16,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 IS_MYSQL = "mysql" in (engine.dialect.name or "").lower()
+IS_POSTGRES = "postgresql" in (engine.dialect.name or "").lower()
+logger = logging.getLogger(__name__)
 
 
 def _str_to_bool(value: str | None, default: bool) -> bool:
@@ -63,15 +66,25 @@ def init_db():
         agendamento,
         conversa,
         reminder_job,
+        pagamento,
+        payment_account,
+        payment_oauth_state,
+        payment_webhook_event,
         webhook_event,
         token_blacklist,
     )
     if _should_run_create_all():
         Base.metadata.create_all(bind=engine)
+    _ensure_clientes_email_column()
     _ensure_barbearias_working_hours_column()
     _ensure_barbeiros_working_hours_column()
     _ensure_agendamentos_public_columns()
     _ensure_agendamentos_notification_columns()
+    _ensure_agendamentos_compareceu_column()
+    _ensure_servicos_payment_columns()
+    _ensure_agendamentos_payment_columns()
+    _ensure_pagamentos_table()
+    _ensure_postgres_schema_guards()
     if IS_MYSQL:
         _ensure_clientes_contexto_column()
         _ensure_clientes_tenant_indexes()
@@ -84,6 +97,8 @@ def init_db():
     _backfill_agendamentos_notification_defaults()
     _ensure_token_blacklist_table()
     _ensure_rename_para_estabelecimentos()
+    _sync_estabelecimentos_e_barbearias()
+    _sync_profissionais_e_barbeiros()
     _ensure_tipo_servico_column()
     _ensure_configuracoes_columns()
     _ensure_intervalo_minutos_column()
@@ -105,6 +120,243 @@ def _ensure_intervalo_minutos_column():
     _run_best_effort([
         "ALTER TABLE estabelecimentos ADD COLUMN intervalo_minutos INTEGER NOT NULL DEFAULT 30",
     ])
+
+
+def _ensure_clientes_email_column():
+    _run_best_effort([
+        "ALTER TABLE clientes ADD COLUMN email VARCHAR(255) NULL",
+        "CREATE INDEX ix_clientes_email ON clientes (email)",
+    ])
+
+
+def _ensure_agendamentos_compareceu_column():
+    _run_best_effort([
+        "ALTER TABLE agendamentos ADD COLUMN compareceu_em TIMESTAMP NULL",
+    ])
+
+
+def _ensure_servicos_payment_columns():
+    _run_best_effort([
+        "ALTER TABLE servicos ADD COLUMN pagamento_adiantado_obrigatorio BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE servicos ADD COLUMN advance_payment_type VARCHAR(20) NULL",
+        "ALTER TABLE servicos ADD COLUMN advance_payment_amount FLOAT NULL",
+        "ALTER TABLE servicos ADD COLUMN payment_description_override TEXT NULL",
+        "ALTER TABLE servicos ADD COLUMN updated_at TIMESTAMP NULL",
+    ])
+
+
+def _ensure_agendamentos_payment_columns():
+    _run_best_effort([
+        "ALTER TABLE agendamentos ADD COLUMN pagamento_adiantado_exigido BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE agendamentos ADD COLUMN payment_type_snapshot VARCHAR(20) NULL",
+        "ALTER TABLE agendamentos ADD COLUMN payment_amount_snapshot FLOAT NULL",
+        "ALTER TABLE agendamentos ADD COLUMN payment_status VARCHAR(30) NOT NULL DEFAULT 'not_required'",
+        "ALTER TABLE agendamentos ADD COLUMN payment_hold_expires_at TIMESTAMP NULL",
+        "ALTER TABLE agendamentos ADD COLUMN provider_checkout_reference VARCHAR(255) NULL",
+        "ALTER TABLE agendamentos ADD COLUMN provider_preference_id VARCHAR(255) NULL",
+        "ALTER TABLE agendamentos ADD COLUMN updated_at TIMESTAMP NULL",
+        "CREATE INDEX ix_agendamentos_payment_status ON agendamentos (payment_status)",
+        "CREATE INDEX ix_agendamentos_payment_hold_expires_at ON agendamentos (payment_hold_expires_at)",
+    ])
+
+
+def _ensure_pagamentos_table():
+    try:
+        from app.models.payment_account import PaymentAccount
+        from app.models.payment_oauth_state import PaymentOAuthState
+        from app.models.payment_webhook_event import PaymentWebhookEvent
+        from app.models.pagamento import Pagamento
+
+        PaymentAccount.__table__.create(bind=engine, checkfirst=True)
+        PaymentOAuthState.__table__.create(bind=engine, checkfirst=True)
+        Pagamento.__table__.create(bind=engine, checkfirst=True)
+        PaymentWebhookEvent.__table__.create(bind=engine, checkfirst=True)
+    except Exception:
+        pass
+
+    _run_best_effort([
+        "ALTER TABLE payment_accounts ADD COLUMN account_name VARCHAR(120) NULL",
+        "ALTER TABLE payment_accounts ADD COLUMN client_id_encrypted TEXT NULL",
+        "ALTER TABLE payment_accounts ADD COLUMN client_secret_encrypted TEXT NULL",
+        "ALTER TABLE payment_accounts ADD COLUMN internal_notes TEXT NULL",
+        "ALTER TABLE payment_accounts ADD COLUMN created_by_admin_id VARCHAR(120) NULL",
+        "ALTER TABLE payment_accounts ADD COLUMN updated_by_admin_id VARCHAR(120) NULL",
+        "ALTER TABLE pagamentos ADD COLUMN estabelecimento_id INTEGER NULL",
+        "ALTER TABLE pagamentos ADD COLUMN payment_account_id INTEGER NULL",
+        "ALTER TABLE pagamentos ADD COLUMN idempotency_key VARCHAR(120) NULL",
+        "ALTER TABLE pagamentos ADD COLUMN external_merchant_order_id VARCHAR(120) NULL",
+        "ALTER TABLE pagamentos ADD COLUMN external_status VARCHAR(80) NULL",
+        "ALTER TABLE pagamentos ADD COLUMN platform_fee_amount FLOAT NOT NULL DEFAULT 0",
+        "ALTER TABLE pagamentos ADD COLUMN currency VARCHAR(10) NOT NULL DEFAULT 'BRL'",
+        "ALTER TABLE pagamentos ADD COLUMN payment_method VARCHAR(80) NULL",
+        "ALTER TABLE pagamentos ADD COLUMN paid_at TIMESTAMP NULL",
+        "ALTER TABLE pagamentos ADD COLUMN expires_at TIMESTAMP NULL",
+        "CREATE UNIQUE INDEX ux_pagamentos_idempotency_key ON pagamentos (idempotency_key)",
+        "CREATE INDEX ix_pagamentos_estabelecimento_id ON pagamentos (estabelecimento_id)",
+        "CREATE INDEX ix_pagamentos_payment_account_id ON pagamentos (payment_account_id)",
+        "CREATE INDEX ix_pagamentos_expires_at ON pagamentos (expires_at)",
+    ])
+
+
+def _ensure_postgres_schema_guards():
+    """
+    Guardas explícitas para colunas críticas em Postgres (Neon).
+    Evita 500 por schema defasado quando o app evolui mais rápido que o banco.
+    """
+    if not IS_POSTGRES:
+        return
+
+    statements = [
+        # clientes.email
+        """
+        ALTER TABLE clientes
+        ADD COLUMN IF NOT EXISTS email VARCHAR(255) NULL
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_clientes_email ON clientes (email)",
+
+        # agendamentos.compareceu_em
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS compareceu_em TIMESTAMP NULL
+        """,
+
+        # servicos.pagamento_adiantado_obrigatorio
+        """
+        ALTER TABLE servicos
+        ADD COLUMN IF NOT EXISTS pagamento_adiantado_obrigatorio BOOLEAN NOT NULL DEFAULT FALSE
+        """,
+        """
+        ALTER TABLE servicos
+        ADD COLUMN IF NOT EXISTS advance_payment_type VARCHAR(20) NULL
+        """,
+        """
+        ALTER TABLE servicos
+        ADD COLUMN IF NOT EXISTS advance_payment_amount FLOAT NULL
+        """,
+        """
+        ALTER TABLE servicos
+        ADD COLUMN IF NOT EXISTS payment_description_override TEXT NULL
+        """,
+        """
+        ALTER TABLE servicos
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NULL
+        """,
+
+        # agendamentos.pagamento_adiantado_exigido
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS pagamento_adiantado_exigido BOOLEAN NOT NULL DEFAULT FALSE
+        """,
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS payment_type_snapshot VARCHAR(20) NULL
+        """,
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS payment_amount_snapshot FLOAT NULL
+        """,
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS payment_status VARCHAR(30) NOT NULL DEFAULT 'not_required'
+        """,
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS payment_hold_expires_at TIMESTAMP NULL
+        """,
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS provider_checkout_reference VARCHAR(255) NULL
+        """,
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS provider_preference_id VARCHAR(255) NULL
+        """,
+        """
+        ALTER TABLE agendamentos
+        ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP NULL
+        """,
+        "CREATE INDEX IF NOT EXISTS ix_agendamentos_payment_status ON agendamentos (payment_status)",
+        "CREATE INDEX IF NOT EXISTS ix_agendamentos_payment_hold_expires_at ON agendamentos (payment_hold_expires_at)",
+
+        # payment_accounts administrado pelo master
+        """
+        ALTER TABLE payment_accounts
+        ADD COLUMN IF NOT EXISTS account_name VARCHAR(120) NULL
+        """,
+        """
+        ALTER TABLE payment_accounts
+        ADD COLUMN IF NOT EXISTS client_id_encrypted TEXT NULL
+        """,
+        """
+        ALTER TABLE payment_accounts
+        ADD COLUMN IF NOT EXISTS client_secret_encrypted TEXT NULL
+        """,
+        """
+        ALTER TABLE payment_accounts
+        ADD COLUMN IF NOT EXISTS internal_notes TEXT NULL
+        """,
+        """
+        ALTER TABLE payment_accounts
+        ADD COLUMN IF NOT EXISTS created_by_admin_id VARCHAR(120) NULL
+        """,
+        """
+        ALTER TABLE payment_accounts
+        ADD COLUMN IF NOT EXISTS updated_by_admin_id VARCHAR(120) NULL
+        """,
+
+        # pagamentos v2
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS estabelecimento_id INTEGER NULL
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS payment_account_id INTEGER NULL
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(120) NULL
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS external_merchant_order_id VARCHAR(120) NULL
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS external_status VARCHAR(80) NULL
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS platform_fee_amount FLOAT NOT NULL DEFAULT 0
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS currency VARCHAR(10) NOT NULL DEFAULT 'BRL'
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS payment_method VARCHAR(80) NULL
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP NULL
+        """,
+        """
+        ALTER TABLE pagamentos
+        ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP NULL
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS ux_pagamentos_idempotency_key ON pagamentos (idempotency_key)",
+        "CREATE INDEX IF NOT EXISTS ix_pagamentos_estabelecimento_id ON pagamentos (estabelecimento_id)",
+        "CREATE INDEX IF NOT EXISTS ix_pagamentos_payment_account_id ON pagamentos (payment_account_id)",
+        "CREATE INDEX IF NOT EXISTS ix_pagamentos_expires_at ON pagamentos (expires_at)",
+    ]
+
+    for sql in statements:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(sql))
+        except Exception:
+            logger.exception("Falha ao aplicar guarda de schema Postgres: %s", sql.strip().splitlines()[0])
 
 
 def _ensure_barbearias_working_hours_column():
@@ -396,6 +648,128 @@ def _ensure_tipo_servico_column():
         "ALTER TABLE estabelecimentos ADD COLUMN tipo_servico VARCHAR(50) NOT NULL DEFAULT 'barbearia'",
         "UPDATE estabelecimentos SET tipo_servico = 'barbearia' WHERE tipo_servico IS NULL",
     ])
+
+
+def _sync_estabelecimentos_e_barbearias():
+    """
+    Mantem compatibilidade entre schemas legados (barbearias) e novo schema (estabelecimentos).
+    Algumas FKs antigas ainda apontam para `barbearias`, entao garantimos linhas espelho.
+    """
+    statements = [
+        # Copia registros novos do schema atual para tabela legada (usada por FKs antigas).
+        """
+        INSERT INTO barbearias (
+            id, nome, slug, endereco, mega_instance_key, mega_token, whatsapp_number,
+            login, senha, plano, status_manual, vencimento_em, trial_ativo, trial_fim_em,
+            ultimo_acesso_em, pagamento_recusado, horarios_funcionamento, criado_em
+        )
+        SELECT
+            e.id, e.nome, e.slug, e.endereco, e.mega_instance_key, e.mega_token, e.whatsapp_number,
+            e.login, e.senha, e.plano, e.status_manual, e.vencimento_em, e.trial_ativo, e.trial_fim_em,
+            e.ultimo_acesso_em, e.pagamento_recusado, e.horarios_funcionamento, e.criado_em
+        FROM estabelecimentos e
+        LEFT JOIN barbearias b ON b.id = e.id
+        WHERE b.id IS NULL
+        """,
+
+        # Copia registros legados para schema atual, caso existam apenas em barbearias.
+        """
+        INSERT INTO estabelecimentos (
+            id, nome, slug, endereco, mega_instance_key, mega_token, whatsapp_number,
+            login, senha, plano, status_manual, vencimento_em, trial_ativo, trial_fim_em,
+            ultimo_acesso_em, pagamento_recusado, horarios_funcionamento, criado_em
+        )
+        SELECT
+            b.id, b.nome, b.slug, b.endereco, b.mega_instance_key, b.mega_token, b.whatsapp_number,
+            b.login, b.senha, b.plano, b.status_manual, b.vencimento_em, b.trial_ativo, b.trial_fim_em,
+            b.ultimo_acesso_em, b.pagamento_recusado, b.horarios_funcionamento, b.criado_em
+        FROM barbearias b
+        LEFT JOIN estabelecimentos e ON e.id = b.id
+        WHERE e.id IS NULL
+        """,
+
+        # Mantem dados principais alinhados (evita drift entre tabelas).
+        """
+        UPDATE barbearias b
+        SET
+            nome = e.nome,
+            slug = e.slug,
+            endereco = e.endereco,
+            mega_instance_key = e.mega_instance_key,
+            mega_token = e.mega_token,
+            whatsapp_number = e.whatsapp_number,
+            login = e.login,
+            senha = e.senha,
+            plano = e.plano,
+            status_manual = e.status_manual,
+            vencimento_em = e.vencimento_em,
+            trial_ativo = e.trial_ativo,
+            trial_fim_em = e.trial_fim_em,
+            ultimo_acesso_em = e.ultimo_acesso_em,
+            pagamento_recusado = e.pagamento_recusado,
+            horarios_funcionamento = e.horarios_funcionamento,
+            criado_em = e.criado_em
+        FROM estabelecimentos e
+        WHERE b.id = e.id
+        """,
+
+        # Ajusta sequencias para evitar colisao de PK apos inserts manuais de id.
+        "SELECT setval('barbearias_id_seq', COALESCE((SELECT MAX(id) FROM barbearias), 1), true)",
+        "SELECT setval('estabelecimentos_id_seq', COALESCE((SELECT MAX(id) FROM estabelecimentos), 1), true)",
+    ]
+
+    _run_best_effort(statements)
+
+
+def _sync_profissionais_e_barbeiros():
+    """
+    Mantem compatibilidade entre `profissionais` (novo) e `barbeiros` (legado).
+    Algumas FKs antigas de agendamentos ainda apontam para `barbeiros`.
+    """
+    statements = [
+        # Copia profissionais novos para tabela legada.
+        """
+        INSERT INTO barbeiros (
+            id, nome, barbershop_id, ativo, tempo_por_servico, horarios_funcionamento
+        )
+        SELECT
+            p.id, p.nome, p.estabelecimento_id, p.ativo, p.tempo_por_servico, p.horarios_funcionamento
+        FROM profissionais p
+        LEFT JOIN barbeiros b ON b.id = p.id
+        WHERE b.id IS NULL
+        """,
+
+        # Copia barbeiros legados para tabela nova.
+        """
+        INSERT INTO profissionais (
+            id, nome, estabelecimento_id, ativo, tempo_por_servico, horarios_funcionamento
+        )
+        SELECT
+            b.id, b.nome, b.barbershop_id, b.ativo, b.tempo_por_servico, b.horarios_funcionamento
+        FROM barbeiros b
+        LEFT JOIN profissionais p ON p.id = b.id
+        WHERE p.id IS NULL
+        """,
+
+        # Mantem dados principais alinhados.
+        """
+        UPDATE barbeiros b
+        SET
+            nome = p.nome,
+            barbershop_id = p.estabelecimento_id,
+            ativo = p.ativo,
+            tempo_por_servico = p.tempo_por_servico,
+            horarios_funcionamento = p.horarios_funcionamento
+        FROM profissionais p
+        WHERE b.id = p.id
+        """,
+
+        # Ajusta sequencias.
+        "SELECT setval('barbeiros_id_seq', COALESCE((SELECT MAX(id) FROM barbeiros), 1), true)",
+        "SELECT setval('profissionais_id_seq', COALESCE((SELECT MAX(id) FROM profissionais), 1), true)",
+    ]
+
+    _run_best_effort(statements)
 
 
 def _backfill_agendamentos_notification_defaults():

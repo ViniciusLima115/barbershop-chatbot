@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.services.notificacao_service import processar_lembretes_pendentes
+from app.services.payments.payment_service import expire_pending_bookings_and_payments
 
 
 router = APIRouter(prefix="/internal", tags=["internal"])
@@ -21,3 +22,16 @@ def processar_reminders(
         raise HTTPException(status_code=401, detail="Token interno invalido.")
 
     return processar_lembretes_pendentes(db, limite=limite)
+
+
+@router.post("/payments/expire-pending")
+def expire_pending_payments(
+    x_internal_token: str | None = Header(default=None, alias="X-Internal-Token"),
+    limite: int = 300,
+    db: Session = Depends(get_db),
+):
+    token_esperado = os.getenv("INTERNAL_REMINDER_TOKEN")
+    if token_esperado and x_internal_token != token_esperado:
+        raise HTTPException(status_code=401, detail="Token interno invalido.")
+    expirados = expire_pending_bookings_and_payments(db, limit=limite)
+    return {"expirados": expirados}

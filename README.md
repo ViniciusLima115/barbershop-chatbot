@@ -219,3 +219,9 @@ barbearia-chatbot/
     app/
     services/
 ```
+
+## Pagamentos multi-tenant
+
+Documentacao completa da camada de pagamentos por estabelecimento (credenciais Mercado Pago gerenciadas pelo admin, webhook, expiracao e testes):
+
+- `docs/pagamento-adiantado-mercado-pago.md`
