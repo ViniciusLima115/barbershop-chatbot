@@ -1,6 +1,7 @@
 from datetime import date
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -82,6 +83,9 @@ def criar(
         return agendamento
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Erro interno ao salvar agendamento.") from exc
 
 
 @router.get("/", response_model=list[AgendamentoResponse])

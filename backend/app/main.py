@@ -16,8 +16,10 @@ from app.routes import (
     dashboard,
     estabelecimento_funcionamento,
     estabelecimentos,
+    integrations,
     internal,
     notificacoes,
+    payments,
     profissionais,
     public,
     servicos,
@@ -44,15 +46,29 @@ def _str_to_bool(value: str | None, default: bool) -> bool:
 
 
 def _get_cors_allow_origins() -> list[str]:
+    defaults_local = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
     configured = os.getenv("CORS_ALLOWED_ORIGINS", "").strip()
+    app_env = os.getenv("APP_ENV", "").strip().lower()
     if configured:
-        return [item.strip() for item in configured.split(",") if item.strip()]
+        origins = [item.strip() for item in configured.split(",") if item.strip()]
+        if app_env not in {"prod", "production"}:
+            origins.extend(defaults_local)
+        # dedup mantendo ordem
+        unique: list[str] = []
+        seen: set[str] = set()
+        for origin in origins:
+            if origin not in seen:
+                unique.append(origin)
+                seen.add(origin)
+        return unique
 
     return [
         "https://virtualbarber.shop",
         "https://app.virtualbarber.shop",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        *defaults_local,
     ]
 
 
@@ -159,6 +175,8 @@ app.include_router(profissionais.router)
 app.include_router(estabelecimento_funcionamento.router)
 app.include_router(configuracoes.router)
 app.include_router(notificacoes.router)
+app.include_router(integrations.router)
+app.include_router(payments.router)
 
 @app.get("/")
 def home():

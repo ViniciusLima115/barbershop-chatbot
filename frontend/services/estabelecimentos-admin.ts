@@ -18,6 +18,35 @@ export type EstabelecimentoAdmin = {
   ultimoAcessoEm: string | null;
   pagamentoRecusado: boolean;
   criadoEm: string;
+  paymentAccountStatus?: "not_configured" | "active" | "inactive" | "error" | "revoked" | "pending";
+  paymentAccountName?: string | null;
+  paymentAccountId?: number | null;
+};
+
+export type AdminPaymentAccount = {
+  id: number;
+  establishment_id: number;
+  provider: string;
+  account_name: string | null;
+  status: "active" | "inactive" | "error" | "revoked" | "pending";
+  client_id_masked: string | null;
+  client_secret_masked: string | null;
+  access_token_masked: string | null;
+  public_key_masked: string | null;
+  internal_notes: string | null;
+  checkout_hold_minutes: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AdminPaymentEstablishment = {
+  id: number;
+  nome: string;
+  slug: string | null;
+  login: string | null;
+  payment_account_status: "not_configured" | "active" | "inactive" | "error" | "revoked" | "pending";
+  payment_account_name: string | null;
+  payment_account_id: number | null;
 };
 
 // Backward compat aliases
@@ -96,6 +125,14 @@ export async function listEstabelecimentosAdmin(): Promise<EstabelecimentoAdmin[
   });
   const data = (await parseOrThrow(res, "Falha ao carregar estabelecimentos.")) as EstabelecimentoApi[];
   return data.map(toUi);
+}
+
+export async function listPaymentEstablishmentsAdmin(): Promise<AdminPaymentEstablishment[]> {
+  const res = await fetch(`${API_URL}/admin/establishments`, {
+    cache: "no-store",
+    headers: getAdminHeaders(),
+  });
+  return parseOrThrow(res, "Falha ao carregar status de pagamentos dos estabelecimentos.");
 }
 
 // Backward compat alias
@@ -182,6 +219,52 @@ export async function deleteEstabelecimentoAdmin(id: number): Promise<void> {
     headers: getAdminHeaders(),
   });
   await parseOrThrow(res, "Falha ao excluir estabelecimento.");
+}
+
+export async function getPaymentAccountAdmin(establishmentId: number): Promise<AdminPaymentAccount | null> {
+  const res = await fetch(`${API_URL}/admin/establishments/${establishmentId}/payment-account`, {
+    cache: "no-store",
+    headers: getAdminHeaders(),
+  });
+  if (res.status === 404) return null;
+  return parseOrThrow(res, "Falha ao carregar conta de pagamento.");
+}
+
+export async function savePaymentAccountAdmin(
+  establishmentId: number,
+  payload: {
+    account_name?: string | null;
+    client_id?: string | null;
+    client_secret?: string | null;
+    access_token?: string | null;
+    public_key?: string | null;
+    status: "active" | "inactive" | "error";
+    internal_notes?: string | null;
+    checkout_hold_minutes: number;
+  },
+  exists: boolean,
+): Promise<AdminPaymentAccount> {
+  const res = await fetch(`${API_URL}/admin/establishments/${establishmentId}/payment-account`, {
+    method: exists ? "PATCH" : "POST",
+    headers: getAdminHeaders(true),
+    body: JSON.stringify({
+      provider: "mercadopago",
+      ...payload,
+    }),
+  });
+  return parseOrThrow(res, "Falha ao salvar conta de pagamento.");
+}
+
+export async function updatePaymentAccountStatusAdmin(
+  establishmentId: number,
+  status: "active" | "inactive" | "error" | "revoked",
+): Promise<AdminPaymentAccount> {
+  const res = await fetch(`${API_URL}/admin/establishments/${establishmentId}/payment-account/status`, {
+    method: "PATCH",
+    headers: getAdminHeaders(true),
+    body: JSON.stringify({ status }),
+  });
+  return parseOrThrow(res, "Falha ao alterar status da conta de pagamento.");
 }
 
 // Backward compat alias

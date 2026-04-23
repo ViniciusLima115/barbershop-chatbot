@@ -1,6 +1,7 @@
+from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Column, Date, DateTime, ForeignKey, Index, Integer, String, Time
+from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Index, Integer, String, Time
 from sqlalchemy.orm import relationship, synonym
 from app.database import Base
 
@@ -9,6 +10,8 @@ class Agendamento(Base):
     __tablename__ = "agendamentos"
     __table_args__ = (
         Index("ix_agendamentos_tenant_data_barbeiro", "estabelecimento_id", "data", "profissional_id"),
+        Index("ix_agendamentos_payment_status", "payment_status"),
+        Index("ix_agendamentos_payment_hold_expires_at", "payment_hold_expires_at"),
     )
 
     id = Column(Integer, primary_key=True, index=True)
@@ -30,11 +33,21 @@ class Agendamento(Base):
     lembrete_24h_enviado = Column(Boolean, nullable=False, default=False)
     lembrete_2h_enviado = Column(Boolean, nullable=False, default=False)
     compareceu_em = Column(DateTime, nullable=True)
+    pagamento_adiantado_exigido = Column(Boolean, nullable=False, default=False, index=True)
+    payment_type_snapshot = Column(String(20), nullable=True)
+    payment_amount_snapshot = Column(Float, nullable=True)
+    payment_status = Column(String(30), nullable=False, default="not_required")
+    payment_hold_expires_at = Column(DateTime, nullable=True)
+    provider_checkout_reference = Column(String(255), nullable=True)
+    provider_preference_id = Column(String(255), nullable=True)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Aliases de compatibilidade com código legado (colunas físicas renomeadas)
     barbearia_id = synonym("estabelecimento_id")
     barbeiro_id = synonym("profissional_id")
     tenant_id = synonym("estabelecimento_id")
+    booking_status = synonym("status")
+    payment_required_snapshot = synonym("pagamento_adiantado_exigido")
 
     cliente = relationship("Cliente")
     profissional = relationship("Profissional", foreign_keys=[profissional_id])

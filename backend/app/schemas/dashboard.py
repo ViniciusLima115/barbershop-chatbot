@@ -1,9 +1,8 @@
-# backend/app/schemas/dashboard.py
 from pydantic import BaseModel
 
 
 class HistoricoMes(BaseModel):
-    mes: str        # "2026-01"
+    mes: str
     faturamento: float
     total_agendamentos: int
 
@@ -11,10 +10,15 @@ class HistoricoMes(BaseModel):
 class FinanceiroResponse(BaseModel):
     faturamento_mes_atual: float
     faturamento_mes_anterior: float
-    variacao_percentual: float | None   # None se mês anterior = 0
+    variacao_percentual: float | None
     ticket_medio: float
     total_agendamentos: int
     historico_12_meses: list[HistoricoMes]
+    valor_recebido_hoje: float = 0
+    agendamentos_pagos: int = 0
+    taxa_conversao_pagamento: float | None = None
+    pagamentos_pendentes: int = 0
+    pagamentos_expirados: int = 0
 
 
 class ServicoMaisVendido(BaseModel):
@@ -33,14 +37,14 @@ class TopCliente(BaseModel):
     telefone: str
     total_visitas: int
     valor_total_gasto: float
-    ultima_visita: str      # ISO date "2026-03-21"
+    ultima_visita: str
 
 
 class ClientesResponse(BaseModel):
     total_clientes: int
-    clientes_novos: int         # só 1 visita no período
-    clientes_recorrentes: int   # mais de 1 visita
-    taxa_cancelamento: float    # 0.0 a 100.0 (percentual)
+    clientes_novos: int
+    clientes_recorrentes: int
+    taxa_cancelamento: float
     top_5_clientes: list[TopCliente]
 
 
@@ -48,16 +52,16 @@ class ResumoMes(BaseModel):
     agendamentos: int
     faturamento: float
     ticket_medio: float
-    ocupacao: int           # 0–100 (percentual inteiro)
+    ocupacao: int
 
 
 class DiaSemana(BaseModel):
-    dia: str                # "Seg", "Ter", ..., "Dom"
+    dia: str
     clientes: int
 
 
 class HorarioCheio(BaseModel):
-    hora: str               # "09:00", "18:00", etc.
+    hora: str
     atendimentos: int
 
 
@@ -81,7 +85,6 @@ class AnaliseResponse(BaseModel):
     clientes: ClientesAnalise
 
 
-# ── Dashboard Básico (plano Básico) ──────────────────────────────────────────
 class ResumoBasicoResponse(BaseModel):
     total_agendamentos_mes: int
     agendamentos_confirmados_mes: int
@@ -89,3 +92,6 @@ class ResumoBasicoResponse(BaseModel):
     faturamento_estimado_mes: float
     total_clientes_unicos_mes: int
     agendamentos_hoje: int
+    valor_recebido_hoje: float = 0
+    pagamentos_pendentes: int = 0
+    pagamentos_expirados: int = 0

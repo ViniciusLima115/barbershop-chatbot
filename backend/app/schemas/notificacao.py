@@ -4,7 +4,15 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 
-TipoNotificacao = Literal["novo_agendamento", "agendamento_confirmado", "pendente_confirmacao"]
+TipoNotificacao = Literal[
+    "novo_agendamento",
+    "agendamento_confirmado",
+    "pendente_confirmacao",
+    "pagamento_aprovado",
+    "pagamento_expirado",
+    "pagamento_falhou",
+    "conta_pagamento_desconectada",
+]
 
 
 class NotificacaoResponse(BaseModel):

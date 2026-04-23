@@ -1,5 +1,6 @@
 from datetime import date, datetime, time, timedelta
 
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
 from app.models.agendamento import Agendamento
@@ -97,12 +98,22 @@ class BookingRepository:
         inicio: datetime,
         fim: datetime,
     ) -> Agendamento | None:
+        now = datetime.utcnow()
         return (
             self.db.query(Agendamento)
             .filter(
                 Agendamento.barbeiro_id == barbeiro_id,
                 Agendamento.barbearia_id == tenant_id,
-                Agendamento.status.in_(["pendente", "confirmado"]),
+                or_(
+                    Agendamento.status.in_(["pendente", "confirmado", "reagendamento_solicitado"]),
+                    and_(
+                        Agendamento.status == "pending_payment",
+                        or_(
+                            Agendamento.payment_hold_expires_at.is_(None),
+                            Agendamento.payment_hold_expires_at > now,
+                        ),
+                    ),
+                ),
                 Agendamento.data_hora_inicio < fim,
                 Agendamento.data_hora_fim > inicio,
             )
@@ -122,6 +133,7 @@ class BookingRepository:
         inicio: datetime,
         fim: datetime,
         status: str = "pendente",
+        pagamento_adiantado_exigido: bool = False,
     ) -> Agendamento:
         agendamento = Agendamento(
             tenant_id=tenant_id,
@@ -136,6 +148,7 @@ class BookingRepository:
             data_hora_inicio=inicio,
             data_hora_fim=fim,
             status=status,
+            pagamento_adiantado_exigido=pagamento_adiantado_exigido,
         )
         self.db.add(agendamento)
         self.db.flush()

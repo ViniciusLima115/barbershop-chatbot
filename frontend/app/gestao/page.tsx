@@ -17,10 +17,12 @@ import {
   deleteCliente,
   deleteServico,
   getBarbershopWorkingHours,
+  getMercadoPagoStatus,
   listAgendamentos,
   listBarbeiros,
   listClientes,
   listServicos,
+  type PaymentAccountStatus,
   updateAgendamento,
   updateBarbeiro,
   updateBarbershopWorkingHours,
@@ -46,7 +48,15 @@ import styles from "./page.module.css";
 type Tab = "agendamentos" | "clientes" | "servicos" | "funcionamento";
 
 const initialCliente = { nome: "", telefone: "" };
-const initialServico = { nome: "", duracao_minutos: 40, preco: 40 };
+const initialServico = {
+  nome: "",
+  duracao_minutos: 40,
+  preco: 40,
+  pagamento_adiantado_obrigatorio: false,
+  advance_payment_type: "full" as "full" | "signal",
+  advance_payment_amount: null as number | null,
+  payment_description_override: "",
+};
 const MAX_BARBEIROS_PREMIUM = 3;
 const MAX_BARBEIROS_BASICO = 1;
 const tabs: Array<{
@@ -304,19 +314,65 @@ function Field({
 }
 
 function StatusPill({ status }: { status: Agendamento["status"] }) {
-  const label =
-    status === "confirmado" ? "Confirmado" : status === "pendente" ? "Pendente" : "Cancelado";
+  const labelByStatus: Record<string, string> = {
+    confirmado: "Confirmado",
+    pendente: "Pendente",
+    pending_payment: "Aguardando pagamento",
+    cancelado: "Cancelado",
+    expired: "Expirado",
+    no_show: "Nao compareceu",
+    compareceu: "Concluido",
+    reagendamento_solicitado: "Reagendamento",
+    failed: "Falhou",
+  };
+  const label = labelByStatus[status] ?? status;
 
   return (
     <span
       className={cx(
         styles.statusPill,
         status === "confirmado" && styles.statusConfirmado,
-        status === "pendente" && styles.statusPendente,
-        status === "cancelado" && styles.statusCancelado
+        (status === "pendente" || status === "pending_payment") && styles.statusPendente,
+        (status === "cancelado" || status === "failed" || status === "expired") && styles.statusCancelado
       )}
     >
       {label}
+    </span>
+  );
+}
+
+function PaymentPill({
+  paymentStatus,
+  required,
+}: {
+  paymentStatus?: Agendamento["payment_status"];
+  required?: boolean;
+}) {
+  if (!required) {
+    return <span className={styles.statusPill}>Nao obrigatorio</span>;
+  }
+
+  const value = paymentStatus || "pending";
+  const labels: Record<string, string> = {
+    pending: "Aguardando",
+    approved: "Pago",
+    rejected: "Recusado",
+    cancelled: "Cancelado",
+    refunded: "Estornado",
+    expired: "Expirado",
+    not_required: "Nao obrigatorio",
+  };
+
+  return (
+    <span
+      className={cx(
+        styles.statusPill,
+        value === "approved" && styles.statusConfirmado,
+        value === "pending" && styles.statusPendente,
+        (value === "rejected" || value === "cancelled" || value === "expired") && styles.statusCancelado
+      )}
+    >
+      {labels[value] ?? value}
     </span>
   );
 }
@@ -427,6 +483,7 @@ export default function GestaoPage() {
   );
   const [savingFuncionamento, setSavingFuncionamento] = useState(false);
   const [intervaloMinutos, setIntervaloMinutos] = useState<number>(30);
+  const [paymentAccount, setPaymentAccount] = useState<PaymentAccountStatus | null>(null);
 
   const [novoCliente, setNovoCliente] = useState(initialCliente);
   const [editClienteId, setEditClienteId] = useState<number | null>(null);
@@ -441,7 +498,16 @@ export default function GestaoPage() {
     barbeiroId: "",
     servicoId: "",
     dataHora: "",
-    status: "confirmado" as "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado" | "compareceu" | "no_show",
+    status: "confirmado" as
+      | "pending_payment"
+      | "pendente"
+      | "confirmado"
+      | "cancelado"
+      | "reagendamento_solicitado"
+      | "compareceu"
+      | "no_show"
+      | "failed"
+      | "expired",
   });
   const [editAgendamentoId, setEditAgendamentoId] = useState<number | null>(null);
 
@@ -465,6 +531,12 @@ export default function GestaoPage() {
       setAgendamentos(ags);
       setFuncionamento(workingHours);
       setIntervaloMinutos(workingHours.intervalo_minutos ?? 30);
+      try {
+        const status = await getMercadoPagoStatus();
+        setPaymentAccount(status);
+      } catch {
+        setPaymentAccount(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao carregar dados.");
     } finally {
@@ -510,6 +582,7 @@ export default function GestaoPage() {
     }
     return `${barbeiroSelecionadoAgendamento.nome} atende em ${dia?.label.toLowerCase() ?? "esse dia"} das ${item.inicio} as ${item.fim}.`;
   }, [barbeiroSelecionadoAgendamento, formAgendamento.dataHora, funcionamento]);
+  const mercadoPagoConectado = Boolean(paymentAccount?.connected && paymentAccount.status === "active");
 
   const limparMensagens = () => {
     setError(null);
@@ -591,11 +664,39 @@ export default function GestaoPage() {
     e.preventDefault();
     limparMensagens();
     try {
+      const exigePagamento = Boolean(novoServico.pagamento_adiantado_obrigatorio);
+      const tipoPagamento = exigePagamento ? novoServico.advance_payment_type ?? "full" : null;
+      const valorSinal = novoServico.advance_payment_amount;
+
+      if (exigePagamento && tipoPagamento === "signal") {
+        const valor = Number(valorSinal ?? 0);
+        if (!Number.isFinite(valor) || valor <= 0) {
+          setError("Informe um valor de sinal maior que zero.");
+          return;
+        }
+        if (valor > Number(novoServico.preco || 0)) {
+          setError("O valor do sinal nao pode ser maior que o preco do servico.");
+          return;
+        }
+      }
+
+      const payloadServico = {
+        ...novoServico,
+        advance_payment_type: tipoPagamento,
+        advance_payment_amount:
+          exigePagamento && tipoPagamento === "signal"
+            ? Number(novoServico.advance_payment_amount)
+            : null,
+        payment_description_override: exigePagamento
+          ? novoServico.payment_description_override?.trim() || null
+          : null,
+      };
+
       if (editServicoId) {
-        await updateServico(editServicoId, novoServico);
+        await updateServico(editServicoId, payloadServico);
         setSuccess("Servico atualizado com sucesso!");
       } else {
-        await createServico(novoServico);
+        await createServico(payloadServico);
         setSuccess("Servico criado com sucesso!");
       }
       setNovoServico(initialServico);
@@ -615,6 +716,13 @@ export default function GestaoPage() {
         nome: servico.nome,
         duracao_minutos: servico.duracao_minutos,
         preco: servico.preco,
+        pagamento_adiantado_obrigatorio: Boolean(servico.pagamento_adiantado_obrigatorio),
+        advance_payment_type: servico.advance_payment_type ?? "full",
+        advance_payment_amount:
+          servico.advance_payment_amount !== undefined && servico.advance_payment_amount !== null
+            ? Number(servico.advance_payment_amount)
+            : null,
+        payment_description_override: servico.payment_description_override ?? "",
       });
     } else {
       setEditServicoId(null);
@@ -1014,6 +1122,8 @@ export default function GestaoPage() {
                             <th>Profissional</th>
                             <th>Horario</th>
                             <th>Status</th>
+                            <th>Pagamento</th>
+                            <th>Valor</th>
                             <th className={styles.actionsColumn}>Acoes</th>
                           </tr>
                         </thead>
@@ -1028,6 +1138,17 @@ export default function GestaoPage() {
                               <td>{formatDateTime(agendamento.data_hora_inicio)}</td>
                               <td>
                                 <StatusPill status={agendamento.status} />
+                              </td>
+                              <td>
+                                <PaymentPill
+                                  paymentStatus={agendamento.payment_status}
+                                  required={agendamento.payment_required}
+                                />
+                              </td>
+                              <td>
+                                {agendamento.payment_required
+                                  ? formatCurrency(Number(agendamento.payment_amount || 0))
+                                  : "-"}
                               </td>
                               <td className={styles.actionsColumn}>
                                 <div className={styles.rowActions}>
@@ -1131,6 +1252,12 @@ export default function GestaoPage() {
                   </ActionButton>
                 }
               >
+                {!mercadoPagoConectado ? (
+                  <Notice
+                    tone="warning"
+                    message="Este estabelecimento ainda nao possui conta de pagamento configurada pela administracao. O pagamento online nao ficara disponivel ate essa configuracao ser feita."
+                  />
+                ) : null}
                 {servicos.length === 0 ? (
                   <EmptyState
                     title="Nenhum servico cadastrado"
@@ -1150,6 +1277,9 @@ export default function GestaoPage() {
                           <th>Nome</th>
                           <th>Duracao</th>
                           <th>Preco</th>
+                          <th>Pagamento adiantado</th>
+                          <th>Tipo</th>
+                          <th>Valor online</th>
                           <th className={styles.actionsColumn}>Acoes</th>
                         </tr>
                       </thead>
@@ -1161,6 +1291,23 @@ export default function GestaoPage() {
                             </td>
                             <td>{servico.duracao_minutos} min</td>
                             <td>{formatCurrency(servico.preco)}</td>
+                            <td>{servico.pagamento_adiantado_obrigatorio ? "Obrigatorio" : "Nao"}</td>
+                            <td>
+                              {servico.pagamento_adiantado_obrigatorio
+                                ? servico.advance_payment_type === "signal"
+                                  ? "Sinal"
+                                  : "Valor total"
+                                : "-"}
+                            </td>
+                            <td>
+                              {servico.pagamento_adiantado_obrigatorio
+                                ? formatCurrency(
+                                    servico.advance_payment_type === "signal"
+                                      ? Number(servico.advance_payment_amount || 0)
+                                      : servico.preco
+                                  )
+                                : "-"}
+                            </td>
                             <td className={styles.actionsColumn}>
                               <div className={styles.rowActions}>
                                 <IconActionButton label="Editar servico" onClick={() => abrirModalServico(servico)}>
@@ -1375,6 +1522,100 @@ export default function GestaoPage() {
               />
             </Field>
           </div>
+          <label className={styles.switchField}>
+            <input
+              type="checkbox"
+              checked={Boolean(novoServico.pagamento_adiantado_obrigatorio)}
+              onChange={(e) =>
+                setNovoServico((prev) => ({
+                  ...prev,
+                  pagamento_adiantado_obrigatorio: e.target.checked,
+                  advance_payment_type: e.target.checked ? prev.advance_payment_type ?? "full" : "full",
+                  advance_payment_amount: e.target.checked ? prev.advance_payment_amount : null,
+                }))
+              }
+            />
+            <span className={styles.switchTrack} />
+            <span className={styles.switchLabel}>
+              {novoServico.pagamento_adiantado_obrigatorio
+                ? "Exigir pagamento adiantado"
+                : "Permitir agendamento sem pagamento adiantado"}
+            </span>
+          </label>
+          {novoServico.pagamento_adiantado_obrigatorio ? (
+            <div className={styles.inlineInfoCard}>
+              <p className={styles.inlineInfoTitle}>Configuracao da cobranca online</p>
+              <div className={styles.formGrid}>
+                <Field label="Tipo de pagamento adiantado" required>
+                  <select
+                    className={styles.select}
+                    value={novoServico.advance_payment_type ?? "full"}
+                    onChange={(e) =>
+                      setNovoServico((prev) => ({
+                        ...prev,
+                        advance_payment_type: e.target.value as "full" | "signal",
+                        advance_payment_amount:
+                          e.target.value === "signal"
+                            ? prev.advance_payment_amount
+                            : null,
+                      }))
+                    }
+                  >
+                    <option value="full">Valor total</option>
+                    <option value="signal">Sinal</option>
+                  </select>
+                </Field>
+                {novoServico.advance_payment_type === "signal" ? (
+                  <Field
+                    label="Valor do sinal"
+                    required
+                    hint="O valor do sinal deve ser maior que zero e menor ou igual ao preco do servico."
+                  >
+                    <input
+                      className={styles.input}
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      max={novoServico.preco}
+                      value={novoServico.advance_payment_amount ?? ""}
+                      onChange={(e) =>
+                        setNovoServico((prev) => ({
+                          ...prev,
+                          advance_payment_amount: e.target.value ? Number(e.target.value) : null,
+                        }))
+                      }
+                      required
+                    />
+                  </Field>
+                ) : null}
+              </div>
+              <Field
+                label="Descricao opcional no checkout"
+                hint="Texto exibido no checkout do cliente (opcional)."
+              >
+                <input
+                  className={styles.input}
+                  value={novoServico.payment_description_override ?? ""}
+                  onChange={(e) =>
+                    setNovoServico((prev) => ({
+                      ...prev,
+                      payment_description_override: e.target.value,
+                    }))
+                  }
+                  placeholder="Ex: Sinal para reservar horario"
+                />
+              </Field>
+              <p className={styles.inlineInfoText}>
+                O agendamento so sera confirmado apos a aprovacao do pagamento. A conta de recebimento e definida pela administracao do sistema.
+              </p>
+              {!mercadoPagoConectado ? (
+                <Notice
+                  tone="warning"
+                  message="Este estabelecimento ainda nao possui conta de pagamento configurada pela administracao. O pagamento online nao ficara disponivel ate essa configuracao ser feita."
+                />
+              ) : null}
+            </div>
+          ) : null}
           <div className={styles.formActions}>
             <ActionButton variant="ghost" onClick={fecharServicoModal}>
               Cancelar
@@ -1587,17 +1828,27 @@ export default function GestaoPage() {
                   setFormAgendamento((prev) => ({
                     ...prev,
                     status: e.target.value as
+                      | "pending_payment"
                       | "pendente"
                       | "confirmado"
                       | "cancelado"
-                      | "reagendamento_solicitado",
+                      | "reagendamento_solicitado"
+                      | "compareceu"
+                      | "no_show"
+                      | "failed"
+                      | "expired",
                   }))
                 }
               >
+                <option value="pending_payment">Aguardando pagamento</option>
                 <option value="confirmado">Confirmado</option>
                 <option value="pendente">Pendente</option>
                 <option value="cancelado">Cancelado</option>
+                <option value="expired">Expirado</option>
                 <option value="reagendamento_solicitado">Reagendamento solicitado</option>
+                <option value="compareceu">Compareceu</option>
+                <option value="no_show">Nao compareceu</option>
+                <option value="failed">Falhou</option>
               </select>
             </Field>
           </div>

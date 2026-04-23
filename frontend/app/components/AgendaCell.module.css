@@ -28,6 +28,13 @@
   border-color: var(--success-line);
 }
 
+.cellPendingPayment {
+  cursor: pointer;
+  color: #9a3412;
+  background: #fff7ed;
+  border-color: #fdba74;
+}
+
 .cellIndisponivel {
   cursor: not-allowed;
   color: var(--warning);

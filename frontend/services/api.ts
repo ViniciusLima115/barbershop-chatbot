@@ -1,11 +1,20 @@
 import { getAuthSession, logout } from "./auth";
 
 const DEFAULT_API_URL = "https://api.virtualbarber.shop";
+<<<<<<< HEAD
 const _rawApiUrl = (process.env.NEXT_PUBLIC_API_URL?.trim() || DEFAULT_API_URL).replace(/\/+$/, "");
 // Força HTTPS apenas quando não for localhost/127.0.0.1 (evita quebrar dev local)
 export const API_URL = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(_rawApiUrl)
   ? _rawApiUrl
   : _rawApiUrl.replace(/^http:\/\//i, "https://");
+=======
+const _rawApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim() || DEFAULT_API_URL;
+export const API_URL = _rawApiUrl.replace(/\/+$/, "");
+if (typeof window !== "undefined") {
+  console.log("[api] NEXT_PUBLIC_API_URL env:", process.env.NEXT_PUBLIC_API_URL);
+  console.log("[api] API_URL resolvido:", API_URL);
+}
+>>>>>>> d1b47bb (add-mercadoPago)
 
 export type AgendaSlot = {
   hora: string;
@@ -13,6 +22,9 @@ export type AgendaSlot = {
   servico: string;
   telefone?: string;
   status?: string;
+  payment_status?: string;
+  payment_amount?: number | null;
+  payment_method?: string | null;
   inicio?: string;
   fim?: string;
 };
@@ -46,6 +58,10 @@ export type Servico = {
   nome: string;
   duracao_minutos: number;
   preco: number;
+  pagamento_adiantado_obrigatorio?: boolean;
+  advance_payment_type?: "full" | "signal" | null;
+  advance_payment_amount?: number | null;
+  payment_description_override?: string | null;
 };
 
 export type Barbeiro = {
@@ -67,7 +83,20 @@ export type Agendamento = {
   servico_nome: string;
   data_hora_inicio: string;
   data_hora_fim: string;
-  status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado" | "compareceu" | "no_show";
+  status:
+    | "pending_payment"
+    | "pendente"
+    | "confirmado"
+    | "cancelado"
+    | "failed"
+    | "reagendamento_solicitado"
+    | "compareceu"
+    | "no_show"
+    | "expired";
+  payment_status?: "not_required" | "pending" | "approved" | "rejected" | "cancelled" | "refunded" | "expired";
+  payment_required?: boolean;
+  payment_amount?: number | null;
+  payment_type?: "full" | "signal" | null;
 };
 
 export type AdminCheckResponse = {
@@ -77,7 +106,11 @@ export type AdminCheckResponse = {
 export type TipoNotificacao =
   | "novo_agendamento"
   | "agendamento_confirmado"
-  | "pendente_confirmacao";
+  | "pendente_confirmacao"
+  | "pagamento_aprovado"
+  | "pagamento_expirado"
+  | "pagamento_falhou"
+  | "conta_pagamento_desconectada";
 
 export type Notificacao = {
   id: number;
@@ -110,6 +143,10 @@ export type PublicServico = {
   nome: string;
   duracao: number;
   preco: number;
+  pagamento_adiantado_obrigatorio?: boolean;
+  pagamento_adiantado_obrigatorio_efetivo?: boolean;
+  advance_payment_type?: "full" | "signal" | null;
+  advance_payment_amount?: number | null;
 };
 
 export type PublicHorarioGrade = {
@@ -157,7 +194,38 @@ export type PublicAgendamentoTokenResponse = {
   servico_nome: string;
   data_hora_inicio: string;
   data_hora_fim: string;
-  status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado";
+  status: "pending_payment" | "pendente" | "confirmado" | "cancelado" | "failed" | "reagendamento_solicitado";
+};
+
+export type PublicPaymentInitResponse = {
+  agendamento_id: number;
+  external_reference: string;
+  preference_id: string;
+  checkout_url: string;
+  amount: number;
+  pagamento_status: "pending" | "approved" | "rejected" | "cancelled" | "refunded" | "expired";
+  agendamento_status: "pending_payment" | "pendente" | "confirmado" | "cancelado" | "failed" | "expired";
+  expires_at?: string | null;
+};
+
+export type PublicPaymentStatusResponse = {
+  external_reference: string;
+  agendamento_id: number;
+  pagamento_status: "pending" | "approved" | "rejected" | "cancelled" | "refunded" | "expired";
+  agendamento_status: "pending_payment" | "pendente" | "confirmado" | "cancelado" | "failed" | "expired";
+  amount: number;
+};
+
+export type PaymentAccountStatus = {
+  connected: boolean;
+  provider: string;
+  status: "pending" | "active" | "inactive" | "revoked" | "error";
+  establishment_id: number;
+  external_account_email_masked?: string | null;
+  external_user_id_masked?: string | null;
+  last_sync_at?: string | null;
+  token_expires_at?: string | null;
+  checkout_hold_minutes?: number;
 };
 
 export type WorkingDayKey = "seg" | "ter" | "qua" | "qui" | "sex" | "sab" | "dom";
@@ -278,6 +346,10 @@ export async function createServico(payload: {
   nome: string;
   duracao_minutos: number;
   preco: number;
+  pagamento_adiantado_obrigatorio?: boolean;
+  advance_payment_type?: "full" | "signal" | null;
+  advance_payment_amount?: number | null;
+  payment_description_override?: string | null;
 }): Promise<Servico> {
   const res = await apiFetch("/servicos/", {
     method: "POST",
@@ -289,7 +361,15 @@ export async function createServico(payload: {
 
 export async function updateServico(
   id: number,
-  payload: { nome: string; duracao_minutos: number; preco: number }
+  payload: {
+    nome: string;
+    duracao_minutos: number;
+    preco: number;
+    pagamento_adiantado_obrigatorio?: boolean;
+    advance_payment_type?: "full" | "signal" | null;
+    advance_payment_amount?: number | null;
+    payment_description_override?: string | null;
+  }
 ): Promise<Servico> {
   const res = await apiFetch(`/servicos/${id}`, {
     method: "PUT",
@@ -360,7 +440,16 @@ export async function createAgendamento(payload: {
   barbeiro_id: number;
   servico_id: number;
   data_hora_inicio: string;
-  status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado" | "compareceu" | "no_show";
+  status:
+    | "pending_payment"
+    | "pendente"
+    | "confirmado"
+    | "cancelado"
+    | "reagendamento_solicitado"
+    | "compareceu"
+    | "no_show"
+    | "failed"
+    | "expired";
 }): Promise<Agendamento> {
   const res = await apiFetch("/agendamentos/", {
     method: "POST",
@@ -377,7 +466,16 @@ export async function updateAgendamento(
     servico_id: number;
     data_hora_inicio: string;
     cliente_email?: string;
-    status: "pendente" | "confirmado" | "cancelado" | "reagendamento_solicitado" | "compareceu" | "no_show";
+    status:
+      | "pending_payment"
+      | "pendente"
+      | "confirmado"
+      | "cancelado"
+      | "reagendamento_solicitado"
+      | "compareceu"
+      | "no_show"
+      | "failed"
+      | "expired";
   }
 ): Promise<Agendamento> {
   const res = await apiFetch(`/agendamentos/${id}`, {
@@ -414,6 +512,11 @@ export async function updateBarbershopWorkingHours(
     body: JSON.stringify(payload),
   });
   return parseOrThrow(res, "Falha ao salvar horarios de funcionamento.");
+}
+
+export async function getMercadoPagoStatus(): Promise<PaymentAccountStatus> {
+  const res = await apiFetch("/integrations/mercadopago/status", { cache: "no-store" });
+  return parseOrThrow(res, "Falha ao carregar status da conta Mercado Pago.");
 }
 
 export async function deleteAgendamento(id: number): Promise<void> {
@@ -536,6 +639,33 @@ export async function createPublicBooking(payload: {
   return parseOrThrow(res, "Falha ao criar agendamento publico.");
 }
 
+export async function startPublicBookingPayment(payload: {
+  slug?: string;
+  barbearia_id?: number;
+  cliente_nome: string;
+  cliente_telefone: string;
+  cliente_email?: string;
+  barbeiro_id: number;
+  servico_id: number;
+  data: string;
+  hora_inicio: string;
+}): Promise<PublicPaymentInitResponse> {
+  const res = await fetch(`${API_URL}/public/agendamentos/pagamento/iniciar`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseOrThrow(res, "Falha ao iniciar pagamento do agendamento.");
+}
+
+export async function getPublicPaymentStatus(externalReference: string): Promise<PublicPaymentStatusResponse> {
+  const params = new URLSearchParams({ external_reference: externalReference });
+  const res = await fetch(`${API_URL}/public/pagamentos/status?${params.toString()}`, {
+    cache: "no-store",
+  });
+  return parseOrThrow(res, "Falha ao consultar status do pagamento.");
+}
+
 export type PublicClienteLookupResponse = {
   nome: string;
   email: string | null;
@@ -609,6 +739,11 @@ export type FinanceiroResponse = {
   ticket_medio: number;
   total_agendamentos: number;
   historico_12_meses: HistoricoMes[];
+  valor_recebido_hoje?: number;
+  agendamentos_pagos?: number;
+  taxa_conversao_pagamento?: number | null;
+  pagamentos_pendentes?: number;
+  pagamentos_expirados?: number;
 };
 
 export type ServicoMaisVendido = {
@@ -706,6 +841,9 @@ export type ResumoBasicoResponse = {
   faturamento_estimado_mes: number;
   total_clientes_unicos_mes: number;
   agendamentos_hoje: number;
+  valor_recebido_hoje?: number;
+  pagamentos_pendentes?: number;
+  pagamentos_expirados?: number;
 };
 
 export async function getDashboardResumoBasico(barbeariaId: string): Promise<ResumoBasicoResponse> {

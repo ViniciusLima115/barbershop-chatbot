@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.agendamento import Agendamento
+from app.models.pagamento import Pagamento
 from app.models.servico import Servico
 from app.routes.deps import verificar_plano_minimo_basico, verificar_plano_premium
 from app.schemas.dashboard import (
@@ -49,6 +50,8 @@ def resumo_basico(
 def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
     hoje = date.today()
     inicio_mes = hoje.replace(day=1)
+    inicio_hoje_dt = datetime.combine(hoje, datetime.min.time())
+    fim_hoje_dt = inicio_hoje_dt + timedelta(days=1)
 
     total_mes = (
         db.query(func.count(Agendamento.id))
@@ -116,6 +119,37 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
         .scalar() or 0
     )
 
+    valor_recebido_hoje = (
+        db.query(func.coalesce(func.sum(Pagamento.amount), 0.0))
+        .filter(
+            Pagamento.estabelecimento_id == tenant_id,
+            Pagamento.status == "approved",
+            Pagamento.paid_at.is_not(None),
+            Pagamento.paid_at >= inicio_hoje_dt,
+            Pagamento.paid_at < fim_hoje_dt,
+        )
+        .scalar() or 0.0
+    )
+
+    pagamentos_pendentes = (
+        db.query(func.count(Pagamento.id))
+        .filter(
+            Pagamento.estabelecimento_id == tenant_id,
+            Pagamento.status == "pending",
+        )
+        .scalar() or 0
+    )
+
+    pagamentos_expirados = (
+        db.query(func.count(Pagamento.id))
+        .filter(
+            Pagamento.estabelecimento_id == tenant_id,
+            Pagamento.status == "expired",
+            Pagamento.created_at >= datetime.combine(inicio_mes, datetime.min.time()),
+        )
+        .scalar() or 0
+    )
+
     return ResumoBasicoResponse(
         total_agendamentos_mes=int(total_mes),
         agendamentos_confirmados_mes=int(confirmados_mes),
@@ -123,6 +157,9 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
         faturamento_estimado_mes=float(faturamento),
         total_clientes_unicos_mes=int(clientes_unicos),
         agendamentos_hoje=int(agendamentos_hoje),
+        valor_recebido_hoje=float(valor_recebido_hoje),
+        pagamentos_pendentes=int(pagamentos_pendentes),
+        pagamentos_expirados=int(pagamentos_expirados),
     )
 
 
@@ -146,6 +183,9 @@ def financeiro(
 def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
     hoje = date.today()
     inicio_atual = hoje.replace(day=1)
+    inicio_atual_dt = datetime.combine(inicio_atual, datetime.min.time())
+    inicio_hoje_dt = datetime.combine(hoje, datetime.min.time())
+    fim_hoje_dt = inicio_hoje_dt + timedelta(days=1)
     # Primeiro dia do mês anterior
     ultimo_dia_anterior = inicio_atual - timedelta(days=1)
     inicio_anterior = ultimo_dia_anterior.replace(day=1)
@@ -208,6 +248,62 @@ def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
         for row in historico_rows
     ]
 
+    valor_recebido_hoje = (
+        db.query(func.coalesce(func.sum(Pagamento.amount), 0.0))
+        .filter(
+            Pagamento.estabelecimento_id == tenant_id,
+            Pagamento.status == "approved",
+            Pagamento.paid_at.is_not(None),
+            Pagamento.paid_at >= inicio_hoje_dt,
+            Pagamento.paid_at < fim_hoje_dt,
+        )
+        .scalar() or 0.0
+    )
+
+    agendamentos_pagos = (
+        db.query(func.count(Pagamento.id))
+        .filter(
+            Pagamento.estabelecimento_id == tenant_id,
+            Pagamento.status == "approved",
+            Pagamento.created_at >= inicio_atual_dt,
+        )
+        .scalar() or 0
+    )
+
+    total_pagamentos_iniciados = (
+        db.query(func.count(Pagamento.id))
+        .filter(
+            Pagamento.estabelecimento_id == tenant_id,
+            Pagamento.created_at >= inicio_atual_dt,
+        )
+        .scalar() or 0
+    )
+
+    pagamentos_pendentes = (
+        db.query(func.count(Pagamento.id))
+        .filter(
+            Pagamento.estabelecimento_id == tenant_id,
+            Pagamento.status == "pending",
+        )
+        .scalar() or 0
+    )
+
+    pagamentos_expirados = (
+        db.query(func.count(Pagamento.id))
+        .filter(
+            Pagamento.estabelecimento_id == tenant_id,
+            Pagamento.status == "expired",
+            Pagamento.created_at >= inicio_atual_dt,
+        )
+        .scalar() or 0
+    )
+
+    taxa_conversao_pagamento = (
+        (agendamentos_pagos / total_pagamentos_iniciados) * 100.0
+        if total_pagamentos_iniciados > 0
+        else None
+    )
+
     return FinanceiroResponse(
         faturamento_mes_atual=fat_atual,
         faturamento_mes_anterior=fat_anterior,
@@ -215,6 +311,11 @@ def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
         ticket_medio=ticket_atual,
         total_agendamentos=total_atual,
         historico_12_meses=historico,
+        valor_recebido_hoje=float(valor_recebido_hoje),
+        agendamentos_pagos=int(agendamentos_pagos),
+        taxa_conversao_pagamento=taxa_conversao_pagamento,
+        pagamentos_pendentes=int(pagamentos_pendentes),
+        pagamentos_expirados=int(pagamentos_expirados),
     )
 
 

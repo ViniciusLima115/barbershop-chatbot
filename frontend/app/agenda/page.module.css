@@ -232,6 +232,11 @@
   background: var(--success-soft);
 }
 
+.legendPendentePagamento {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+}
+
 .legendIndisponivel {
   background: var(--warning-soft);
 }

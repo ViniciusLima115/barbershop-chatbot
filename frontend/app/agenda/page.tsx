@@ -257,6 +257,10 @@ export default function AgendaPage() {
                   <span>Horario confirmado</span>
                 </div>
                 <div className={styles.legendItem}>
+                  <span className={cx(styles.legendSwatch, styles.legendPendentePagamento)} />
+                  <span>Aguardando pagamento</span>
+                </div>
+                <div className={styles.legendItem}>
                   <span className={cx(styles.legendSwatch, styles.legendIndisponivel)} />
                   <span>Fora do expediente do profissional</span>
                 </div>
@@ -294,9 +298,28 @@ export default function AgendaPage() {
                       selected.agendamento.fim
                     )}
                   />
+                  <DetailBlock
+                    label="Pagamento"
+                    value={selected.agendamento.payment_status || "not_required"}
+                  />
+                  {selected.agendamento.payment_amount ? (
+                    <DetailBlock
+                      label="Valor pago/previsto"
+                      value={new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+                        selected.agendamento.payment_amount
+                      )}
+                    />
+                  ) : null}
+                  {selected.agendamento.payment_method ? (
+                    <DetailBlock label="Metodo" value={selected.agendamento.payment_method} />
+                  ) : null}
                   <div className={styles.statusBadge}>
                     <CheckCircle2 size={14} />
-                    {selected.agendamento.status === "confirmado" ? "Confirmado" : "Agendado"}
+                    {selected.agendamento.status === "confirmado"
+                      ? "Confirmado"
+                      : selected.agendamento.status === "pending_payment"
+                        ? "Aguardando pagamento"
+                        : "Agendado"}
                   </div>
                 </div>
               ) : (
