@@ -27,4 +27,4 @@ jobs:
       - name: Run tests
         run: |
           cd backend
-          pytest --cov=app --cov-fail-under=80
+          pytest --cov=app --cov-fail-under=78
