@@ -152,12 +152,13 @@ def test_agendamento_horario_bloqueado_por_conflito_retorna_400(monkeypatch, cli
 
 # ── GET /public/horarios-disponiveis — additional paths ───────────────────────
 
-def test_horarios_sem_barbeiro_retorna_200(client, db_session):
-    b = _barbearia(db_session, "horarios-sem-barb")
+def test_horarios_com_barbeiro_retorna_200(client, db_session):
+    b = _barbearia(db_session, "horarios-com-barb")
+    barb = _barbeiro(db_session, b.id)
     serv = _servico(db_session, b.id)
     resp = client.get(
         "/public/horarios-disponiveis",
-        params={"barbearia_id": b.id, "servico_id": serv.id, "data": _data_futura()},
+        params={"barbearia_id": b.id, "barbeiro_id": barb.id, "servico_id": serv.id, "data": _data_futura()},
     )
     assert resp.status_code == 200
 
