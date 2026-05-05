@@ -27,6 +27,9 @@ from app.schemas.dashboard import (
     TopCliente,
 )
 
+# Statuses que representam um atendimento realizado (conta no faturamento/analytics)
+_ATENDIDO = ("confirmado", "compareceu")
+
 router = APIRouter(prefix="/dashboard")
 
 
@@ -67,7 +70,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
         db.query(func.count(Agendamento.id))
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
@@ -91,7 +94,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
         .join(Servico, Servico.id == Agendamento.servico_id)
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
@@ -102,7 +105,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
         db.query(func.count(func.distinct(Agendamento.cliente_telefone)))
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
@@ -202,7 +205,7 @@ def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
             .join(Servico, Servico.id == Agendamento.servico_id)
             .filter(
                 Agendamento.barbearia_id == tenant_id,
-                Agendamento.status == "confirmado",
+                Agendamento.status.in_(_ATENDIDO),
                 Agendamento.data >= inicio,
                 Agendamento.data <= fim,
             )
@@ -231,7 +234,7 @@ def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
         .join(Servico, Servico.id == Agendamento.servico_id)
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= data_12m,
         )
         .group_by(mes_col)
@@ -349,7 +352,7 @@ def _servicos_mais_vendidos(db: Session, tenant_id: int) -> ServicosMaisVendidos
         .join(Agendamento, Agendamento.servico_id == Servico.id)
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= data_30d,
         )
         .group_by(Servico.id, Servico.nome, Servico.preco)
@@ -400,7 +403,7 @@ def _clientes(db: Session, tenant_id: int) -> ClientesResponse:
         )
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= data_30d,
         )
         .group_by(Agendamento.cliente_telefone)
@@ -445,7 +448,7 @@ def _clientes(db: Session, tenant_id: int) -> ClientesResponse:
         .join(Servico, Servico.id == Agendamento.servico_id)
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
         )
         .group_by(Agendamento.cliente_telefone, Agendamento.cliente_nome)
         .order_by(func.count(Agendamento.id).desc())
@@ -507,7 +510,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
         .join(Servico, Servico.id == Agendamento.servico_id)
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
@@ -529,7 +532,19 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
         or 0
     )
 
+    # Conta no_show explícitos + pendentes passados (heurística)
     total_no_show = (
+        db.query(func.count(Agendamento.id))
+        .filter(
+            Agendamento.barbearia_id == tenant_id,
+            Agendamento.status == "no_show",
+            Agendamento.data >= inicio_mes,
+            Agendamento.data <= hoje,
+        )
+        .scalar()
+        or 0
+    )
+    total_no_show += (
         db.query(func.count(Agendamento.id))
         .filter(
             Agendamento.barbearia_id == tenant_id,
@@ -558,7 +573,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
         db.query(dow_col, func.count(Agendamento.id).label("total"))
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
@@ -579,7 +594,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
         db.query(hora_col, func.count(Agendamento.id).label("total"))
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
@@ -599,7 +614,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
         .join(Agendamento, Agendamento.servico_id == Servico.id)
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
@@ -618,7 +633,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
         )
         .filter(
             Agendamento.barbearia_id == tenant_id,
-            Agendamento.status == "confirmado",
+            Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
