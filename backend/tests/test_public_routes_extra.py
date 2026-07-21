@@ -105,7 +105,7 @@ def test_agendamento_barbearia_invalida_retorna_400_ou_422(monkeypatch, client, 
     resp = client.post(
         "/public/agendamentos",
         json={
-            "barbearia_id": 999999,
+            "estabelecimento_id": 999999,
             "cliente_nome": "Teste",
             "cliente_telefone": "11999990002",
             "barbeiro_id": 1,
@@ -118,7 +118,7 @@ def test_agendamento_barbearia_invalida_retorna_400_ou_422(monkeypatch, client, 
 
 
 def test_agendamento_sem_campos_obrigatorios_retorna_422(client):
-    resp = client.post("/public/agendamentos", json={"barbearia_id": 1})
+    resp = client.post("/public/agendamentos", json={"estabelecimento_id": 1})
     assert resp.status_code == 422
 
 
@@ -132,7 +132,7 @@ def test_agendamento_horario_bloqueado_por_conflito_retorna_400(monkeypatch, cli
     data = _data_futura(days=5)
 
     payload = {
-        "barbearia_id": b.id,
+        "estabelecimento_id": b.id,
         "cliente_nome": "Primeiro",
         "cliente_telefone": "11999990010",
         "barbeiro_id": barb.id,
@@ -157,7 +157,7 @@ def test_horarios_com_barbeiro_retorna_200(client, db_session):
     serv = _servico(db_session, b.id)
     resp = client.get(
         "/public/horarios-disponiveis",
-        params={"barbearia_id": b.id, "barbeiro_id": barb.id, "servico_id": serv.id, "data": _data_futura()},
+        params={"estabelecimento_id": b.id, "barbeiro_id": barb.id, "servico_id": serv.id, "data": _data_futura()},
     )
     assert resp.status_code == 200
 
@@ -165,6 +165,6 @@ def test_horarios_com_barbeiro_retorna_200(client, db_session):
 def test_horarios_barbearia_invalida_retorna_400_ou_422(client):
     resp = client.get(
         "/public/horarios-disponiveis",
-        params={"barbearia_id": 999999, "servico_id": 1, "data": "2030-01-01"},
+        params={"estabelecimento_id": 999999, "servico_id": 1, "data": "2030-01-01"},
     )
     assert resp.status_code in (400, 404, 422)

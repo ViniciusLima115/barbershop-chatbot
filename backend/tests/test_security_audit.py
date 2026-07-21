@@ -42,7 +42,7 @@ def reset_rate_limiter_storage():
 
 def _public_booking_payload(dados_base, **overrides):
     payload = {
-        "barbearia_id": dados_base["barbearia"].id,
+        "estabelecimento_id": dados_base["barbearia"].id,
         "cliente_nome": "Cliente Seguro",
         "cliente_telefone": "11999998888",
         "cliente_email": "cliente@example.com",
@@ -78,7 +78,7 @@ def test_public_booking_cannot_bypass_required_payment(client, db_session, dados
 
 def test_public_booking_rejects_sql_injection_identifier(client, dados_base):
     payload = _public_booking_payload(dados_base)
-    payload.pop("barbearia_id")
+    payload.pop("estabelecimento_id")
     payload["slug"] = "x' OR 1=1--"
     assert client.post("/public/agendamentos", json=payload).status_code == 422
 

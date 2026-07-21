@@ -69,7 +69,7 @@ class AgendamentoRemarcacaoRequest(StrictRequestModel):
 
 class AgendamentoTokenDataResponse(BaseModel):
     id: int
-    barbearia_id: int
+    estabelecimento_id: int
     slug: str | None = None
     confirmation_token: str
     cliente_nome: str

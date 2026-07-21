@@ -376,7 +376,7 @@ def criar_agendamento_publico(
     return {
         "id": agendamento.id,
         "tenant_id": barbearia.id,
-        "barbearia_id": barbearia.id,
+        "estabelecimento_id": barbearia.id,
         "slug": barbearia.slug,
         "cliente_nome": agendamento.cliente_nome,
         "cliente_telefone": agendamento.cliente_telefone,

@@ -60,7 +60,7 @@ def _criar_agendamento_publico(client, barbearia_id, barbeiro_id, servico_id, *,
     """Helper: cria agendamento via rota pública e retorna o body."""
     data_hora = datetime.now() + timedelta(days=offset_days)
     payload = {
-        "barbearia_id": barbearia_id,
+        "estabelecimento_id": barbearia_id,
         "cliente_nome": "Cliente Token",
         "cliente_telefone": "5582991111111",
         "cliente_email": "token@example.com",
@@ -203,7 +203,7 @@ def test_remarcar_com_conflito_retorna_400(client, db_session, barbearia_com_bar
     # Cria primeiro agendamento às 10:00
     data_base = datetime.now() + timedelta(days=4)
     payload1 = {
-        "barbearia_id": fix["barbearia"].id,
+        "estabelecimento_id": fix["barbearia"].id,
         "cliente_nome": "Cliente Um",
         "cliente_telefone": "5582911111111",
         "barbeiro_id": fix["barbeiro"].id,
@@ -216,7 +216,7 @@ def test_remarcar_com_conflito_retorna_400(client, db_session, barbearia_com_bar
 
     # Cria segundo agendamento em horário diferente
     payload2 = {
-        "barbearia_id": fix["barbearia"].id,
+        "estabelecimento_id": fix["barbearia"].id,
         "cliente_nome": "Cliente Dois",
         "cliente_telefone": "5582922222222",
         "barbeiro_id": fix["barbeiro"].id,
@@ -299,7 +299,7 @@ def test_telefone_com_ddi_55_e_armazenado_sem_prefixo(client, db_session, barbea
     fix = barbearia_com_barbeiro_e_servico
     data_hora = datetime.now() + timedelta(days=2)
     payload = {
-        "barbearia_id": fix["barbearia"].id,
+        "estabelecimento_id": fix["barbearia"].id,
         "cliente_nome": "Cliente DDI",
         "cliente_telefone": "5582991234567",
         "barbeiro_id": fix["barbeiro"].id,
@@ -323,7 +323,7 @@ def test_busca_publica_nao_enumera_cliente_por_telefone(client, db_session, barb
     fix = barbearia_com_barbeiro_e_servico
     data_hora = datetime.now() + timedelta(days=2)
     payload = {
-        "barbearia_id": fix["barbearia"].id,
+        "estabelecimento_id": fix["barbearia"].id,
         "cliente_nome": "Cliente Busca DDI",
         "cliente_telefone": "5582991234567",
         "barbeiro_id": fix["barbeiro"].id,
@@ -356,7 +356,7 @@ def test_agendamento_publico_no_passado_retorna_400(client, db_session, barbeari
     fix = barbearia_com_barbeiro_e_servico
     ontem = datetime.now() - timedelta(days=1)
     payload = {
-        "barbearia_id": fix["barbearia"].id,
+        "estabelecimento_id": fix["barbearia"].id,
         "cliente_nome": "Cliente Passado",
         "cliente_telefone": "5582991111111",
         "barbeiro_id": fix["barbeiro"].id,
@@ -528,7 +528,7 @@ def test_barbeiro_inativo_nao_aparece_na_listagem_publica(client, db_session):
     db_session.add_all([ativo, inativo])
     db_session.commit()
 
-    resp = client.get("/public/barbeiros", params={"barbearia_id": barbearia.id})
+    resp = client.get("/public/barbeiros", params={"estabelecimento_id": barbearia.id})
     assert resp.status_code == 200
     nomes = [b["nome"] for b in resp.json()]
     assert "Ativo" in nomes
@@ -558,7 +558,7 @@ def test_cada_agendamento_tem_token_unico(client, db_session, barbearia_com_barb
 
     payloads = [
         {
-            "barbearia_id": fix["barbearia"].id,
+            "estabelecimento_id": fix["barbearia"].id,
             "cliente_nome": f"Cliente {i}",
             "cliente_telefone": f"558299999{i:04d}",
             "barbeiro_id": fix["barbeiro"].id,

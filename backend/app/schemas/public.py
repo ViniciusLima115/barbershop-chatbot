@@ -53,7 +53,7 @@ class PublicAgendamentoCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     slug: str | None = Field(default=None, min_length=1, max_length=120, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-    barbearia_id: int | None = Field(default=None, gt=0)
+    estabelecimento_id: int | None = Field(default=None, gt=0)
     cliente_nome: str = Field(min_length=2, max_length=120)
     cliente_telefone: str = Field(min_length=8, max_length=30, pattern=r"^[0-9+().\s-]+$")
     cliente_email: str | None = Field(
@@ -75,7 +75,7 @@ class PublicAgendamentoCreate(BaseModel):
 
     @model_validator(mode="after")
     def validar_tenant_identificador(self):
-        if bool(self.slug) == bool(self.barbearia_id):
+        if bool(self.slug) == bool(self.estabelecimento_id):
             raise ValueError("Informe apenas slug ou estabelecimento_id para identificar o estabelecimento.")
         if self.data > date.today() + timedelta(days=730):
             raise ValueError("Data fora da janela permitida para agendamento.")
@@ -85,7 +85,7 @@ class PublicAgendamentoCreate(BaseModel):
 class PublicAgendamentoResponse(BaseModel):
     id: int
     tenant_id: int
-    barbearia_id: int
+    estabelecimento_id: int
     slug: str
     cliente_nome: str
     cliente_telefone: str

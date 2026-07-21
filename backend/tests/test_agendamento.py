@@ -225,7 +225,7 @@ def test_fluxo_por_token_confirma_cancela_e_reagenda(client, db_session):
 
     inicio = (datetime.now() + timedelta(days=2)).replace(hour=11, minute=0, second=0, microsecond=0)
     payload = {
-        "barbearia_id": barbearia.id,
+        "estabelecimento_id": barbearia.id,
         "cliente_nome": "Cliente Token",
         "cliente_telefone": "5582991111111",
         "cliente_email": "token@example.com",

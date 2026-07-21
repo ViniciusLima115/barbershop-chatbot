@@ -40,18 +40,18 @@ def test_public_lookup_retorna_barbeiros_servicos_e_horarios(client, db_session)
     assert body["servicos"][0]["duracao"] == 40
     assert body["horarios_disponiveis"]
 
-    resp_servicos = client.get("/public/servicos", params={"barbearia_id": barbearia.id})
+    resp_servicos = client.get("/public/servicos", params={"estabelecimento_id": barbearia.id})
     assert resp_servicos.status_code == 200
     assert any(item["id"] == servico.id for item in resp_servicos.json())
 
-    resp_barbeiros = client.get("/public/barbeiros", params={"barbearia_id": barbearia.id})
+    resp_barbeiros = client.get("/public/barbeiros", params={"estabelecimento_id": barbearia.id})
     assert resp_barbeiros.status_code == 200
     assert len(resp_barbeiros.json()) == 1
 
     resp_horarios = client.get(
         "/public/horarios-disponiveis",
         params={
-            "barbearia_id": barbearia.id,
+            "estabelecimento_id": barbearia.id,
             "barbeiro_id": barbeiro_ativo.id,
             "servico_id": servico.id,
             "data": data_futura.isoformat(),
@@ -109,7 +109,7 @@ def test_public_lookup_respeita_funcionamento_individual_do_barbeiro(client, db_
     resp = client.get(
         "/public/horarios-disponiveis",
         params={
-            "barbearia_id": barbearia.id,
+            "estabelecimento_id": barbearia.id,
             "barbeiro_id": barbeiro.id,
             "servico_id": servico.id,
             "data": data_futura.isoformat(),
@@ -153,7 +153,7 @@ def test_public_agendamento_cria_confirma_e_agenda_lembretes(monkeypatch, client
 
     data_hora = datetime.now() + timedelta(days=3)
     payload = {
-        "barbearia_id": barbearia.id,
+        "estabelecimento_id": barbearia.id,
         "cliente_nome": "Vinicius",
         "cliente_telefone": "558298373869",
         "cliente_email": "vinicius@example.com",
@@ -168,7 +168,7 @@ def test_public_agendamento_cria_confirma_e_agenda_lembretes(monkeypatch, client
     body = resp.json()
     assert body["status"] == "pendente"
     assert body["tenant_id"] == barbearia.id
-    assert body["barbearia_id"] == barbearia.id
+    assert body["estabelecimento_id"] == barbearia.id
     assert body["cliente_email"] == "vinicius@example.com"
     assert body["confirmation_token"]
     assert body["lembretes_agendados"] == 2
@@ -220,7 +220,7 @@ def test_agendamento_nao_sobrescreve_nome_de_cliente_existente(monkeypatch, clie
     resp_marcio = client.post(
         "/public/agendamentos",
         json={
-            "barbearia_id": barbearia.id,
+            "estabelecimento_id": barbearia.id,
             "cliente_nome": "Marcio",
             "cliente_telefone": telefone_compartilhado,
             "barbeiro_id": barbeiro.id,
@@ -235,7 +235,7 @@ def test_agendamento_nao_sobrescreve_nome_de_cliente_existente(monkeypatch, clie
     resp_vinicius = client.post(
         "/public/agendamentos",
         json={
-            "barbearia_id": barbearia.id,
+            "estabelecimento_id": barbearia.id,
             "cliente_nome": "Vinicius",
             "cliente_telefone": telefone_compartilhado,
             "barbeiro_id": barbeiro.id,

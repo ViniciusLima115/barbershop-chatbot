@@ -75,7 +75,9 @@ def _serializar_agendamento(agendamento: Agendamento):
 def _serializar_dados_token(agendamento: Agendamento):
     return {
         "id": agendamento.id,
-        "barbearia_id": agendamento.barbearia_id,
+        # NOTE: agendamento.barbearia_id ainda usa barbearia_id como nome do atributo ORM
+        # internamente — renomeacao desse sinonimo fica para uma task de limpeza seguinte.
+        "estabelecimento_id": agendamento.barbearia_id,
         "slug": agendamento.barbearia.slug if agendamento.barbearia else None,
         "confirmation_token": agendamento.confirmation_token,
         "cliente_nome": agendamento.cliente_nome or "",

@@ -109,7 +109,7 @@ def test_horarios_publicos_respeitam_dia_fechado(client, db_session):
     resp = client.get(
         "/public/horarios-disponiveis",
         params={
-            "barbearia_id": estabelecimento.id,
+            "estabelecimento_id": estabelecimento.id,
             "barbeiro_id": barbeiro.id,
             "servico_id": servico.id,
             "data": domingo.isoformat(),

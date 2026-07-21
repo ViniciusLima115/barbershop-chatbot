@@ -2102,7 +2102,7 @@ def test_public_checkout_retry_reuses_same_idempotency_key(
 
     provider.create_checkout = flaky_checkout
     payload = {
-        "barbearia_id": tenant.id,
+        "estabelecimento_id": tenant.id,
         "cliente_nome": "Cliente Retry",
         "cliente_telefone": "11999112233",
         "cliente_email": "retry@example.com",
@@ -2131,7 +2131,7 @@ def test_repeated_public_checkout_returns_existing_preference(
     )
     _create_active_payment_account(db_session, tenant_id=tenant.id)
     payload = {
-        "barbearia_id": tenant.id,
+        "estabelecimento_id": tenant.id,
         "cliente_nome": "Cliente Duplicate",
         "cliente_telefone": "11999445566",
         "cliente_email": "duplicate@example.com",

@@ -189,7 +189,7 @@ export type PublicLookupResponse = {
 export type PublicAgendamentoResponse = {
   id: number;
   tenant_id: number;
-  barbearia_id: number;
+  estabelecimento_id: number;
   slug: string;
   cliente_nome: string;
   cliente_telefone: string;
@@ -205,7 +205,7 @@ export type PublicAgendamentoResponse = {
 
 export type PublicAgendamentoTokenResponse = {
   id: number;
-  barbearia_id: number;
+  estabelecimento_id: number;
   slug?: string | null;
   confirmation_token: string;
   cliente_nome: string;
@@ -640,27 +640,27 @@ export async function lookupPublicBarbershopById(params: {
 }
 
 export async function listPublicServicos(barbeariaId: number): Promise<PublicServico[]> {
-  const res = await fetch(`${API_URL}/public/servicos?barbearia_id=${barbeariaId}`, {
+  const res = await fetch(`${API_URL}/public/servicos?estabelecimento_id=${barbeariaId}`, {
     cache: "no-store",
   });
   return parseOrThrow(res, "Falha ao carregar servicos publicos.");
 }
 
 export async function listPublicBarbeiros(barbeariaId: number): Promise<PublicBarbeiro[]> {
-  const res = await fetch(`${API_URL}/public/barbeiros?barbearia_id=${barbeariaId}`, {
+  const res = await fetch(`${API_URL}/public/barbeiros?estabelecimento_id=${barbeariaId}`, {
     cache: "no-store",
   });
   return parseOrThrow(res, "Falha ao carregar barbeiros publicos.");
 }
 
 export async function listPublicHorarios(params: {
-  barbearia_id: number;
+  estabelecimento_id: number;
   barbeiro_id: number;
   servico_id: number;
   data: string;
 }): Promise<{ horarios_disponiveis: string[]; horarios_grade: PublicHorarioGrade[] }> {
   const query = new URLSearchParams({
-    barbearia_id: String(params.barbearia_id),
+    estabelecimento_id: String(params.estabelecimento_id),
     barbeiro_id: String(params.barbeiro_id),
     servico_id: String(params.servico_id),
     data: params.data,
@@ -673,7 +673,7 @@ export async function listPublicHorarios(params: {
 
 export async function createPublicBooking(payload: {
   slug?: string;
-  barbearia_id?: number;
+  estabelecimento_id?: number;
   cliente_nome: string;
   cliente_telefone: string;
   cliente_email?: string;
@@ -692,7 +692,7 @@ export async function createPublicBooking(payload: {
 
 export async function startPublicBookingPayment(payload: {
   slug?: string;
-  barbearia_id?: number;
+  estabelecimento_id?: number;
   cliente_nome: string;
   cliente_telefone: string;
   cliente_email?: string;
