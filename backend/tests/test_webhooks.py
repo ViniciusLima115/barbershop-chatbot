@@ -16,10 +16,10 @@ def test_webhook_megaapi_exige_assinatura_ou_token(monkeypatch, client):
 
 def test_webhook_megaapi_processa_por_instance_key(monkeypatch, client, db_session):
     import app.routes.webhooks as webhooks_module
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
 
-    barbearia = Barbearia(
-        nome="Barbearia Webhook",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Webhook",
         endereco="Rua A",
         mega_instance_key="inst-tenant-1",
     )
@@ -55,10 +55,10 @@ def test_webhook_megaapi_processa_por_instance_key(monkeypatch, client, db_sessi
 
 def test_webhook_megaapi_ignora_evento_duplicado(monkeypatch, client, db_session):
     import app.routes.webhooks as webhooks_module
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
 
-    barbearia = Barbearia(
-        nome="Barbearia Duplicado",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Duplicado",
         endereco="Rua B",
         mega_instance_key="inst-tenant-dup",
     )
@@ -115,10 +115,10 @@ def test_webhook_megaapi_ignora_sem_tenant(monkeypatch, client):
 
 def test_webhook_megaapi_retorna_link_publico_em_saudacao(monkeypatch, client, db_session):
     import app.routes.webhooks as webhooks_module
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
 
-    barbearia = Barbearia(
-        nome="Barbearia Link",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Link",
         slug="barbearia-link",
         endereco="Rua C",
         mega_instance_key="inst-link",

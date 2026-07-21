@@ -29,7 +29,7 @@ _REMINDER_GRACE_MINUTES = 5
 
 
 def _montar_contexto_email(agendamento: Agendamento) -> AgendamentoEmailContext | None:
-    if not agendamento.cliente_email or not agendamento.barbearia or not agendamento.barbeiro or not agendamento.servico:
+    if not agendamento.cliente_email or not agendamento.estabelecimento or not agendamento.barbeiro or not agendamento.servico:
         return None
 
     return AgendamentoEmailContext(
@@ -37,9 +37,9 @@ def _montar_contexto_email(agendamento: Agendamento) -> AgendamentoEmailContext 
         confirmation_token=agendamento.confirmation_token,
         cliente_nome=agendamento.cliente_nome or "",
         cliente_email=agendamento.cliente_email,
-        barbearia_nome=agendamento.barbearia.nome,
-        barbearia_id=agendamento.barbearia_id,
-        slug=agendamento.barbearia.slug,
+        barbearia_nome=agendamento.estabelecimento.nome,
+        estabelecimento_id=agendamento.estabelecimento_id,
+        slug=agendamento.estabelecimento.slug,
         servico_nome=agendamento.servico.nome,
         barbeiro_nome=agendamento.barbeiro.nome,
         data_hora_inicio=agendamento.data_hora_inicio,
@@ -99,7 +99,7 @@ def processar_lembretes_email_pendentes(limite: int = 200) -> dict[str, int]:
         agendamentos = (
             db.query(Agendamento)
             .options(
-                joinedload(Agendamento.barbearia),
+                joinedload(Agendamento.estabelecimento),
                 joinedload(Agendamento.barbeiro),
                 joinedload(Agendamento.servico),
             )

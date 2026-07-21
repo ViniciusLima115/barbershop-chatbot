@@ -1,5 +1,5 @@
 def test_barbeiros_criar_e_listar(client, db_session, make_tenant_headers):
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
 
     funcionamento = {
         "seg": {"ativo": True, "inicio": "13:00", "fim": "18:00"},
@@ -11,7 +11,7 @@ def test_barbeiros_criar_e_listar(client, db_session, make_tenant_headers):
         "dom": {"ativo": False, "inicio": "08:00", "fim": "18:00"},
     }
 
-    premium = Barbearia(nome="Barbearia Premium", plano="premium")
+    premium = Estabelecimento(nome="Estabelecimento Premium", plano="premium")
     db_session.add(premium)
     db_session.commit()
     db_session.refresh(premium)
@@ -24,7 +24,7 @@ def test_barbeiros_criar_e_listar(client, db_session, make_tenant_headers):
     )
     assert criar.status_code == 200
     assert criar.json()["nome"] == "Carlos"
-    assert criar.json()["barbershop_id"] == premium.id
+    assert criar.json()["estabelecimento_id"] == premium.id
     assert criar.json()["horarios_funcionamento"]["seg"]["inicio"] == "13:00"
 
     listar = client.get("/barbeiros/", headers=db_headers)
@@ -32,14 +32,14 @@ def test_barbeiros_criar_e_listar(client, db_session, make_tenant_headers):
     body = listar.json()
     assert len(body) == 1
     assert body[0]["nome"] == "Carlos"
-    assert body[0]["barbershop_id"] == premium.id
+    assert body[0]["estabelecimento_id"] == premium.id
     assert body[0]["horarios_funcionamento"]["seg"]["inicio"] == "13:00"
 
 
 def test_barbeiros_exige_header_tenant(client, db_session, make_tenant_headers):
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
 
-    tenant = Barbearia(nome="Tenant sem header", plano="premium")
+    tenant = Estabelecimento(nome="Tenant sem header", plano="premium")
     db_session.add(tenant)
     db_session.commit()
     criar = client.post(
@@ -52,9 +52,9 @@ def test_barbeiros_exige_header_tenant(client, db_session, make_tenant_headers):
 
 
 def test_barbeiros_basico_permite_um_e_bloqueia_mais_com_upgrade(client, db_session, make_tenant_headers):
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
 
-    basico = Barbearia(nome="Barbearia Basica", plano="basico")
+    basico = Estabelecimento(nome="Estabelecimento Basica", plano="basico")
     db_session.add(basico)
     db_session.commit()
 
@@ -79,9 +79,9 @@ def test_barbeiros_basico_permite_um_e_bloqueia_mais_com_upgrade(client, db_sess
 
 
 def test_barbeiros_premium_limite_edicao_e_exclusao(client, db_session, make_tenant_headers):
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
 
-    premium = Barbearia(nome="Barbearia Premium", plano="premium")
+    premium = Estabelecimento(nome="Estabelecimento Premium", plano="premium")
     db_session.add(premium)
     db_session.commit()
 
@@ -115,10 +115,10 @@ def test_barbeiros_premium_limite_edicao_e_exclusao(client, db_session, make_ten
 
 
 def test_barbeiro_nao_pode_ser_acessado_por_outra_barbearia(client, db_session, make_tenant_headers):
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
 
-    premium_a = Barbearia(nome="Premium A", plano="premium")
-    premium_b = Barbearia(nome="Premium B", plano="premium")
+    premium_a = Estabelecimento(nome="Premium A", plano="premium")
+    premium_b = Estabelecimento(nome="Premium B", plano="premium")
     db_session.add_all([premium_a, premium_b])
     db_session.commit()
 

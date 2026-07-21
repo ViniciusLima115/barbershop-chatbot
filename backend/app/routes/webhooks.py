@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from starlette.datastructures import Headers
 
 from app.database import get_db
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.webhook_event import WebhookEvent
 from app.routes.whatsapp import _extrair_dados_mensagem, _extrair_instance_key, _resolver_tenant_id
 from app.services.chatbot_service import responder_mensagem
@@ -189,7 +189,7 @@ async def receive_megaapi_webhook(
     if not _registrar_evento(db, PROVIDER_MEGAAPI, event_id, tenant_id):
         return {"status": "ignored", "reason": "evento_duplicado"}
 
-    barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
+    barbearia = db.query(Estabelecimento).filter(Estabelecimento.id == tenant_id).first()
     if not barbearia:
         return {"status": "ignored", "reason": "tenant_nao_encontrado"}
 

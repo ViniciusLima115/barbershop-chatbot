@@ -15,7 +15,7 @@ def _contexto() -> AgendamentoEmailContext:
         cliente_nome="Cliente Teste",
         cliente_email="cliente@example.com",
         barbearia_nome="Studio Central",
-        barbearia_id=1,
+        estabelecimento_id=1,
         slug="studio-central",
         servico_nome="Consulta inicial",
         barbeiro_nome="Profissional Teste",

@@ -6,7 +6,7 @@ from urllib.parse import urlsplit
 import requests
 from sqlalchemy.orm import Session
 
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.reminder_job import ReminderJob
 from app.services.payments.crypto import decrypt_sensitive_value
 from app.time_utils import utcnow_naive
@@ -52,7 +52,7 @@ def _normalizar_telefone(telefone: str) -> str:
 
 
 def enviar_mensagem_whatsapp(
-    barbearia: Barbearia,
+    barbearia: Estabelecimento,
     telefone: str,
     mensagem: str,
 ) -> bool:
@@ -168,7 +168,7 @@ def processar_lembretes_pendentes(db: Session, limite: int = 100) -> dict[str, i
     falhas = 0
 
     for job in pendentes:
-        barbearia = db.query(Barbearia).filter(Barbearia.id == job.tenant_id).first()
+        barbearia = db.query(Estabelecimento).filter(Estabelecimento.id == job.tenant_id).first()
         if not barbearia:
             job.status = "falha"
             job.ultimo_erro = "tenant_nao_encontrado"

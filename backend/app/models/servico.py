@@ -21,6 +21,5 @@ class Servico(Base):
     estabelecimento_id = Column(Integer, ForeignKey("estabelecimentos.id"), nullable=True, index=True)
 
     # Aliases de compatibilidade com código legado
-    barbearia_id = synonym("estabelecimento_id")
     tenant_id = synonym("estabelecimento_id")
     require_advance_payment = synonym("pagamento_adiantado_obrigatorio")

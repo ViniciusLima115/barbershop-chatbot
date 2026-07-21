@@ -3,7 +3,7 @@ from fastapi import status as http_status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.routes.deps import tenant_id_from_header
 from app.schemas.chatbot import ChatbotMensagem
 from app.services.chatbot_service import responder_mensagem
@@ -18,7 +18,7 @@ def mensagem(
     db: Session = Depends(get_db),
 ):
     # Chatbot nao disponivel no plano Gratis
-    barbearia = db.query(Barbearia.plano).filter(Barbearia.id == tenant_id).first()
+    barbearia = db.query(Estabelecimento.plano).filter(Estabelecimento.id == tenant_id).first()
     plano = (barbearia.plano or "gratis").lower() if barbearia else "gratis"
     if plano == "gratis":
         raise HTTPException(

@@ -22,7 +22,7 @@ def _criar_est(db_session, plano="basico", nome="Est Dashboard"):
 
 def _criar_agendamento(db_session, est_id, prof_id, serv_id, status="confirmado", dias_atras=0):
     hoje = date.today() - timedelta(days=dias_atras)
-    cliente = Cliente(telefone="11999990099", nome="Cliente Teste", barbearia_id=est_id)
+    cliente = Cliente(telefone="11999990099", nome="Cliente Teste", estabelecimento_id=est_id)
     db_session.add(cliente)
     db_session.flush()
     ag = Agendamento(
@@ -30,7 +30,6 @@ def _criar_agendamento(db_session, est_id, prof_id, serv_id, status="confirmado"
         estabelecimento_id=est_id,
         profissional_id=prof_id,
         servico_id=serv_id,
-        barbearia_id=est_id,
         cliente_nome="Cliente Teste",
         cliente_telefone="11999990099",
         data=hoje,
@@ -45,9 +44,9 @@ def _criar_agendamento(db_session, est_id, prof_id, serv_id, status="confirmado"
     return ag
 
 
-# ── GET /{barbearia_id}/resumo-basico ─────────────────────────────────────────
+# ── GET /{estabelecimento_id}/resumo-basico ─────────────────────────────────────────
 
-def test_resumo_basico_barbearia_id_errado_retorna_403(client, db_session, make_tenant_headers):
+def test_resumo_basico_estabelecimento_id_errado_retorna_403(client, db_session, make_tenant_headers):
     est1 = _criar_est(db_session, "basico", "Est 1")
     est2 = _criar_est(db_session, "basico", "Est 2")
     headers = make_tenant_headers(est1.id)
@@ -69,7 +68,7 @@ def test_resumo_basico_plano_basico_retorna_200(client, db_session, make_tenant_
     assert resp.status_code == 200
 
 
-# ── GET /{barbearia_id}/financeiro ────────────────────────────────────────────
+# ── GET /{estabelecimento_id}/financeiro ────────────────────────────────────────────
 
 def test_financeiro_plano_basico_retorna_403(client, db_session, make_tenant_headers):
     est = _criar_est(db_session, "basico", "Est Fin")
@@ -99,7 +98,7 @@ def test_financeiro_com_agendamentos_nao_quebra(client, db_session, make_tenant_
     assert resp.status_code in (200, 500)
 
 
-# ── GET /{barbearia_id}/clientes ─────────────────────────────────────────────
+# ── GET /{estabelecimento_id}/clientes ─────────────────────────────────────────────
 
 def test_clientes_plano_basico_retorna_403(client, db_session, make_tenant_headers):
     est = _criar_est(db_session, "basico", "Est Cli")
@@ -122,7 +121,7 @@ def test_clientes_plano_gratis_retorna_403(client, db_session, make_tenant_heade
     assert resp.status_code == 403
 
 
-# ── GET /{barbearia_id}/servicos-mais-vendidos ────────────────────────────────
+# ── GET /{estabelecimento_id}/servicos-mais-vendidos ────────────────────────────────
 
 def test_servicos_mais_vendidos_plano_basico_retorna_403(client, db_session, make_tenant_headers):
     est = _criar_est(db_session, "basico", "Est Serv")
@@ -145,7 +144,7 @@ def test_servicos_mais_vendidos_plano_gratis_retorna_403(client, db_session, mak
     assert resp.status_code == 403
 
 
-# ── GET /{barbearia_id}/analise ───────────────────────────────────────────────
+# ── GET /{estabelecimento_id}/analise ───────────────────────────────────────────────
 
 def test_analise_plano_premium_retorna_200(client, db_session, make_tenant_headers):
     est = _criar_est(db_session, "premium", "Est Analise")

@@ -33,14 +33,14 @@ _ATENDIDO = ("confirmado", "compareceu")
 router = APIRouter(prefix="/dashboard")
 
 
-@router.get("/{barbearia_id}/resumo-basico", response_model=ResumoBasicoResponse)
+@router.get("/{estabelecimento_id}/resumo-basico", response_model=ResumoBasicoResponse)
 def resumo_basico(
-    barbearia_id: int,
+    estabelecimento_id: int,
     tenant_id: int = Depends(verificar_plano_minimo_basico),
     db: Session = Depends(get_db),
 ):
     """Dashboard simplificado acessível pelos planos Básico e Premium."""
-    if barbearia_id != tenant_id:
+    if estabelecimento_id != tenant_id:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
     try:
         return _resumo_basico(db, tenant_id)
@@ -59,7 +59,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
     total_mes = (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
         )
@@ -69,7 +69,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
     confirmados_mes = (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -80,7 +80,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
     cancelados_mes = (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status == "cancelado",
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -93,7 +93,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
         .select_from(Agendamento)
         .join(Servico, Servico.id == Agendamento.servico_id)
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -104,7 +104,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
     clientes_unicos = (
         db.query(func.count(func.distinct(Agendamento.cliente_telefone)))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -115,7 +115,7 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
     agendamentos_hoje = (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.data == hoje,
             Agendamento.status.in_(["confirmado", "pendente"]),
         )
@@ -166,13 +166,13 @@ def _resumo_basico(db: Session, tenant_id: int) -> ResumoBasicoResponse:
     )
 
 
-@router.get("/{barbearia_id}/financeiro", response_model=FinanceiroResponse)
+@router.get("/{estabelecimento_id}/financeiro", response_model=FinanceiroResponse)
 def financeiro(
-    barbearia_id: int,
+    estabelecimento_id: int,
     tenant_id: int = Depends(verificar_plano_premium),
     db: Session = Depends(get_db),
 ):
-    if barbearia_id != tenant_id:
+    if estabelecimento_id != tenant_id:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
 
     try:
@@ -204,7 +204,7 @@ def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
             .select_from(Agendamento)
             .join(Servico, Servico.id == Agendamento.servico_id)
             .filter(
-                Agendamento.barbearia_id == tenant_id,
+                Agendamento.estabelecimento_id == tenant_id,
                 Agendamento.status.in_(_ATENDIDO),
                 Agendamento.data >= inicio,
                 Agendamento.data <= fim,
@@ -233,7 +233,7 @@ def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
         .select_from(Agendamento)
         .join(Servico, Servico.id == Agendamento.servico_id)
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= data_12m,
         )
@@ -322,13 +322,13 @@ def _financeiro(db: Session, tenant_id: int) -> FinanceiroResponse:
     )
 
 
-@router.get("/{barbearia_id}/servicos-mais-vendidos", response_model=ServicosMaisVendidosResponse)
+@router.get("/{estabelecimento_id}/servicos-mais-vendidos", response_model=ServicosMaisVendidosResponse)
 def servicos_mais_vendidos(
-    barbearia_id: int,
+    estabelecimento_id: int,
     tenant_id: int = Depends(verificar_plano_premium),
     db: Session = Depends(get_db),
 ):
-    if barbearia_id != tenant_id:
+    if estabelecimento_id != tenant_id:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
 
     try:
@@ -351,7 +351,7 @@ def _servicos_mais_vendidos(db: Session, tenant_id: int) -> ServicosMaisVendidos
         )
         .join(Agendamento, Agendamento.servico_id == Servico.id)
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= data_30d,
         )
@@ -374,13 +374,13 @@ def _servicos_mais_vendidos(db: Session, tenant_id: int) -> ServicosMaisVendidos
     )
 
 
-@router.get("/{barbearia_id}/clientes", response_model=ClientesResponse)
+@router.get("/{estabelecimento_id}/clientes", response_model=ClientesResponse)
 def clientes(
-    barbearia_id: int,
+    estabelecimento_id: int,
     tenant_id: int = Depends(verificar_plano_premium),
     db: Session = Depends(get_db),
 ):
-    if barbearia_id != tenant_id:
+    if estabelecimento_id != tenant_id:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
 
     try:
@@ -402,7 +402,7 @@ def _clientes(db: Session, tenant_id: int) -> ClientesResponse:
             func.count(Agendamento.id).label("visitas"),
         )
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= data_30d,
         )
@@ -418,7 +418,7 @@ def _clientes(db: Session, tenant_id: int) -> ClientesResponse:
     total_periodo = (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.data >= data_30d,
         )
         .scalar()
@@ -427,7 +427,7 @@ def _clientes(db: Session, tenant_id: int) -> ClientesResponse:
     total_cancelados = (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status == "cancelado",
             Agendamento.data >= data_30d,
         )
@@ -447,7 +447,7 @@ def _clientes(db: Session, tenant_id: int) -> ClientesResponse:
         )
         .join(Servico, Servico.id == Agendamento.servico_id)
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
         )
         .group_by(Agendamento.cliente_telefone, Agendamento.cliente_nome)
@@ -478,13 +478,13 @@ def _clientes(db: Session, tenant_id: int) -> ClientesResponse:
 _DIA_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
 
 
-@router.get("/{barbearia_id}/analise", response_model=AnaliseResponse)
+@router.get("/{estabelecimento_id}/analise", response_model=AnaliseResponse)
 def analise(
-    barbearia_id: int,
+    estabelecimento_id: int,
     tenant_id: int = Depends(verificar_plano_premium),
     db: Session = Depends(get_db),
 ):
-    if barbearia_id != tenant_id:
+    if estabelecimento_id != tenant_id:
         raise HTTPException(status_code=http_status.HTTP_403_FORBIDDEN, detail="Acesso negado.")
     try:
         return _analise(db, tenant_id)
@@ -509,7 +509,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
         .select_from(Agendamento)
         .join(Servico, Servico.id == Agendamento.servico_id)
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -523,7 +523,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
     total_cancelados = (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status == "cancelado",
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -536,7 +536,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
     total_no_show = (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status == "no_show",
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -547,7 +547,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
     total_no_show += (
         db.query(func.count(Agendamento.id))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status == "pendente",
             Agendamento.data_hora_inicio < agora,
             Agendamento.data >= inicio_mes,
@@ -572,7 +572,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
     semana_rows = (
         db.query(dow_col, func.count(Agendamento.id).label("total"))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -593,7 +593,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
     horario_rows = (
         db.query(hora_col, func.count(Agendamento.id).label("total"))
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -613,7 +613,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
         db.query(Servico.nome, func.count(Agendamento.id).label("total"))
         .join(Agendamento, Agendamento.servico_id == Servico.id)
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,
@@ -632,7 +632,7 @@ def _analise(db: Session, tenant_id: int) -> AnaliseResponse:
             func.count(Agendamento.id).label("visitas"),
         )
         .filter(
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(_ATENDIDO),
             Agendamento.data >= inicio_mes,
             Agendamento.data <= hoje,

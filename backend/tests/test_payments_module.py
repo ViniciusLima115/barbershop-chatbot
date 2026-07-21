@@ -1130,7 +1130,7 @@ def test_block_checkout_when_admin_account_is_not_configured(client, db_session,
 
     assert response.status_code == 400
     assert "Este estabelecimento ainda nao possui pagamento online configurado" in response.json()["detail"]
-    blocked = db_session.query(Agendamento).filter(Agendamento.barbearia_id == tenant.id).one()
+    blocked = db_session.query(Agendamento).filter(Agendamento.estabelecimento_id == tenant.id).one()
     assert blocked.status == "failed"
     assert blocked.payment_status == "cancelled"
     assert blocked.payment_hold_expires_at is None
@@ -1168,7 +1168,7 @@ def test_block_checkout_without_webhook_secret_releases_slot(
 
     assert response.status_code == 400
     assert "assinatura de webhook" in response.json()["detail"]
-    booking = db_session.query(Agendamento).filter(Agendamento.barbearia_id == tenant.id).one()
+    booking = db_session.query(Agendamento).filter(Agendamento.estabelecimento_id == tenant.id).one()
     assert booking.status == "failed"
     assert booking.payment_hold_expires_at is None
 

@@ -48,7 +48,7 @@ class AgendamentoEmailContext:
     cliente_nome: str
     cliente_email: str
     barbearia_nome: str
-    barbearia_id: int
+    estabelecimento_id: int
     slug: str | None
     servico_nome: str
     barbeiro_nome: str

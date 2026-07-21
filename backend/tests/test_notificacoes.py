@@ -22,7 +22,7 @@ def _criar_agendamento(db_session, dados_base, *, hora_inicio=None, status="pend
     fim = inicio + timedelta(minutes=servico.duracao_minutos)
 
     from app.models.cliente import Cliente
-    cliente = Cliente(telefone="11999999999", nome="Teste", barbearia_id=barbearia.id)
+    cliente = Cliente(telefone="11999999999", nome="Teste", estabelecimento_id=barbearia.id)
     db_session.add(cliente)
     db_session.flush()
 

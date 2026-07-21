@@ -14,9 +14,7 @@ class Profissional(Base):
     tempo_por_servico = Column(JSON, nullable=True)
     horarios_funcionamento = Column(JSON, nullable=True)
 
-    # Compatibilidade com codigo legado que ainda usa `barbearia_id`, `barbershop_id` ou `tenant_id`.
-    barbearia_id = synonym("estabelecimento_id")
-    barbershop_id = synonym("estabelecimento_id")
+    # Compatibilidade com codigo legado que ainda usa `tenant_id`.
     tenant_id = synonym("estabelecimento_id")
 
     estabelecimento = relationship("Estabelecimento", back_populates="profissionais")

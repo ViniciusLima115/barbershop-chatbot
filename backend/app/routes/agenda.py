@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.database import get_db
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.pagamento import Pagamento
 from app.routes.deps import tenant_id_from_header
 from app.services.estabelecimento_hours_service import build_day_slots, get_working_window
@@ -43,10 +43,10 @@ def agenda_dia(
     tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
-    barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
+    barbearia = db.query(Estabelecimento).filter(Estabelecimento.id == tenant_id).first()
     barbeiros = (
         db.query(Barbeiro)
-        .filter(Barbeiro.barbershop_id == tenant_id)
+        .filter(Barbeiro.estabelecimento_id == tenant_id)
         .order_by(Barbeiro.id.asc())
         .all()
     )
@@ -78,7 +78,7 @@ def agenda_dia(
                 joinedload(Agendamento.servico),
             )
             .filter(
-                Agendamento.barbearia_id == tenant_id,
+                Agendamento.estabelecimento_id == tenant_id,
                 Agendamento.data_hora_inicio >= inicio_dia,
                 Agendamento.data_hora_inicio < fim_dia,
                 or_(

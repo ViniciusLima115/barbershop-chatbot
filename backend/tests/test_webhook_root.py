@@ -1,4 +1,4 @@
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.conversa import Conversa
 from app.models.webhook_event import WebhookEvent
 
@@ -16,8 +16,8 @@ def test_webhook_primeira_mensagem_envia_saudacao_e_cria_conversa(monkeypatch, c
 
     monkeypatch.setattr(greeting_service, "enviar_mensagem_whatsapp", fake_enviar)
 
-    barbearia = Barbearia(
-        nome="Barbearia Teste",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Teste",
         slug="barbearia-teste",
         mega_instance_key="inst-webhook",
         whatsapp_number="5582999912345",
@@ -68,8 +68,8 @@ def test_webhook_nao_repete_saudacao_com_conversa_ativa(monkeypatch, client, db_
 
     monkeypatch.setattr(greeting_service, "enviar_mensagem_whatsapp", fake_enviar)
 
-    barbearia = Barbearia(
-        nome="Barbearia Fluxo",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Fluxo",
         slug="barbearia-fluxo",
         mega_instance_key="inst-webhook-2",
     )

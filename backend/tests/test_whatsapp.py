@@ -195,11 +195,11 @@ def test_whatsapp_receive_message_ignored_sem_tenant(monkeypatch, client):
 
 
 def test_resolve_tenant_por_instance_key(db_session):
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
     from app.routes.whatsapp import _resolver_tenant_id
 
-    barbearia = Barbearia(
-        nome="Barbearia Instance",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Instance",
         endereco="Rua A",
         mega_instance_key="instancia-teste-1",
     )

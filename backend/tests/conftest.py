@@ -121,12 +121,12 @@ def dados_base(db_session):
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro = Profissional(nome="Joao", barbearia_id=barbearia.id)
+    barbeiro = Profissional(nome="Joao", estabelecimento_id=barbearia.id)
     servico = Servico(
         nome="corte social",
         duracao_minutos=40,
         preco=40.0,
-        barbearia_id=barbearia.id,
+        estabelecimento_id=barbearia.id,
     )
     db_session.add_all([barbeiro, servico])
     db_session.commit()

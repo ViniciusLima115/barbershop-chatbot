@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 
 import pytest
 
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.barbeiro import Barbeiro
 from app.models.cliente import Cliente
 from app.models.servico import Servico
@@ -12,23 +12,23 @@ from app.models.servico import Servico
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _barbearia(db_session, slug="pub-extra", nome="Pub Extra"):
-    b = Barbearia(nome=nome, slug=slug, endereco="Rua Extra")
+    b = Estabelecimento(nome=nome, slug=slug, endereco="Rua Extra")
     db_session.add(b)
     db_session.commit()
     db_session.refresh(b)
     return b
 
 
-def _barbeiro(db_session, barbearia_id, nome="Barber", ativo=True):
-    b = Barbeiro(nome=nome, barbershop_id=barbearia_id, ativo=ativo)
+def _barbeiro(db_session, estabelecimento_id, nome="Barber", ativo=True):
+    b = Barbeiro(nome=nome, estabelecimento_id=estabelecimento_id, ativo=ativo)
     db_session.add(b)
     db_session.commit()
     db_session.refresh(b)
     return b
 
 
-def _servico(db_session, barbearia_id, nome="Corte", duracao=30, preco=40.0):
-    s = Servico(nome=nome, duracao_minutos=duracao, preco=preco, barbearia_id=barbearia_id)
+def _servico(db_session, estabelecimento_id, nome="Corte", duracao=30, preco=40.0):
+    s = Servico(nome=nome, duracao_minutos=duracao, preco=preco, estabelecimento_id=estabelecimento_id)
     db_session.add(s)
     db_session.commit()
     db_session.refresh(s)
@@ -78,11 +78,11 @@ def test_lookup_barbearia_por_id_com_data_e_params(client, db_session):
     assert resp.status_code == 200
 
 
-# ── GET /public/{barbearia_id}/cliente ───────────────────────────────────────
+# ── GET /public/{estabelecimento_id}/cliente ───────────────────────────────────────
 
 def test_lookup_cliente_nao_permite_enumerar_cadastro_existente(client, db_session):
     b = _barbearia(db_session, "cliente-lookup")
-    c = Cliente(telefone="11999990001", nome="Joana", barbearia_id=b.id)
+    c = Cliente(telefone="11999990001", nome="Joana", estabelecimento_id=b.id)
     db_session.add(c)
     db_session.commit()
 

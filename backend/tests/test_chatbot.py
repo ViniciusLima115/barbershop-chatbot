@@ -212,7 +212,7 @@ def test_chatbot_sessao_expirada(client, db_session, tenant_headers, dados_base)
         telefone="5582974444444",
         etapa_atual="escolhendo_horario",
         contexto=None,
-        barbearia_id=dados_base["barbearia"].id,
+        estabelecimento_id=dados_base["barbearia"].id,
     )
     db_session.add(cliente)
     db_session.commit()
@@ -250,7 +250,7 @@ def test_chatbot_normaliza_nome_no_cadastro(client, db_session, tenant_headers, 
         db_session.query(Cliente)
         .filter(
             Cliente.telefone == telefone,
-            Cliente.barbearia_id == dados_base["barbearia"].id,
+            Cliente.estabelecimento_id == dados_base["barbearia"].id,
         )
         .first()
     )

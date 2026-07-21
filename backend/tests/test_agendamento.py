@@ -86,21 +86,21 @@ def test_agendamentos_sao_isolados_por_barbearia(
     tenant_headers,
     make_tenant_headers,
 ):
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
     from app.models.barbeiro import Barbeiro
     from app.models.servico import Servico
 
-    barbearia_b = Barbearia(nome="Barbearia B", endereco="Rua B")
+    barbearia_b = Estabelecimento(nome="Estabelecimento B", endereco="Rua B")
     db_session.add(barbearia_b)
     db_session.commit()
     db_session.refresh(barbearia_b)
 
-    barbeiro_b = Barbeiro(nome="Barbeiro B", barbearia_id=barbearia_b.id)
+    barbeiro_b = Barbeiro(nome="Barbeiro B", estabelecimento_id=barbearia_b.id)
     servico_b = Servico(
         nome="Servico B",
         duracao_minutos=30,
         preco=30.0,
-        barbearia_id=barbearia_b.id,
+        estabelecimento_id=barbearia_b.id,
     )
     db_session.add_all([barbeiro_b, servico_b])
     db_session.commit()
@@ -208,16 +208,16 @@ def test_patch_agendamento_altera_status(client, dados_base, tenant_headers):
 
 def test_fluxo_por_token_confirma_cancela_e_reagenda(client, db_session):
     from app.models.barbeiro import Barbeiro
-    from app.models.barbearia import Barbearia
+    from app.models.estabelecimento import Estabelecimento
     from app.models.servico import Servico
 
-    barbearia = Barbearia(nome="Barbearia Token", slug="barbearia-token", endereco="Rua Token")
+    barbearia = Estabelecimento(nome="Estabelecimento Token", slug="barbearia-token", endereco="Rua Token")
     db_session.add(barbearia)
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro = Barbeiro(nome="Leo", barbershop_id=barbearia.id, ativo=True)
-    servico = Servico(nome="Corte premium", duracao_minutos=45, preco=70.0, barbearia_id=barbearia.id)
+    barbeiro = Barbeiro(nome="Leo", estabelecimento_id=barbearia.id, ativo=True)
+    servico = Servico(nome="Corte premium", duracao_minutos=45, preco=70.0, estabelecimento_id=barbearia.id)
     db_session.add_all([barbeiro, servico])
     db_session.commit()
     db_session.refresh(barbeiro)

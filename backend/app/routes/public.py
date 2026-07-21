@@ -92,11 +92,9 @@ def lookup_barbearia_publica_por_id(
     db: Session = Depends(get_db),
 ):
     try:
-        # NOTE: obter_lookup_publico_por_id ainda usa barbearia_id como nome de parametro
-        # internamente — renomeacao desse service fica para uma task de limpeza seguinte.
         return obter_lookup_publico_por_id(
             db,
-            barbearia_id=estabelecimento_id,
+            estabelecimento_id=estabelecimento_id,
             data_referencia=data,
             barbeiro_id=barbeiro_id,
             servico_id=servico_id,
@@ -116,9 +114,7 @@ def listar_servicos_public(
     estabelecimento_id: int = Query(...),
     db: Session = Depends(get_db),
 ):
-    # NOTE: listar_servicos_publico ainda usa barbearia_id como nome de parametro
-    # internamente — renomeacao desse service fica para uma task de limpeza seguinte.
-    return listar_servicos_publico(db, barbearia_id=estabelecimento_id)
+    return listar_servicos_publico(db, estabelecimento_id=estabelecimento_id)
 
 
 @router.get("/barbeiros", response_model=list[PublicBarbeiroItem])
@@ -128,9 +124,7 @@ def listar_barbeiros_public(
     estabelecimento_id: int = Query(...),
     db: Session = Depends(get_db),
 ):
-    # NOTE: listar_barbeiros_publico ainda usa barbearia_id como nome de parametro
-    # internamente — renomeacao desse service fica para uma task de limpeza seguinte.
-    return listar_barbeiros_publico(db, barbearia_id=estabelecimento_id)
+    return listar_barbeiros_publico(db, estabelecimento_id=estabelecimento_id)
 
 
 @router.get("/horarios-disponiveis")
@@ -143,11 +137,9 @@ def horarios_disponiveis_public(
     data: date = Query(...),
     db: Session = Depends(get_db),
 ):
-    # NOTE: listar_horarios_disponiveis_publico ainda usa barbearia_id como nome de parametro
-    # internamente — renomeacao desse service fica para uma task de limpeza seguinte.
     return listar_horarios_disponiveis_publico(
         db,
-        barbearia_id=estabelecimento_id,
+        estabelecimento_id=estabelecimento_id,
         barbeiro_id=barbeiro_id,
         servico_id=servico_id,
         data_referencia=data,
@@ -163,13 +155,10 @@ def criar_agendamento_public(
     db: Session = Depends(get_db),
 ):
     try:
-        # NOTE: servico_exige_pagamento_adiantado_publico e criar_agendamento_publico ainda usam
-        # barbearia_id como nome de parametro internamente — renomeacao desses services fica para
-        # uma task de limpeza seguinte.
         exige_pagamento, _, _ = servico_exige_pagamento_adiantado_publico(
             db,
             slug=dados.slug,
-            barbearia_id=dados.estabelecimento_id,
+            estabelecimento_id=dados.estabelecimento_id,
             servico_id=dados.servico_id,
         )
         if exige_pagamento:
@@ -180,7 +169,7 @@ def criar_agendamento_public(
         agendamento = criar_agendamento_publico(
             db,
             slug=dados.slug,
-            barbearia_id=dados.estabelecimento_id,
+            estabelecimento_id=dados.estabelecimento_id,
             cliente_nome=dados.cliente_nome,
             cliente_telefone=dados.cliente_telefone,
             cliente_email=dados.cliente_email,
@@ -212,13 +201,10 @@ def iniciar_pagamento_agendamento_public(
     db: Session = Depends(get_db),
 ):
     try:
-        # NOTE: servico_exige_pagamento_adiantado_publico e criar_agendamento_publico ainda usam
-        # barbearia_id como nome de parametro internamente — renomeacao desses services fica para
-        # uma task de limpeza seguinte.
         exige_pagamento, _, tenant_id = servico_exige_pagamento_adiantado_publico(
             db,
             slug=dados.slug,
-            barbearia_id=dados.estabelecimento_id,
+            estabelecimento_id=dados.estabelecimento_id,
             servico_id=dados.servico_id,
         )
         if not exige_pagamento:
@@ -243,7 +229,7 @@ def iniciar_pagamento_agendamento_public(
         existente = (
             db.query(AgendamentoModel)
             .filter(
-                AgendamentoModel.barbearia_id == tenant_id,
+                AgendamentoModel.estabelecimento_id == tenant_id,
                 AgendamentoModel.profissional_id == dados.barbeiro_id,
                 AgendamentoModel.servico_id == dados.servico_id,
                 AgendamentoModel.cliente_telefone == telefone_normalizado,
@@ -296,12 +282,10 @@ def iniciar_pagamento_agendamento_public(
                 "expires_at": pagamento_retentativa.expires_at,
             }
 
-        # NOTE: criar_agendamento_publico ainda usa barbearia_id como nome de parametro
-        # internamente — renomeacao desse service fica para uma task de limpeza seguinte.
         agendamento = criar_agendamento_publico(
             db,
             slug=dados.slug,
-            barbearia_id=dados.estabelecimento_id,
+            estabelecimento_id=dados.estabelecimento_id,
             cliente_nome=dados.cliente_nome,
             cliente_telefone=dados.cliente_telefone,
             cliente_email=dados.cliente_email,

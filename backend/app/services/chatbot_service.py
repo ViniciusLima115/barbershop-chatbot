@@ -73,7 +73,7 @@ def _normalizar_nome(nome: str) -> str:
 def _listar_servicos(db: Session, tenant_id: int) -> list[Servico]:
     return (
         db.query(Servico)
-        .filter(Servico.barbearia_id == tenant_id)
+        .filter(Servico.estabelecimento_id == tenant_id)
         .order_by(Servico.id.asc())
         .all()
     )
@@ -82,7 +82,7 @@ def _listar_servicos(db: Session, tenant_id: int) -> list[Servico]:
 def _obter_barbeiro_padrao(db: Session, tenant_id: int) -> Barbeiro | None:
     return (
         db.query(Barbeiro)
-        .filter(Barbeiro.barbershop_id == tenant_id)
+        .filter(Barbeiro.estabelecimento_id == tenant_id)
         .order_by(Barbeiro.id.asc())
         .first()
     )
@@ -127,7 +127,7 @@ def _agendamentos_futuros_cliente(db: Session, cliente_id: int, tenant_id: int) 
         db.query(Agendamento)
         .filter(
             Agendamento.cliente_id == cliente_id,
-            Agendamento.barbearia_id == tenant_id,
+            Agendamento.estabelecimento_id == tenant_id,
             Agendamento.status.in_(["pendente", "confirmado"]),
             Agendamento.data_hora_inicio >= datetime.now(),
         )
@@ -182,7 +182,7 @@ def _datas_disponiveis_por_periodo(
 def _buscar_ou_criar_cliente(db: Session, telefone: str, tenant_id: int) -> Cliente:
     cliente = (
         db.query(Cliente)
-        .filter(Cliente.telefone == telefone, Cliente.barbearia_id == tenant_id)
+        .filter(Cliente.telefone == telefone, Cliente.estabelecimento_id == tenant_id)
         .first()
     )
     if cliente:
@@ -193,7 +193,7 @@ def _buscar_ou_criar_cliente(db: Session, telefone: str, tenant_id: int) -> Clie
         nome="Cliente",
         etapa_atual="aguardando_nome",
         contexto=None,
-        barbearia_id=tenant_id,
+        estabelecimento_id=tenant_id,
     )
     db.add(cliente)
     db.commit()
@@ -333,7 +333,7 @@ def responder_mensagem(db: Session, telefone, mensagem, tenant_id: int):
                 .filter(
                     Agendamento.id == cliente.contexto["agendamento_id_gestao"],
                     Agendamento.cliente_id == cliente.id,
-                    Agendamento.barbearia_id == tenant_id,
+                    Agendamento.estabelecimento_id == tenant_id,
                 )
                 .first()
             )

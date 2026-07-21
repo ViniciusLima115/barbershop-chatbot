@@ -25,7 +25,7 @@ load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.security import hash_senha, verificar_senha
 
 DRY_RUN = "--dry-run" in sys.argv
@@ -48,7 +48,7 @@ def main():
     erros = 0
     db: Session = SessionLocal()
     try:
-        barbearias = db.query(Barbearia).all()
+        barbearias = db.query(Estabelecimento).all()
         total = len(barbearias)
 
         for b in barbearias:

@@ -14,8 +14,8 @@ def _criar_estabelecimento(db_session, plano="gratis"):
     return est
 
 
-def _headers(barbearia_id: int, make_tenant_headers):
-    return make_tenant_headers(barbearia_id)
+def _headers(estabelecimento_id: int, make_tenant_headers):
+    return make_tenant_headers(estabelecimento_id)
 
 
 def _payload(nome="João"):

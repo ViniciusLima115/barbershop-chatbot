@@ -9,7 +9,6 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.barbearia import Barbearia
 from app.models.estabelecimento import Estabelecimento
 from app.models.admin_mfa import AdminMfaSetting
 from app.models.token_blacklist import TokenBlacklist
@@ -148,7 +147,7 @@ def tenant_id_from_header(
     if claims.tenant_id != tenant_id:
         raise HTTPException(status_code=403, detail="Tenant do token difere do tenant da requisicao.")
 
-    barbearia = db.query(Barbearia.id).filter(Barbearia.id == tenant_id).first()
+    barbearia = db.query(Estabelecimento.id).filter(Estabelecimento.id == tenant_id).first()
     if not barbearia:
         raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
 
@@ -173,7 +172,7 @@ def verificar_plano_premium(
     tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ) -> int:
-    barbearia = db.query(Barbearia.plano).filter(Barbearia.id == tenant_id).first()
+    barbearia = db.query(Estabelecimento.plano).filter(Estabelecimento.id == tenant_id).first()
     if not barbearia or barbearia.plano != "premium":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -187,7 +186,7 @@ def verificar_plano_minimo_basico(
     db: Session = Depends(get_db),
 ) -> int:
     """Permite acesso para planos 'basico' e 'premium'. Bloqueia 'gratis'."""
-    barbearia = db.query(Barbearia.plano).filter(Barbearia.id == tenant_id).first()
+    barbearia = db.query(Estabelecimento.plano).filter(Estabelecimento.id == tenant_id).first()
     plano = (barbearia.plano or "gratis").lower() if barbearia else "gratis"
     if plano not in ("basico", "premium"):
         raise HTTPException(

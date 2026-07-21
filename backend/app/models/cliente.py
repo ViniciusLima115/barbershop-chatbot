@@ -1,7 +1,6 @@
 from datetime import datetime
 
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import synonym
 from app.database import Base
 from app.time_utils import utcnow_naive
 
@@ -17,6 +16,3 @@ class Cliente(Base):
     contexto = Column(JSON, nullable=True)
     data_criacao = Column(DateTime, nullable=False, default=utcnow_naive)
     estabelecimento_id = Column(Integer, ForeignKey("estabelecimentos.id"), nullable=True)
-
-    # Alias de compatibilidade com código legado
-    barbearia_id = synonym("estabelecimento_id")

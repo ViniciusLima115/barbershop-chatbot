@@ -45,7 +45,6 @@ class Agendamento(Base):
     updated_at = Column(DateTime, nullable=False, default=utcnow_naive, onupdate=utcnow_naive)
 
     # Aliases de compatibilidade com código legado (colunas físicas renomeadas)
-    barbearia_id = synonym("estabelecimento_id")
     barbeiro_id = synonym("profissional_id")
     tenant_id = synonym("estabelecimento_id")
     booking_status = synonym("status")
@@ -56,6 +55,5 @@ class Agendamento(Base):
     servico = relationship("Servico")
     estabelecimento = relationship("Estabelecimento", foreign_keys=[estabelecimento_id])
 
-    # Aliases de relacionamento para código legado que acessa .barbeiro / .barbearia
+    # Alias de relacionamento para código legado que acessa .barbeiro
     barbeiro = relationship("Profissional", foreign_keys=[profissional_id], overlaps="profissional")
-    barbearia = relationship("Estabelecimento", foreign_keys=[estabelecimento_id], overlaps="estabelecimento")

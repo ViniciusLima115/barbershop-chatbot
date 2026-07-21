@@ -17,13 +17,13 @@ def criar(
 ):
     cliente_existente = (
         db.query(Cliente)
-        .filter(Cliente.telefone == dados.telefone, Cliente.barbearia_id == tenant_id)
+        .filter(Cliente.telefone == dados.telefone, Cliente.estabelecimento_id == tenant_id)
         .first()
     )
     if cliente_existente:
         raise HTTPException(status_code=400, detail="Telefone já cadastrado")
 
-    cliente = Cliente(**dados.model_dump(), barbearia_id=tenant_id)
+    cliente = Cliente(**dados.model_dump(), estabelecimento_id=tenant_id)
     db.add(cliente)
     db.commit()
     db.refresh(cliente)
@@ -35,7 +35,7 @@ def criar(
 def listar(tenant_id: int = Depends(tenant_id_from_header), db: Session = Depends(get_db)):
     return (
         db.query(Cliente)
-        .filter(Cliente.barbearia_id == tenant_id)
+        .filter(Cliente.estabelecimento_id == tenant_id)
         .order_by(Cliente.id.asc())
         .all()
     )
@@ -50,7 +50,7 @@ def atualizar(
 ):
     cliente = (
         db.query(Cliente)
-        .filter(Cliente.id == cliente_id, Cliente.barbearia_id == tenant_id)
+        .filter(Cliente.id == cliente_id, Cliente.estabelecimento_id == tenant_id)
         .first()
     )
     if not cliente:
@@ -61,7 +61,7 @@ def atualizar(
         .filter(
             Cliente.telefone == dados.telefone,
             Cliente.id != cliente_id,
-            Cliente.barbearia_id == tenant_id,
+            Cliente.estabelecimento_id == tenant_id,
         )
         .first()
     )
@@ -85,7 +85,7 @@ def remover(
 ):
     cliente = (
         db.query(Cliente)
-        .filter(Cliente.id == cliente_id, Cliente.barbearia_id == tenant_id)
+        .filter(Cliente.id == cliente_id, Cliente.estabelecimento_id == tenant_id)
         .first()
     )
     if not cliente:

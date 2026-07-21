@@ -24,7 +24,7 @@ import pytest
 
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.servico import Servico
 from app.models.cliente import Cliente
 from app.services.public_booking_service import buscar_cliente_publico, _normalizar_telefone_storage
@@ -37,8 +37,8 @@ from app.services.public_booking_service import buscar_cliente_publico, _normali
 @pytest.fixture
 def barbearia_com_barbeiro_e_servico(db_session):
     """Cria estrutura básica: barbearia, barbeiro ativo e serviço."""
-    barbearia = Barbearia(
-        nome="Barbearia Cenarios",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Cenarios",
         slug="cenarios",
         endereco="Rua Cenarios, 1",
     )
@@ -46,8 +46,8 @@ def barbearia_com_barbeiro_e_servico(db_session):
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro = Barbeiro(nome="Barbeiro Cenarios", barbershop_id=barbearia.id, ativo=True)
-    servico = Servico(nome="Corte Cenarios", duracao_minutos=40, preco=50.0, barbearia_id=barbearia.id)
+    barbeiro = Barbeiro(nome="Barbeiro Cenarios", estabelecimento_id=barbearia.id, ativo=True)
+    servico = Servico(nome="Corte Cenarios", duracao_minutos=40, preco=50.0, estabelecimento_id=barbearia.id)
     db_session.add_all([barbeiro, servico])
     db_session.commit()
     db_session.refresh(barbeiro)
@@ -56,11 +56,11 @@ def barbearia_com_barbeiro_e_servico(db_session):
     return {"barbearia": barbearia, "barbeiro": barbeiro, "servico": servico}
 
 
-def _criar_agendamento_publico(client, barbearia_id, barbeiro_id, servico_id, *, offset_days=2):
+def _criar_agendamento_publico(client, estabelecimento_id, barbeiro_id, servico_id, *, offset_days=2):
     """Helper: cria agendamento via rota pública e retorna o body."""
     data_hora = datetime.now() + timedelta(days=offset_days)
     payload = {
-        "estabelecimento_id": barbearia_id,
+        "estabelecimento_id": estabelecimento_id,
         "cliente_nome": "Cliente Token",
         "cliente_telefone": "5582991111111",
         "cliente_email": "token@example.com",
@@ -243,14 +243,14 @@ def test_remarcar_com_conflito_retorna_400(client, db_session, barbearia_com_bar
 # ---------------------------------------------------------------------------
 
 def test_listar_agendamentos_filtra_por_barbeiro_id(client, db_session, make_tenant_headers):
-    barbearia = Barbearia(nome="Barbearia Filtro", endereco="Rua Filtro")
+    barbearia = Estabelecimento(nome="Estabelecimento Filtro", endereco="Rua Filtro")
     db_session.add(barbearia)
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro_a = Barbeiro(nome="Barbeiro A", barbershop_id=barbearia.id, ativo=True)
-    barbeiro_b = Barbeiro(nome="Barbeiro B", barbershop_id=barbearia.id, ativo=True)
-    servico = Servico(nome="Corte", duracao_minutos=40, preco=40.0, barbearia_id=barbearia.id)
+    barbeiro_a = Barbeiro(nome="Barbeiro A", estabelecimento_id=barbearia.id, ativo=True)
+    barbeiro_b = Barbeiro(nome="Barbeiro B", estabelecimento_id=barbearia.id, ativo=True)
+    servico = Servico(nome="Corte", duracao_minutos=40, preco=40.0, estabelecimento_id=barbearia.id)
     db_session.add_all([barbeiro_a, barbeiro_b, servico])
     db_session.commit()
     db_session.refresh(barbeiro_a)
@@ -378,18 +378,18 @@ def test_buscar_cliente_publico_retorna_email(db_session, barbearia_com_barbeiro
     Cliente possui campo email. buscar_cliente_publico retorna o email armazenado.
     """
     fix = barbearia_com_barbeiro_e_servico
-    barbearia_id = fix["barbearia"].id
+    estabelecimento_id = fix["barbearia"].id
 
     cliente = Cliente(
         nome="Cliente Com Email",
         telefone="82991111111",
         email="cliente@example.com",
-        barbearia_id=barbearia_id,
+        estabelecimento_id=estabelecimento_id,
     )
     db_session.add(cliente)
     db_session.commit()
 
-    resultado = buscar_cliente_publico(db_session, barbearia_id=barbearia_id, telefone="82991111111")
+    resultado = buscar_cliente_publico(db_session, estabelecimento_id=estabelecimento_id, telefone="82991111111")
     assert resultado is not None
     assert resultado["nome"] == "Cliente Com Email"
     assert resultado["email"] == "cliente@example.com"
@@ -400,17 +400,17 @@ def test_buscar_cliente_publico_email_none_quando_nao_informado(db_session, barb
     Cliente sem email retorna email=None.
     """
     fix = barbearia_com_barbeiro_e_servico
-    barbearia_id = fix["barbearia"].id
+    estabelecimento_id = fix["barbearia"].id
 
     cliente = Cliente(
         nome="Cliente Sem Email",
         telefone="82992222222",
-        barbearia_id=barbearia_id,
+        estabelecimento_id=estabelecimento_id,
     )
     db_session.add(cliente)
     db_session.commit()
 
-    resultado = buscar_cliente_publico(db_session, barbearia_id=barbearia_id, telefone="82992222222")
+    resultado = buscar_cliente_publico(db_session, estabelecimento_id=estabelecimento_id, telefone="82992222222")
     assert resultado is not None
     assert resultado["email"] is None
 
@@ -470,7 +470,7 @@ def test_status_invalido_normalizado_para_pendente(client, db_session, barbearia
     fix = barbearia_com_barbeiro_e_servico
     data_hora = datetime.now() + timedelta(days=2)
 
-    cliente = Cliente(nome="Cliente Status", telefone="82999999999", barbearia_id=fix["barbearia"].id)
+    cliente = Cliente(nome="Cliente Status", telefone="82999999999", estabelecimento_id=fix["barbearia"].id)
     db_session.add(cliente)
     db_session.commit()
     db_session.refresh(cliente)
@@ -480,7 +480,7 @@ def test_status_invalido_normalizado_para_pendente(client, db_session, barbearia
         cliente_id=cliente.id,
         barbeiro_id=fix["barbeiro"].id,
         servico_id=fix["servico"].id,
-        barbearia_id=fix["barbearia"].id,
+        estabelecimento_id=fix["barbearia"].id,
         cliente_nome=cliente.nome,
         cliente_telefone=cliente.telefone,
         data=data_hora.date(),
@@ -518,13 +518,13 @@ def test_lookup_barbearia_por_id_inexistente_retorna_404(client):
 # ---------------------------------------------------------------------------
 
 def test_barbeiro_inativo_nao_aparece_na_listagem_publica(client, db_session):
-    barbearia = Barbearia(nome="Barbearia Ativo Inativo", slug="ativo-inativo", endereco="Rua X")
+    barbearia = Estabelecimento(nome="Estabelecimento Ativo Inativo", slug="ativo-inativo", endereco="Rua X")
     db_session.add(barbearia)
     db_session.commit()
     db_session.refresh(barbearia)
 
-    ativo = Barbeiro(nome="Ativo", barbershop_id=barbearia.id, ativo=True)
-    inativo = Barbeiro(nome="Inativo", barbershop_id=barbearia.id, ativo=False)
+    ativo = Barbeiro(nome="Ativo", estabelecimento_id=barbearia.id, ativo=True)
+    inativo = Barbeiro(nome="Inativo", estabelecimento_id=barbearia.id, ativo=False)
     db_session.add_all([ativo, inativo])
     db_session.commit()
 

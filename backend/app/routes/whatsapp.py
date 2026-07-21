@@ -8,7 +8,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.services.chatbot_service import responder_mensagem
 from app.services.public_booking_service import deve_responder_com_link, montar_mensagem_link_agendamento_por_id
 from app.services.webhook_payload_service import (
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 def _resposta_publica_link(db: Session, tenant_id: int, texto: str):
     try:
-        estabelecimento = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
+        estabelecimento = db.query(Estabelecimento).filter(Estabelecimento.id == tenant_id).first()
     except Exception:
         return None
     if not estabelecimento or not deve_responder_com_link(texto):

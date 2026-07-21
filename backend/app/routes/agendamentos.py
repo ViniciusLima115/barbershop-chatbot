@@ -65,7 +65,7 @@ def criar(
         total_mes = (
             db.query(AgendamentoModel)
             .filter(
-                AgendamentoModel.barbearia_id == tenant_id,
+                AgendamentoModel.estabelecimento_id == tenant_id,
                 AgendamentoModel.data >= inicio_mes,
             )
             .count()

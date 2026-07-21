@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.cliente import Cliente
 from app.models.servico import Servico
 from app.services.scheduler import processar_lembretes_email_pendentes
@@ -18,14 +18,14 @@ def test_scheduler_envia_lembrete_24h(monkeypatch, db_session):
     monkeypatch.setattr("app.services.scheduler.send_email_payload", fake_send)
     monkeypatch.setattr("app.services.scheduler.SessionLocal", lambda: db_session)
 
-    barbearia = Barbearia(nome="Barbearia Scheduler", slug="scheduler", endereco="Rua Scheduler")
+    barbearia = Estabelecimento(nome="Estabelecimento Scheduler", slug="scheduler", endereco="Rua Scheduler")
     db_session.add(barbearia)
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro = Barbeiro(nome="Mauro", barbershop_id=barbearia.id, ativo=True)
-    servico = Servico(nome="Barba", duracao_minutos=30, preco=35.0, barbearia_id=barbearia.id)
-    cliente = Cliente(nome="Cliente Scheduler", telefone="5582992222222", barbearia_id=barbearia.id)
+    barbeiro = Barbeiro(nome="Mauro", estabelecimento_id=barbearia.id, ativo=True)
+    servico = Servico(nome="Barba", duracao_minutos=30, preco=35.0, estabelecimento_id=barbearia.id)
+    cliente = Cliente(nome="Cliente Scheduler", telefone="5582992222222", estabelecimento_id=barbearia.id)
     db_session.add_all([barbeiro, servico, cliente])
     db_session.commit()
     db_session.refresh(barbeiro)
@@ -37,7 +37,7 @@ def test_scheduler_envia_lembrete_24h(monkeypatch, db_session):
         cliente_id=cliente.id,
         barbeiro_id=barbeiro.id,
         servico_id=servico.id,
-        barbearia_id=barbearia.id,
+        estabelecimento_id=barbearia.id,
         cliente_nome=cliente.nome,
         cliente_telefone=cliente.telefone,
         cliente_email="scheduler@example.com",

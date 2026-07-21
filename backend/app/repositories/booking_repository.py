@@ -15,7 +15,7 @@ class BookingRepository:
         self.db = db
 
     def list_public_barbeiros(self, tenant_id: int, only_active: bool = True) -> list[Barbeiro]:
-        query = self.db.query(Barbeiro).filter(Barbeiro.barbershop_id == tenant_id)
+        query = self.db.query(Barbeiro).filter(Barbeiro.estabelecimento_id == tenant_id)
         if only_active:
             query = query.filter(Barbeiro.ativo.is_(True))
         return query.order_by(Barbeiro.id.asc()).all()
@@ -23,7 +23,7 @@ class BookingRepository:
     def list_public_servicos(self, tenant_id: int) -> list[Servico]:
         return (
             self.db.query(Servico)
-            .filter(Servico.barbearia_id == tenant_id)
+            .filter(Servico.estabelecimento_id == tenant_id)
             .order_by(Servico.id.asc())
             .all()
         )
@@ -37,7 +37,7 @@ class BookingRepository:
     ) -> Barbeiro | None:
         query = self.db.query(Barbeiro).filter(
             Barbeiro.id == barbeiro_id,
-            Barbeiro.barbershop_id == tenant_id,
+            Barbeiro.estabelecimento_id == tenant_id,
         )
         if only_active:
             query = query.filter(Barbeiro.ativo.is_(True))
@@ -50,7 +50,7 @@ class BookingRepository:
             self.db.query(Servico)
             .filter(
                 Servico.id == servico_id,
-                Servico.barbearia_id == tenant_id,
+                Servico.estabelecimento_id == tenant_id,
             )
             .first()
         )
@@ -60,7 +60,7 @@ class BookingRepository:
             self.db.query(Cliente)
             .filter(
                 Cliente.telefone == telefone,
-                Cliente.barbearia_id == tenant_id,
+                Cliente.estabelecimento_id == tenant_id,
             )
             .first()
         )
@@ -77,7 +77,7 @@ class BookingRepository:
             self.db.query(Cliente)
             .filter(
                 Cliente.telefone == telefone,
-                Cliente.barbearia_id == tenant_id,
+                Cliente.estabelecimento_id == tenant_id,
             )
             .first()
         )
@@ -93,7 +93,7 @@ class BookingRepository:
             telefone=telefone,
             email=email,
             etapa_atual="menu",
-            barbearia_id=tenant_id,
+            estabelecimento_id=tenant_id,
         )
         self.db.add(cliente)
         self.db.flush()
@@ -112,7 +112,7 @@ class BookingRepository:
             self.db.query(Agendamento)
             .filter(
                 Agendamento.barbeiro_id == barbeiro_id,
-                Agendamento.barbearia_id == tenant_id,
+                Agendamento.estabelecimento_id == tenant_id,
                 or_(
                     Agendamento.status.in_(["pendente", "confirmado", "reagendamento_solicitado"]),
                     and_(
@@ -171,7 +171,7 @@ class BookingRepository:
         data_filtro: date | None = None,
         barbeiro_id: int | None = None,
     ) -> list[Agendamento]:
-        query = self.db.query(Agendamento).filter(Agendamento.barbearia_id == tenant_id)
+        query = self.db.query(Agendamento).filter(Agendamento.estabelecimento_id == tenant_id)
         if data_filtro:
             inicio = datetime.combine(data_filtro, time(0, 0))
             fim = inicio + timedelta(days=1)

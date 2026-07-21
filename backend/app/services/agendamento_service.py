@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.cliente import Cliente
 from app.models.reminder_job import ReminderJob
 from app.models.servico import Servico
@@ -75,10 +75,8 @@ def _serializar_agendamento(agendamento: Agendamento):
 def _serializar_dados_token(agendamento: Agendamento):
     return {
         "id": agendamento.id,
-        # NOTE: agendamento.barbearia_id ainda usa barbearia_id como nome do atributo ORM
-        # internamente — renomeacao desse sinonimo fica para uma task de limpeza seguinte.
-        "estabelecimento_id": agendamento.barbearia_id,
-        "slug": agendamento.barbearia.slug if agendamento.barbearia else None,
+        "estabelecimento_id": agendamento.estabelecimento_id,
+        "slug": agendamento.estabelecimento.slug if agendamento.estabelecimento else None,
         "confirmation_token": agendamento.confirmation_token,
         "cliente_nome": agendamento.cliente_nome or "",
         "cliente_email": _normalizar_email(agendamento.cliente_email),
@@ -92,20 +90,20 @@ def _serializar_dados_token(agendamento: Agendamento):
     }
 
 
-def _obter_barbearia(db: Session, tenant_id: int) -> Barbearia:
-    barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
+def _obter_barbearia(db: Session, tenant_id: int) -> Estabelecimento:
+    barbearia = db.query(Estabelecimento).filter(Estabelecimento.id == tenant_id).first()
     if not barbearia:
         raise ValueError("Estabelecimento não encontrado")
     return barbearia
 
 
-def _validar_funcionamento(barbearia: Barbearia, inicio: datetime, fim: datetime):
+def _validar_funcionamento(barbearia: Estabelecimento, inicio: datetime, fim: datetime):
     if not is_within_working_hours(barbearia, inicio, fim):
         raise ValueError("Horário fora do funcionamento do estabelecimento")
 
 
 def _validar_funcionamento_barbeiro(
-    barbearia: Barbearia,
+    barbearia: Estabelecimento,
     barbeiro: Barbeiro,
     inicio: datetime,
     fim: datetime,
@@ -153,7 +151,7 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
     barbearia = _obter_barbearia(db, tenant_id)
     servico_query = db.query(Servico).filter(
         Servico.id == dados.servico_id,
-        Servico.barbearia_id == tenant_id,
+        Servico.estabelecimento_id == tenant_id,
     )
     servico = servico_query.first()
     if not servico:
@@ -161,7 +159,7 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
 
     barbeiro_query = db.query(Barbeiro).filter(
         Barbeiro.id == dados.barbeiro_id,
-        Barbeiro.barbershop_id == tenant_id,
+        Barbeiro.estabelecimento_id == tenant_id,
     )
     barbeiro = barbeiro_query.with_for_update().first()
     if not barbeiro:
@@ -169,14 +167,14 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
 
     cliente_query = db.query(Cliente).filter(
         Cliente.telefone == dados.telefone,
-        Cliente.barbearia_id == tenant_id,
+        Cliente.estabelecimento_id == tenant_id,
     )
     cliente = cliente_query.first()
     if not cliente:
         cliente = Cliente(
             nome=dados.nome_cliente,
             telefone=dados.telefone,
-            barbearia_id=tenant_id,
+            estabelecimento_id=tenant_id,
         )
         db.add(cliente)
         db.flush()
@@ -187,7 +185,7 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
 
     conflito_query = db.query(Agendamento).filter(
         Agendamento.barbeiro_id == dados.barbeiro_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
         Agendamento.data_hora_inicio < fim,
         Agendamento.data_hora_fim > dados.data_hora_inicio,
         _filtro_status_ativos(utcnow_naive()),
@@ -201,7 +199,7 @@ def criar_agendamento(db: Session, dados, tenant_id: int):
         cliente_id=cliente.id,
         barbeiro_id=dados.barbeiro_id,
         servico_id=dados.servico_id,
-        barbearia_id=tenant_id,
+        estabelecimento_id=tenant_id,
         cliente_nome=cliente.nome,
         cliente_telefone=cliente.telefone,
         cliente_email=_normalizar_email(getattr(dados, "cliente_email", None)),
@@ -238,7 +236,7 @@ def listar_agendamentos(
     data: date | None = None,
     barbeiro_id: int | None = None,
 ):
-    query = db.query(Agendamento).filter(Agendamento.barbearia_id == tenant_id)
+    query = db.query(Agendamento).filter(Agendamento.estabelecimento_id == tenant_id)
     if data:
         inicio = datetime.combine(data, time(0, 0))
         fim = inicio + timedelta(days=1)
@@ -261,7 +259,7 @@ def atualizar_status_agendamento(
 ):
     query = db.query(Agendamento).filter(
         Agendamento.id == agendamento_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
     )
     agendamento = query.first()
     if not agendamento:
@@ -283,7 +281,7 @@ def remarcar_agendamento(
 ):
     query = db.query(Agendamento).filter(
         Agendamento.id == agendamento_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
     )
     agendamento = query.with_for_update().first()
     if not agendamento:
@@ -294,7 +292,7 @@ def remarcar_agendamento(
         db.query(Servico)
         .filter(
             Servico.id == agendamento.servico_id,
-            Servico.barbearia_id == tenant_id,
+            Servico.estabelecimento_id == tenant_id,
         )
         .first()
     )
@@ -306,7 +304,7 @@ def remarcar_agendamento(
         db.query(Barbeiro)
         .filter(
             Barbeiro.id == agendamento.barbeiro_id,
-            Barbeiro.barbershop_id == tenant_id,
+            Barbeiro.estabelecimento_id == tenant_id,
         )
         .with_for_update()
         .first()
@@ -320,7 +318,7 @@ def remarcar_agendamento(
     conflito_query = db.query(Agendamento).filter(
         Agendamento.id != agendamento.id,
         Agendamento.barbeiro_id == agendamento.barbeiro_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
         Agendamento.data_hora_inicio < nova_data_hora_fim,
         Agendamento.data_hora_fim > nova_data_hora_inicio,
         _filtro_status_ativos(utcnow_naive()),
@@ -351,7 +349,7 @@ def atualizar_agendamento(
 ):
     query = db.query(Agendamento).filter(
         Agendamento.id == agendamento_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
     )
     agendamento = query.with_for_update().first()
     if not agendamento:
@@ -360,7 +358,7 @@ def atualizar_agendamento(
 
     servico_query = db.query(Servico).filter(
         Servico.id == dados.servico_id,
-        Servico.barbearia_id == tenant_id,
+        Servico.estabelecimento_id == tenant_id,
     )
     servico = servico_query.first()
     if not servico:
@@ -368,7 +366,7 @@ def atualizar_agendamento(
 
     barbeiro_query = db.query(Barbeiro).filter(
         Barbeiro.id == dados.barbeiro_id,
-        Barbeiro.barbershop_id == tenant_id,
+        Barbeiro.estabelecimento_id == tenant_id,
     )
     barbeiro = barbeiro_query.with_for_update().first()
     if not barbeiro:
@@ -381,7 +379,7 @@ def atualizar_agendamento(
     conflito_query = db.query(Agendamento).filter(
         Agendamento.id != agendamento.id,
         Agendamento.barbeiro_id == dados.barbeiro_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
         Agendamento.data_hora_inicio < novo_fim,
         Agendamento.data_hora_fim > dados.data_hora_inicio,
         _filtro_status_ativos(utcnow_naive()),
@@ -402,7 +400,7 @@ def atualizar_agendamento(
     agendamento.confirmation_token_expires_at = novo_fim + timedelta(days=1)
     agendamento.status = dados.status
     agendamento.cliente_email = _normalizar_email(getattr(dados, "cliente_email", agendamento.cliente_email))
-    agendamento.barbearia_id = tenant_id
+    agendamento.estabelecimento_id = tenant_id
     if houve_remarcacao:
         _resetar_flags_lembrete(agendamento)
     db.commit()
@@ -427,7 +425,7 @@ def aplicar_patch_agendamento(
 
     query = db.query(Agendamento).filter(
         Agendamento.id == agendamento_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
     )
     existente = query.first()
     if not existente:
@@ -451,7 +449,7 @@ def aplicar_patch_agendamento(
 def remover_agendamento(db: Session, agendamento_id: int, tenant_id: int):
     query = db.query(Agendamento).filter(
         Agendamento.id == agendamento_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
     )
     agendamento = query.first()
     if not agendamento:
@@ -484,7 +482,7 @@ def obter_contexto_email_agendamento(
     if not agendamento or not agendamento.cliente_email:
         return None
 
-    barbearia = agendamento.barbearia or db.query(Barbearia).filter(Barbearia.id == agendamento.barbearia_id).first()
+    barbearia = agendamento.estabelecimento or db.query(Estabelecimento).filter(Estabelecimento.id == agendamento.estabelecimento_id).first()
     barbeiro = agendamento.barbeiro or db.query(Barbeiro).filter(Barbeiro.id == agendamento.barbeiro_id).first()
     servico = agendamento.servico or db.query(Servico).filter(Servico.id == agendamento.servico_id).first()
     if not barbearia or not barbeiro or not servico:
@@ -496,7 +494,7 @@ def obter_contexto_email_agendamento(
         cliente_nome=agendamento.cliente_nome or "",
         cliente_email=agendamento.cliente_email,
         barbearia_nome=barbearia.nome,
-        barbearia_id=barbearia.id,
+        estabelecimento_id=barbearia.id,
         slug=barbearia.slug,
         servico_nome=servico.nome,
         barbeiro_nome=barbeiro.nome,
@@ -564,19 +562,19 @@ def remarcar_agendamento_por_token(db: Session, token: str, nova_data_hora_inici
     if agendamento.status == "cancelado":
         raise ValueError("Agendamento cancelado não pode ser reagendado por este link")
 
-    tenant_id = agendamento.barbearia_id
+    tenant_id = agendamento.estabelecimento_id
     barbearia = _obter_barbearia(db, tenant_id)
 
     servico = db.query(Servico).filter(
         Servico.id == agendamento.servico_id,
-        Servico.barbearia_id == tenant_id,
+        Servico.estabelecimento_id == tenant_id,
     ).first()
     if not servico:
         raise ValueError("Serviço não encontrado")
 
     barbeiro = db.query(Barbeiro).filter(
         Barbeiro.id == agendamento.barbeiro_id,
-        Barbeiro.barbershop_id == tenant_id,
+        Barbeiro.estabelecimento_id == tenant_id,
     ).with_for_update().first()
     if not barbeiro:
         raise ValueError("Profissional não encontrado")
@@ -588,7 +586,7 @@ def remarcar_agendamento_por_token(db: Session, token: str, nova_data_hora_inici
     conflito = db.query(Agendamento).filter(
         Agendamento.id != agendamento.id,
         Agendamento.barbeiro_id == agendamento.barbeiro_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
         Agendamento.data_hora_inicio < nova_fim,
         Agendamento.data_hora_fim > nova_data_hora_inicio,
         _filtro_status_ativos(utcnow_naive()),

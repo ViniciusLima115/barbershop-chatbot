@@ -2,7 +2,7 @@
 Testes de isolamento de tenant: garante que um tenant não acessa dados de outro.
 """
 import pytest
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.barbeiro import Barbeiro
 from app.models.servico import Servico
 from app.models.agendamento import Agendamento
@@ -12,16 +12,16 @@ from datetime import datetime, timedelta
 
 @pytest.fixture
 def dois_tenants(db_session):
-    t1 = Barbearia(nome="Tenant Um", login="tenant.um", senha=hash_senha("senha1"), endereco="Rua 1")
-    t2 = Barbearia(nome="Tenant Dois", login="tenant.dois", senha=hash_senha("senha2"), endereco="Rua 2")
+    t1 = Estabelecimento(nome="Tenant Um", login="tenant.um", senha=hash_senha("senha1"), endereco="Rua 1")
+    t2 = Estabelecimento(nome="Tenant Dois", login="tenant.dois", senha=hash_senha("senha2"), endereco="Rua 2")
     db_session.add_all([t1, t2])
     db_session.commit()
     db_session.refresh(t1)
     db_session.refresh(t2)
 
-    b1 = Barbeiro(nome="Barbeiro T1", barbearia_id=t1.id)
-    b2 = Barbeiro(nome="Barbeiro T2", barbearia_id=t2.id)
-    s1 = Servico(nome="Corte T1", duracao_minutos=30, preco=40.0, barbearia_id=t1.id)
+    b1 = Barbeiro(nome="Barbeiro T1", estabelecimento_id=t1.id)
+    b2 = Barbeiro(nome="Barbeiro T2", estabelecimento_id=t2.id)
+    s1 = Servico(nome="Corte T1", duracao_minutos=30, preco=40.0, estabelecimento_id=t1.id)
     db_session.add_all([b1, b2, s1])
     db_session.commit()
     db_session.refresh(b1)

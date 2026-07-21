@@ -13,7 +13,7 @@ from limits.strategies import FixedWindowRateLimiter
 import app.routes.auth as auth_module
 from app.main import _validate_runtime_config
 from app.limiter import RATE_LIMIT_PAYMENT_STATUS, limiter
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.token_blacklist import TokenBlacklist
 from app.routes.deps import ADMIN_REAUTH_MAX_AGE_SECONDS, require_recent_admin
 from app.security import (
@@ -110,7 +110,7 @@ def test_admin_cannot_create_account_with_unsafe_bcrypt_password(client, make_te
     [("inativo", 30), ("ativo", -1)],
 )
 def test_inactive_or_expired_tenant_cannot_login(client, db_session, status_manual, expires_delta):
-    tenant = Barbearia(
+    tenant = Estabelecimento(
         nome="Tenant Bloqueado",
         login=f"tenant.{status_manual}.{expires_delta}",
         senha=hash_senha("senha-segura"),
@@ -129,7 +129,7 @@ def test_inactive_or_expired_tenant_cannot_login(client, db_session, status_manu
 
 
 def test_auth_version_revokes_existing_tenant_session(client, db_session):
-    tenant = Barbearia(
+    tenant = Estabelecimento(
         nome="Tenant Revogacao",
         login="tenant.revogacao",
         senha=hash_senha("senha-segura"),

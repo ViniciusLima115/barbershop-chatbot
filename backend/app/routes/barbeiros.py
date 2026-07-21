@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.barbeiro import Barbeiro
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.routes.deps import tenant_id_from_header
 from app.schemas.barbeiro import BarbeiroCreate, BarbeiroResponse, BarbeiroUpdate
 from app.services.estabelecimento_hours_service import get_working_hours
@@ -13,8 +13,8 @@ MAX_BARBEIROS_BASICO = 1
 MAX_BARBEIROS_PREMIUM = 3
 
 
-def _get_barbearia(db: Session, tenant_id: int) -> Barbearia:
-    barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
+def _get_barbearia(db: Session, tenant_id: int) -> Estabelecimento:
+    barbearia = db.query(Estabelecimento).filter(Estabelecimento.id == tenant_id).first()
     if not barbearia:
         raise HTTPException(status_code=404, detail="Estabelecimento nao encontrado.")
     return barbearia
@@ -28,7 +28,7 @@ def criar(
 ):
     barbearia = _get_barbearia(db, tenant_id)
 
-    total = db.query(Barbeiro).filter(Barbeiro.barbershop_id == tenant_id).count()
+    total = db.query(Barbeiro).filter(Barbeiro.estabelecimento_id == tenant_id).count()
     plano = (barbearia.plano or "basico").lower()
     limite = MAX_BARBEIROS_PREMIUM if plano == "premium" else MAX_BARBEIROS_BASICO
 
@@ -43,7 +43,7 @@ def criar(
 
     payload = {
         "nome": dados.nome.strip(),
-        "barbershop_id": tenant_id,
+        "estabelecimento_id": tenant_id,
         "ativo": dados.ativo,
         "tempo_por_servico": dados.tempo_por_servico,
         "horarios_funcionamento": (
@@ -65,7 +65,7 @@ def criar(
 @router.get("/", response_model=list[BarbeiroResponse])
 def listar(tenant_id: int = Depends(tenant_id_from_header), db: Session = Depends(get_db)):
     _get_barbearia(db, tenant_id)
-    query = db.query(Barbeiro).filter(Barbeiro.barbershop_id == tenant_id)
+    query = db.query(Barbeiro).filter(Barbeiro.estabelecimento_id == tenant_id)
     return query.order_by(Barbeiro.id.asc()).all()
 
 
@@ -77,7 +77,7 @@ def atualizar(
     db: Session = Depends(get_db),
 ):
     _get_barbearia(db, tenant_id)
-    query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.barbershop_id == tenant_id)
+    query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.estabelecimento_id == tenant_id)
 
     barbeiro = query.first()
     if not barbeiro:
@@ -104,7 +104,7 @@ def remover(
     db: Session = Depends(get_db),
 ):
     _get_barbearia(db, tenant_id)
-    query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.barbershop_id == tenant_id)
+    query = db.query(Barbeiro).filter(Barbeiro.id == barbeiro_id, Barbeiro.estabelecimento_id == tenant_id)
 
     barbeiro = query.first()
     if not barbeiro:

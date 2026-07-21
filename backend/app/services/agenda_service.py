@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.servico import Servico
 from app.services.estabelecimento_hours_service import build_day_slots, get_working_window
 from app.time_utils import utcnow_naive
@@ -34,7 +34,7 @@ def gerar_horarios_disponiveis(
 ):
     servico_query = db.query(Servico).filter(
         Servico.id == servico_id,
-        Servico.barbearia_id == tenant_id,
+        Servico.estabelecimento_id == tenant_id,
     )
     servico = servico_query.first()
     if not servico:
@@ -42,13 +42,13 @@ def gerar_horarios_disponiveis(
 
     barbeiro_query = db.query(Barbeiro).filter(
         Barbeiro.id == barbeiro_id,
-        Barbeiro.barbershop_id == tenant_id,
+        Barbeiro.estabelecimento_id == tenant_id,
     )
     barbeiro = barbeiro_query.first()
     if not barbeiro:
         return []
 
-    barbearia = db.query(Barbearia).filter(Barbearia.id == tenant_id).first()
+    barbearia = db.query(Estabelecimento).filter(Estabelecimento.id == tenant_id).first()
     if not barbearia:
         return []
 
@@ -64,7 +64,7 @@ def gerar_horarios_disponiveis(
     agora = utcnow_naive()
     agendamentos_query = db.query(Agendamento).filter(
         Agendamento.barbeiro_id == barbeiro_id,
-        Agendamento.barbearia_id == tenant_id,
+        Agendamento.estabelecimento_id == tenant_id,
         Agendamento.data_hora_inicio >= inicio_dia,
         Agendamento.data_hora_inicio < fim_dia,
         or_(

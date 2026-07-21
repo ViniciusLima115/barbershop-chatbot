@@ -2,20 +2,20 @@ from datetime import datetime, timedelta
 
 from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
-from app.models.barbearia import Barbearia
+from app.models.estabelecimento import Estabelecimento
 from app.models.reminder_job import ReminderJob
 from app.models.servico import Servico
 
 
 def test_public_lookup_retorna_barbeiros_servicos_e_horarios(client, db_session):
-    barbearia = Barbearia(nome="Barbearia Publica", slug="publica", endereco="Rua Publica")
+    barbearia = Estabelecimento(nome="Estabelecimento Publica", slug="publica", endereco="Rua Publica")
     db_session.add(barbearia)
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro_ativo = Barbeiro(nome="Ativo", barbershop_id=barbearia.id, ativo=True)
-    barbeiro_inativo = Barbeiro(nome="Inativo", barbershop_id=barbearia.id, ativo=False)
-    servico = Servico(nome="Corte", duracao_minutos=40, preco=50.0, barbearia_id=barbearia.id)
+    barbeiro_ativo = Barbeiro(nome="Ativo", estabelecimento_id=barbearia.id, ativo=True)
+    barbeiro_inativo = Barbeiro(nome="Inativo", estabelecimento_id=barbearia.id, ativo=False)
+    servico = Servico(nome="Corte", duracao_minutos=40, preco=50.0, estabelecimento_id=barbearia.id)
     db_session.add_all([barbeiro_ativo, barbeiro_inativo, servico])
     db_session.commit()
     db_session.refresh(barbeiro_ativo)
@@ -32,7 +32,7 @@ def test_public_lookup_retorna_barbeiros_servicos_e_horarios(client, db_session)
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["nome"] == "Barbearia Publica"
+    assert body["nome"] == "Estabelecimento Publica"
     assert body["estabelecimento_id"] == barbearia.id
     assert body["slug"] == "publica"
     assert len(body["barbeiros"]) == 1
@@ -81,8 +81,8 @@ def test_public_lookup_respeita_funcionamento_individual_do_barbeiro(client, db_
         "dom": {"ativo": False, "inicio": "08:00", "fim": "18:00"},
     }
 
-    barbearia = Barbearia(
-        nome="Barbearia Tarde",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Tarde",
         slug="publica-tarde",
         endereco="Rua Publica",
         horarios_funcionamento=horarios_barbearia,
@@ -93,11 +93,11 @@ def test_public_lookup_respeita_funcionamento_individual_do_barbeiro(client, db_
 
     barbeiro = Barbeiro(
         nome="Tarde",
-        barbershop_id=barbearia.id,
+        estabelecimento_id=barbearia.id,
         ativo=True,
         horarios_funcionamento=horarios_barbeiro,
     )
-    servico = Servico(nome="Corte", duracao_minutos=40, preco=50.0, barbearia_id=barbearia.id)
+    servico = Servico(nome="Corte", duracao_minutos=40, preco=50.0, estabelecimento_id=barbearia.id)
     db_session.add_all([barbeiro, servico])
     db_session.commit()
     db_session.refresh(barbeiro)
@@ -134,8 +134,8 @@ def test_public_agendamento_cria_confirma_e_agenda_lembretes(monkeypatch, client
 
     monkeypatch.setattr(public_service, "enviar_mensagem_whatsapp", fake_enviar)
 
-    barbearia = Barbearia(
-        nome="Barbearia Agenda",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Agenda",
         slug="agenda-publica",
         endereco="Rua Agenda",
         mega_instance_key="inst-agenda",
@@ -144,8 +144,8 @@ def test_public_agendamento_cria_confirma_e_agenda_lembretes(monkeypatch, client
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro = Barbeiro(nome="Carlos", barbershop_id=barbearia.id, ativo=True)
-    servico = Servico(nome="Barba", duracao_minutos=30, preco=35.0, barbearia_id=barbearia.id)
+    barbeiro = Barbeiro(nome="Carlos", estabelecimento_id=barbearia.id, ativo=True)
+    servico = Servico(nome="Barba", duracao_minutos=30, preco=35.0, estabelecimento_id=barbearia.id)
     db_session.add_all([barbeiro, servico])
     db_session.commit()
     db_session.refresh(barbeiro)
@@ -188,7 +188,7 @@ def test_public_agendamento_cria_confirma_e_agenda_lembretes(monkeypatch, client
     )
     assert len(lembretes) == 2
     assert {item.tipo for item in lembretes} == {"reminder_24h", "reminder_2h"}
-    assert enviados["barbearia"] == "Barbearia Agenda"
+    assert enviados["barbearia"] == "Estabelecimento Agenda"
 
 
 def test_agendamento_nao_sobrescreve_nome_de_cliente_existente(monkeypatch, client, db_session):
@@ -197,8 +197,8 @@ def test_agendamento_nao_sobrescreve_nome_de_cliente_existente(monkeypatch, clie
 
     monkeypatch.setattr(public_service, "enviar_mensagem_whatsapp", lambda *a, **kw: True)
 
-    barbearia = Barbearia(
-        nome="Barbearia Regressao",
+    barbearia = Estabelecimento(
+        nome="Estabelecimento Regressao",
         slug="regressao-nome",
         endereco="Rua Regressao",
     )
@@ -206,8 +206,8 @@ def test_agendamento_nao_sobrescreve_nome_de_cliente_existente(monkeypatch, clie
     db_session.commit()
     db_session.refresh(barbearia)
 
-    barbeiro = Barbeiro(nome="Joao", barbershop_id=barbearia.id, ativo=True)
-    servico = Servico(nome="Corte", duracao_minutos=30, preco=40.0, barbearia_id=barbearia.id)
+    barbeiro = Barbeiro(nome="Joao", estabelecimento_id=barbearia.id, ativo=True)
+    servico = Servico(nome="Corte", duracao_minutos=30, preco=40.0, estabelecimento_id=barbearia.id)
     db_session.add_all([barbeiro, servico])
     db_session.commit()
     db_session.refresh(barbeiro)

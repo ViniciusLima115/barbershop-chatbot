@@ -19,7 +19,7 @@ def criar(
     tenant_id: int = Depends(tenant_id_from_header),
     db: Session = Depends(get_db),
 ):
-    servico = Servico(**dados.model_dump(), barbearia_id=tenant_id)
+    servico = Servico(**dados.model_dump(), estabelecimento_id=tenant_id)
 
     try:
         db.add(servico)
@@ -38,7 +38,7 @@ def listar(tenant_id: int = Depends(tenant_id_from_header), db: Session = Depend
     try:
         return (
             db.query(Servico)
-            .filter(Servico.barbearia_id == tenant_id)
+            .filter(Servico.estabelecimento_id == tenant_id)
             .order_by(Servico.id.asc())
             .all()
         )
@@ -56,7 +56,7 @@ def atualizar(
 ):
     servico = (
         db.query(Servico)
-        .filter(Servico.id == servico_id, Servico.barbearia_id == tenant_id)
+        .filter(Servico.id == servico_id, Servico.estabelecimento_id == tenant_id)
         .first()
     )
     if not servico:
@@ -82,7 +82,7 @@ def remover(
 ):
     servico = (
         db.query(Servico)
-        .filter(Servico.id == servico_id, Servico.barbearia_id == tenant_id)
+        .filter(Servico.id == servico_id, Servico.estabelecimento_id == tenant_id)
         .first()
     )
     if not servico:
