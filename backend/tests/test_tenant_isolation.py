@@ -90,6 +90,6 @@ def test_tenant_nao_cria_agendamento_em_outro_tenant(client, dois_tenants, make_
 def test_endpoint_admin_bloqueia_tenant(client, make_tenant_headers, dois_tenants):
     t1 = dois_tenants["t1"]
     headers_tenant = make_tenant_headers(tenant_id=t1.id)
-    # Tenants não devem acessar lista de barbearias (endpoint admin)
-    resp = client.get("/barbearias/", headers=headers_tenant)
+    # Tenants não devem acessar lista de estabelecimentos (endpoint admin)
+    resp = client.get("/estabelecimentos/", headers=headers_tenant)
     assert resp.status_code == 403

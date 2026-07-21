@@ -27,7 +27,7 @@ os.environ.setdefault("ADMIN_SENHA_HASH", "")
 from app.database import Base, get_db
 from app.models import Estabelecimento, Profissional, Servico
 from app.models.token_blacklist import TokenBlacklist  # registers in SQLite metadata
-from app.routes import agenda, agendamentos, chatbot, barbeiros, barbearia_funcionamento, clientes, servicos, whatsapp, barbearias, auth, webhooks, public, internal, webhook, estabelecimentos, profissionais, estabelecimento_funcionamento, configuracoes, dashboard, notificacoes, integrations, payments
+from app.routes import agenda, agendamentos, chatbot, barbeiros, clientes, servicos, whatsapp, auth, webhooks, public, internal, webhook, estabelecimentos, profissionais, estabelecimento_funcionamento, configuracoes, dashboard, notificacoes, integrations, payments
 from app.models.notificacao import Notificacao  # garante criação da tabela no SQLite
 from app.security import create_access_token
 from app.limiter import limiter
@@ -77,9 +77,7 @@ def app(session_factory):
     test_app.include_router(agenda.router)
     test_app.include_router(chatbot.router)
     test_app.include_router(barbeiros.router)
-    test_app.include_router(barbearia_funcionamento.router)
     test_app.include_router(clientes.router)
-    test_app.include_router(barbearias.router)
     test_app.include_router(servicos.router)
     test_app.include_router(whatsapp.router, prefix="/whatsapp")
     test_app.include_router(webhooks.router)

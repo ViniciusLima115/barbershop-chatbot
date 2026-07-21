@@ -91,7 +91,7 @@ def test_public_booking_rejects_html_in_customer_name(client, dados_base):
 @pytest.mark.parametrize("password", ["curta", "á" * 40])
 def test_admin_cannot_create_account_with_unsafe_bcrypt_password(client, make_tenant_headers, password):
     response = client.post(
-        "/barbearias/",
+        "/estabelecimentos/",
         headers=make_tenant_headers(is_admin=True),
         json={
             "nome": "Conta Segura",
