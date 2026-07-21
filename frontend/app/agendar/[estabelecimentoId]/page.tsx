@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { lookupPublicEstabelecimentoById } from "@/services/api";
 
 export default function RedirectToSlugPage() {
-  const params = useParams<{ barbeariaId: string }>();
+  const params = useParams<{ estabelecimentoId: string }>();
   const router = useRouter();
 
   useEffect(() => {
-    const id = Number(params?.barbeariaId);
+    const id = Number(params?.estabelecimentoId);
     if (!Number.isFinite(id)) {
       router.replace("/");
       return;
