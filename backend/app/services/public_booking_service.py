@@ -12,7 +12,7 @@ from app.models.servico import Servico
 from app.repositories.booking_repository import BookingRepository
 from app.repositories.tenant_repository import TenantRepository
 from app.services.agenda_service import gerar_horarios_disponiveis
-from app.services.barbershop_hours_service import build_day_slots, is_within_working_hours
+from app.services.estabelecimento_hours_service import build_day_slots, is_within_working_hours
 from app.services.notificacao_service import (
     agendar_lembretes_agendamento,
     enviar_mensagem_whatsapp,

@@ -11,7 +11,7 @@ from app.models.barbearia import Barbearia
 from app.models.cliente import Cliente
 from app.models.reminder_job import ReminderJob
 from app.models.servico import Servico
-from app.services.barbershop_hours_service import is_within_working_hours
+from app.services.estabelecimento_hours_service import is_within_working_hours
 from app.services.email_service import (
     AgendamentoEmailContext,
     build_confirmation_email,

@@ -6,7 +6,7 @@ from app.models.barbeiro import Barbeiro
 from app.models.barbearia import Barbearia
 from app.routes.deps import tenant_id_from_header
 from app.schemas.barbeiro import BarbeiroCreate, BarbeiroResponse, BarbeiroUpdate
-from app.services.barbershop_hours_service import get_working_hours
+from app.services.estabelecimento_hours_service import get_working_hours
 
 router = APIRouter(prefix="/barbeiros")
 MAX_BARBEIROS_BASICO = 1

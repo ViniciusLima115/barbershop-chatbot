@@ -7,7 +7,7 @@ from app.models.agendamento import Agendamento
 from app.models.barbeiro import Barbeiro
 from app.models.barbearia import Barbearia
 from app.models.servico import Servico
-from app.services.barbershop_hours_service import build_day_slots, get_working_window
+from app.services.estabelecimento_hours_service import build_day_slots, get_working_window
 from app.time_utils import utcnow_naive
 
 

@@ -10,7 +10,7 @@ from app.models.barbeiro import Barbeiro
 from app.models.barbearia import Barbearia
 from app.models.pagamento import Pagamento
 from app.routes.deps import tenant_id_from_header
-from app.services.barbershop_hours_service import build_day_slots, get_working_window
+from app.services.estabelecimento_hours_service import build_day_slots, get_working_window
 from app.services.agenda_service import gerar_horarios_disponiveis
 from app.services.payments.webhook_service import sync_pending_payment_statuses
 from app.time_utils import utcnow_naive
