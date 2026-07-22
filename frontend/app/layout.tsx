@@ -20,8 +20,12 @@ const jost = Jost({
 });
 
 export const metadata: Metadata = {
-  title: "Painel de Gestão",
-  description: "Plataforma de gestão de agendamentos para estabelecimentos",
+  title: "Hagendei | Painel de Gestão",
+  description: "Hagendei — plataforma de gestão de agendamentos para negócios e profissionais",
+  openGraph: {
+    title: "Hagendei | Painel de Gestão",
+    description: "Hagendei — plataforma de gestão de agendamentos para negócios e profissionais",
+  },
 };
 
 const themeScript = `
