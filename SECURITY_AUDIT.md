@@ -1,22 +1,83 @@
 # Auditoria de Seguranca - Hagendei
 
-Data da auditoria: 2026-07-14
+Data da auditoria original: 2026-07-14
+Data desta atualizacao: 2026-07-22
 Escopo: repositorio completo do Hagendei, incluindo frontend, backend, banco/ORM, autenticacao, multiestabelecimento, Mercado Pago, mensageria, email, Docker, proxy, CI/CD, dependencias, testes e documentacao.  
 Objetivo de referencia: OWASP ASVS 5 nivel 2, OWASP Top 10, OWASP API Security Top 10 e documentacao oficial do Mercado Pago aplicavel ao fluxo encontrado.
 
 ## Sumario executivo
 
-Foram catalogados 40 achados: 5 criticos, 16 altos, 14 medios e 5 baixos. No estado final desta revisao, 32 estao corrigidos, 6 parcialmente corrigidos e 2 pendentes. Os falsos positivos descartados nao entram nessa contagem.
+Foram catalogados 41 achados (40 da auditoria original + 1 novo, ver secao de atualizacao abaixo): 5 criticos, 16 altos, 14 medios e 6 baixos. No estado atual, 34 estao corrigidos, 5 parcialmente corrigidos e 1 pendente. Os falsos positivos descartados nao entram nessa contagem.
 
 | Severidade | Total | Corrigidos | Parciais | Pendentes |
 | --- | ---: | ---: | ---: | ---: |
 | Critica | 5 | 4 | 1 | 0 |
 | Alta | 16 | 15 | 1 | 0 |
-| Media | 14 | 8 | 4 | 2 |
-| Baixa | 5 | 5 | 0 | 0 |
-| **Total** | **40** | **32** | **6** | **2** |
+| Media | 14 | 9 | 3 | 1 |
+| Baixa | 6 | 6 | 0 | 0 |
+| **Total** | **41** | **34** | **5** | **1** |
 
 Esta auditoria reduziu riscos concretos, mas nao certifica que o sistema seja "100% seguro". A verificacao foi local, sem cobrancas, reembolsos ou ataques contra producao e sem acesso ao painel, IAM, banco, backups, observabilidade ou rede reais.
+
+## Atualizacao de 2026-07-22
+
+Desde a auditoria original, o repositorio passou por um rebrand completo
+("Barbershop" -> "Hagendei": identificadores internos, contrato de API
+publica, marca visivel e nome do repositorio GitHub) e por trabalho
+independente de manutencao. Nenhuma dessas mudancas alterou logica de
+autorizacao, criptografia, validacao de webhook ou isolamento multi-tenant —
+cada etapa do rebrand foi verificada com a suite de testes completa antes e
+depois da mudanca, alem de duas rodadas de revisao (conformidade com
+especificacao e qualidade de codigo) por etapa. O que mudou de fato em
+termos de seguranca:
+
+- **M-06 passou de pendente para corrigido**: o DDL de runtime
+  (`ALTER TABLE`/`create_all` best-effort) foi removido de
+  `backend/app/database.py` (commit `c97a100`, 2026-07-18); o schema agora e
+  gerenciado exclusivamente pelo Alembic, incluindo no entrypoint do
+  container de deploy.
+- **M-01 passou de parcial para corrigido**: MFA por TOTP foi implementado
+  para contas administrativas (`backend/app/services/admin_mfa_service.py`,
+  rotas `/auth/admin/mfa/setup|verify|status`, segredo criptografado em
+  repouso, codigos de recuperacao e trilha de auditoria dedicada
+  `admin_mfa_login_verified`/`admin_mfa_recovery_code_used`). O login
+  administrativo agora exige o segundo fator quando MFA esta habilitado.
+- **Novo achado corrigido (B-06, Baixa/CWE-1104)**: `npm audit` passou a
+  acusar 2 vulnerabilidades altas (CVE-2026-33327, CVE-2026-33328,
+  CVE-2026-35590, CVE-2026-35591) na dependencia transitiva `sharp`
+  (< 0.35.0, usada pelo otimizador de imagem do Next.js), publicadas apos a
+  auditoria original. `next@16.2.10` ainda declara `sharp` em `^0.34.5`, faixa
+  que exclui a serie corrigida, e nao ha release estavel mais nova do Next 16
+  que ja resolva isso — a correcao sugerida pelo `npm audit fix --force`
+  seria fazer downgrade do Next para 14.x. Em vez disso, `sharp` foi fixado
+  em `^0.35.0` via `overrides` do npm (commit `3938c02`), mantendo o Next na
+  versao atual; verificado que a imagem renderiza corretamente e o build
+  passa. Classificado como achado independente do rebrand.
+- **Sem mudanca**: M-05 (RLS), H-09 (prova de concorrencia em PostgreSQL
+  real), M-02 (CSP com `unsafe-inline` para o script de tema), M-04 (consulta
+  ao provedor de pagamento ainda sincrona dentro da requisicao de webhook),
+  M-07 (token de confirmacao ainda em texto claro no banco) e C-01 (rotacao
+  de segredos historicos) permanecem exatamente como descrito na auditoria
+  original — nenhuma acao de codigo os resolve, e nenhuma delas foi tocada
+  neste periodo.
+- A referencia a `barbearia_id` na secao de arquitetura abaixo esta obsoleta:
+  o alias legado foi removido do ORM durante o rebrand; multiestabelecimento
+  agora usa exclusivamente `estabelecimento_id`.
+
+Numeros re-executados nesta data (mesma metodologia da auditoria original):
+
+- backend: 349 testes aprovados (era 355 — reducao por consolidacao de testes
+  duplicados durante o rebrand, sem perda de cobertura), cobertura total
+  82,35% (era 80,94%);
+- frontend: ESLint sem erros/avisos, build de producao aprovado;
+- `npm audit --audit-level=low`: 0 vulnerabilidades conhecidas (corrigido no
+  meio do periodo, ver B-06 acima);
+- `pip-audit -r requirements.txt`: 0 vulnerabilidades conhecidas;
+- Bandit `-ll`: 0 alertas medios ou altos; 13 baixos (era 22 — reducao por
+  seguranca de codigo morto removido no rebrand, nao por triagem dedicada);
+- Gitleaks: job `secrets` do CI (`Security and Tests`) passou em todos os
+  commits do periodo; nao houve reescrita de historico, entao os 11
+  candidatos historicos do C-01 permanecem, sem mudanca.
 
 ## Arquitetura identificada
 
@@ -25,7 +86,7 @@ Esta auditoria reduziu riscos concretos, mas nao certifica que o sistema seja "1
 - Banco principal pretendido: PostgreSQL/Neon via `psycopg2`; ha compatibilidade legada com MySQL. Os testes locais usam banco isolado configurado pelas fixtures.
 - Autenticacao: senha bcrypt e JWT HS256 em cookie `HttpOnly`; claims obrigatorias incluem `iss`, `aud`, `jti`, `iat`, `exp` e `session_version`; novos tokens tambem registram `auth_time` para operacoes administrativas sensiveis.
 - Perfis: visitante publico, usuario de estabelecimento/tenant e superadministrador.
-- Multiestabelecimento: `estabelecimento_id`/`barbearia_id` em recursos; o tenant do JWT e comparado com o cabecalho e aplicado nas consultas.
+- Multiestabelecimento: `estabelecimento_id` em recursos (o alias legado `barbearia_id` foi removido do ORM no rebrand de 2026-07); o tenant do JWT e comparado com o cabecalho e aplicado nas consultas.
 - Pagamento: Mercado Pago Checkout Pro, com criacao server-side de preferencia e redirecionamento para checkout hospedado. Nao foi encontrado recebimento ou armazenamento de PAN, CVV, validade ou dados brutos de cartao.
 - Integracoes adicionais: Meta WhatsApp Cloud API, MegaAPI e email SMTP/Resend.
 - Infraestrutura: containers Docker nao-root, Caddy para TLS/reverse proxy e GitHub Actions para teste e deploy por SSH.
@@ -85,7 +146,7 @@ Baseline anterior as correcoes:
 - `pip-audit`: 29 vulnerabilidades em 10 pacotes;
 - Bandit: 1 alerta medio posteriormente descartado e 24 baixos.
 
-Estado final validado:
+Estado final validado (auditoria original, 2026-07-14):
 
 - backend: 355 testes aprovados, 48 avisos, cobertura total 80,94% e piso de 78% atendido;
 - frontend: ESLint sem erros/avisos e build de producao aprovado com typecheck;
@@ -95,6 +156,10 @@ Estado final validado:
 - `python -m compileall -q app`: aprovado;
 - `git diff --check`: aprovado; busca em todo o working tree nao encontrou marcadores de conflito.
 - Gitleaks 8.30.1: 322 commits varridos com redaction total; 11 candidatos historicos detectados, incluindo 2 no antigo `backend/.env`, sem exibir valores.
+
+Ver "Atualizacao de 2026-07-22" no topo do documento para os numeros
+re-executados nesta data (backend 349 testes/82,35% cobertura, Bandit 13
+baixos, `npm audit` corrigido apos novo CVE em `sharp`).
 
 Avisos ainda visiveis: usos de `datetime.utcnow()` restritos a testes, deprecacoes de dependencias (`slowapi`/TestClient) e aviso do Next.js para migrar futuramente `middleware.ts` para a convencao `proxy`.
 
@@ -138,6 +203,9 @@ O merge `3ce45dc` trouxe marcadores de conflito versionados em 26 arquivos e mai
 | L-03 | Baixa | CWE-682 | tempo | `datetime.utcnow()` obsoleto mantinha risco de semantica temporal ambigua. | Codigo de producao usa `utcnow_naive()` centralizado, preservando compatibilidade com as colunas atuais; busca final em `backend/app` retorna zero ocorrencias. |
 | L-04 | Baixa | CWE-16 | documentacao/lockfiles | Instrucoes antigas e lockfile raiz ambiguo favoreciam deploy inseguro. | README, `.env.example`, guia de pagamento e CI atualizados; lockfile vazio da raiz removido. |
 | L-05 | Baixa | CWE-798 | scanner de segredos | Nao havia scanner dedicado no pipeline. | Gitleaks foi executado localmente com redaction total e adicionado ao CI com historico completo; os candidatos historicos mantem C-01 aberto ate rotacao e limpeza. |
+| M-01 | Media | CWE-308 | contas administrativas | Mutacoes de credenciais exigiam autenticacao recente, mas nao havia segundo fator. *(Atualizado em 2026-07-22 — corrigido, era parcial na auditoria original.)* | MFA por TOTP implementado (`admin_mfa_service.py`), com segredo criptografado em repouso, codigos de recuperacao, rotas dedicadas de setup/verify/status e auditoria propria dos eventos de verificacao/recuperacao. |
+| M-06 | Media | CWE-16 | schema/migrations | Parte do schema ainda usava `ALTER TABLE`/`create_all` best-effort no startup. *(Atualizado em 2026-07-22 — corrigido, era pendente na auditoria original.)* | DDL de runtime removido de `app/database.py` (commit `c97a100`); schema passou a ser gerenciado exclusivamente pelo Alembic, inclusive no entrypoint de deploy. |
+| B-06 | Baixa | CWE-1104 | dependencias (frontend) | `sharp` < 0.35.0 (dependencia transitiva de `next` via otimizacao de imagem) carregava CVEs de `libvips` (CVE-2026-33327/33328/35590/35591), publicadas apos a auditoria original. | `sharp` fixado em `^0.35.0` via `overrides` do npm (commit `3938c02`), sem downgrade do Next.js. `npm audit --audit-level=low` retorna 0 vulnerabilidades; renderizacao de imagem e build verificados. |
 
 ## Achados parcialmente corrigidos
 
@@ -145,7 +213,6 @@ O merge `3ce45dc` trouxe marcadores de conflito versionados em 26 arquivos e mai
 | --- | --- | --- | --- | --- | --- |
 | C-01 | Critica | CWE-798 | Git/segredos | Gitleaks varreu 322 commits com redaction total e detectou 11 candidatos; 2 estao no antigo `backend/.env`. Nenhum valor foi exibido. | Rotacionar tudo que possa ter sido usado, triar os 9 candidatos de docs/fixtures e depois reescrever o historico de forma coordenada. A remocao local nao revoga credenciais externas. |
 | H-09 | Alta | CWE-362 | concorrencia de agenda | Criacao/edicao/reagendamento bloqueiam a linha do profissional e revalidam conflito na mesma transacao. Testes impedem conflito sequencial. | Executar teste concorrente real em PostgreSQL staging; SQLite/local nao comprova semantica de `FOR UPDATE` em duas conexoes. Avaliar constraint/slot ledger para defesa adicional. |
-| M-01 | Media | CWE-308 | contas administrativas | Mutacoes de credenciais e conta de pagamento exigem autenticacao com no maximo 15 min, mas ainda nao ha MFA. | Implementar WebAuthn/TOTP, recovery codes e usar o segundo fator no step-up antes de troca de credencial ou futuro reembolso. |
 | M-02 | Media | CWE-79, CSP | frontend/Caddy | Headers e CSP foram adicionados, mas o script inline estatico de tema ainda requer `unsafe-inline`. Nao recebe entrada do usuario. | Migrar bootstrap de tema para arquivo com nonce/hash e remover `unsafe-inline` apos teste cross-browser. |
 | M-04 | Media | API4, disponibilidade | webhook MP | Provider e consultado com timeout e retry correto, mas a consulta ainda ocorre durante a requisicao. | Adotar fila/outbox com ACK rapido, worker idempotente, DLQ e monitoramento antes de escalar horizontalmente. |
 | M-07 | Media | CWE-312, CWE-598 | tokens de acao | Tokens de confirmacao sao aleatorios, unicos e expiram, mas permanecem recuperaveis no banco e URLs. | Armazenar hash do token, reduzir retencao e garantir redaction em proxy/analytics/email. Exige migracao compativel. |
@@ -155,7 +222,6 @@ O merge `3ce45dc` trouxe marcadores de conflito versionados em 26 arquivos e mai
 | ID | Severidade | CWE / categoria | Componente | Risco | Recomendacao |
 | --- | --- | --- | --- | --- | --- |
 | M-05 | Media | CWE-639, defesa em profundidade | PostgreSQL | Isolamento depende da aplicacao; nao ha RLS. | Avaliar RLS com `tenant_id` de sessao, usuario DB sem bypass e testes. Nao habilitar sem plano de migracao. |
-| M-06 | Media | CWE-16 | schema/migrations | Parte do schema ainda usa `ALTER TABLE`/`create_all` best-effort no startup e engole erros. | Consolidar Alembic, migrations versionadas, dry-run, backup e rollback; em producao, app DB sem privilegio DDL. |
 
 ## Falsos positivos descartados
 
@@ -258,13 +324,13 @@ Antes de producao:
 
 1. Preencher segredos em cofre externo e executar o preflight da aplicacao com `APP_ENV=production`.
 2. Configurar `ALLOWED_HOSTS`, `TRUSTED_PROXY_IPS`, CORS, dominios do Caddy e todas as URLs HTTPS exatas.
-3. Executar migrations Alembic em backup restauravel e retirar DDL do usuario runtime antes de desativar os helpers legados.
+3. Executar migrations Alembic em backup restauravel. *(Atualizado 2026-07-22: o DDL de runtime foi removido — ver M-06 — este passo agora e so "rodar as migrations", sem retirada de helper legado.)*
 4. Aplicar menor privilegio ao banco, backups criptografados, teste de restauracao e retencao definida.
 5. Executar o fluxo completo no sandbox: checkout Pix, expiracao de 5 min, duplicata, replay, falha do provider, pagamento tardio, chargeback e reconciliacao.
 6. Executar teste concorrente com duas conexoes PostgreSQL para o mesmo profissional/slot.
 7. Confirmar no ambiente implantado que o Redis privado do Compose esta saudavel e monitorado; producao falha sem storage Redis/Rediss.
 8. Manter o Gitleaks bloqueante, triar os candidatos historicos e adicionar SBOM/assinatura de imagem ao CI; pins SHA/digest e renovacao semanal ja estao configurados.
-9. Implementar MFA e alertas para troca de credencial, falhas de assinatura e estados em revisao; o step-up por autenticacao recente ja esta ativo.
+9. *(Atualizado 2026-07-22: MFA por TOTP ja implementado — ver M-01.)* Configurar alertas para troca de credencial, falhas de assinatura e estados em revisao; o step-up por autenticacao recente e o MFA ja estao ativos.
 10. Definir com juridico/privacidade a base legal, retencao, exclusao, resposta a incidente e atendimento de direitos LGPD.
 
 ## Riscos residuais e itens nao verificaveis localmente
@@ -275,7 +341,7 @@ Antes de producao:
 - Sem credenciais sandbox fornecidas, nao foi possivel comprovar como a UI hospedada do Mercado Pago descreve a expiracao Pix de 5 minutos.
 - A semantica concorrente de `SELECT ... FOR UPDATE` precisa de teste em PostgreSQL staging.
 - O rate limit compartilhado depende da disponibilidade do Redis; o webhook ainda faz I/O sincrono.
-- MFA, hash de confirmation token, RLS e migrations exclusivas por Alembic continuam abertos; o step-up atual reduz, mas nao elimina, o risco administrativo.
+- Hash de confirmation token e RLS continuam abertos (M-07, M-05). *(Atualizado 2026-07-22: MFA — M-01 — e migrations exclusivas por Alembic — M-06 — ja foram corrigidos.)* O step-up e o MFA reduzem, mas nao eliminam sozinhos, o risco administrativo (ex.: nao cobrem comprometimento do dispositivo TOTP).
 - Dependencias podem ganhar novos advisories depois da data desta auditoria; scanners devem rodar continuamente.
 - O codigo nao recebe dados brutos de cartao e usa checkout hospedado, mas esta revisao nao concede certificacao PCI DSS.
 - Melhorias tecnicas de minimizacao/redaction nao equivalem a conformidade LGPD; retencao, base legal, contratos e processos exigem avaliacao organizacional/juridica.
