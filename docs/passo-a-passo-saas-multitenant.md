@@ -1,11 +1,11 @@
-# Passo a Passo SaaS Multi-tenant (Barbearias + WhatsApp)
+# Passo a Passo SaaS Multi-tenant (Estabelecimentos + WhatsApp)
 
 Este documento mostra o fluxo completo:
 
-1. Cadastro de uma nova barbearia.
+1. Cadastro de um novo estabelecimento.
 2. Vinculo da instancia/numero de WhatsApp ao tenant correto.
 3. Login e uso da API com isolamento de tenant.
-4. Como validar que uma mensagem entrou na barbearia correta.
+4. Como validar que uma mensagem entrou no estabelecimento correto.
 5. Como funciona o fluxo publico por link de agendamento.
 
 ## 1) Variaveis de ambiente (staging e prod)
@@ -33,7 +33,7 @@ Se voce usar `npx neonctl@latest init` na raiz do repositorio, o backend agora t
 
 Depois de atualizar, reinicie o backend.
 
-## 2) Login de admin (para cadastrar barbearias)
+## 2) Login de admin (para cadastrar estabelecimentos)
 
 Endpoint:
 
@@ -55,13 +55,13 @@ Resposta esperada:
 - `is_admin: true`
 - `access_token` (JWT)
 
-Guarde o token admin para as chamadas de `/barbearias`.
+Guarde o token admin para as chamadas de `/estabelecimentos`.
 
-## 3) Cadastrar barbearia com dados de roteamento WhatsApp
+## 3) Cadastrar estabelecimento com dados de roteamento WhatsApp
 
 Endpoint:
 
-- `POST /barbearias/` (somente admin)
+- `POST /estabelecimentos/` (somente admin)
 
 Campos criticos para roteamento:
 
@@ -71,16 +71,13 @@ Campos criticos para roteamento:
 Exemplo:
 
 ```bash
-curl -X POST http://SEU_BACKEND/barbearias/ \
+curl -X POST http://SEU_BACKEND/estabelecimentos/ \
   -H "Authorization: Bearer SEU_TOKEN_ADMIN" \
   -H "Content-Type: application/json" \
   -d '{
-    "nome":"Barbearia Centro",
-    "login":"barbearia.centro",
+    "nome":"Estabelecimento Centro",
+    "login":"estabelecimento.centro",
     "senha":"senha-forte",
-    "mega_instance_key":"instancia-centro-01",
-    "mega_token":"token-da-instancia",
-    "whatsapp_number":"5582999991111",
     "plano":"basico",
     "status_manual":"ativo",
     "vencimento_em":"2026-12-31",
@@ -92,12 +89,21 @@ curl -X POST http://SEU_BACKEND/barbearias/ \
   }'
 ```
 
+> **Nota (desatualizado, nao relacionado ao rebrand):** `mega_instance_key`/`mega_token`/
+> `whatsapp_number` nao sao mais aceitos neste `POST` (o schema atual usa
+> `extra="forbid"` e rejeitaria a requisicao com `422` se voce reincluir esses
+> campos aqui). Hoje `whatsapp_number` e definido depois, via
+> `PATCH /configuracoes/perfil`; `mega_instance_key`/`mega_token` nao tem
+> endpoint REST no momento e precisam ser setados direto no banco
+> (`estabelecimentos.mega_instance_key`/`mega_token`). Esta secao precisa de
+> uma revisao funcional a parte — fora do escopo deste rebrand de nomenclatura.
+
 Observacoes:
 
-- `mega_instance_key` e `whatsapp_number` devem ser unicos por barbearia.
+- `mega_instance_key` e `whatsapp_number` devem ser unicos por estabelecimento.
 - Se houver duplicidade, a API retorna `400`.
 
-## 4) Login da barbearia (tenant)
+## 4) Login do estabelecimento (tenant)
 
 Endpoint:
 
@@ -109,7 +115,7 @@ Exemplo:
 curl -X POST http://SEU_BACKEND/auth/login \
   -H "Content-Type: application/json" \
   -d '{
-    "usuario":"barbearia.centro",
+    "usuario":"estabelecimento.centro",
     "senha":"senha-forte"
   }'
 ```
@@ -117,28 +123,28 @@ curl -X POST http://SEU_BACKEND/auth/login \
 Resposta esperada:
 
 - `is_admin: false`
-- `tenant_id: <id da barbearia>`
+- `tenant_id: <id do estabelecimento>`
 - `access_token: <jwt>`
 
 ## 5) Chamar endpoints de negocio com isolamento
 
 Para endpoints de negocio (`/clientes`, `/servicos`, `/agendamentos`, `/agenda`, `/chatbot`), envie:
 
-- `Authorization: Bearer <token da barbearia>`
-- `X-Barbearia-Id: <tenant_id da barbearia>`
+- `Authorization: Bearer <token do estabelecimento>`
+- `X-Estabelecimento-Id: <tenant_id do estabelecimento>`
 
 Exemplo:
 
 ```bash
 curl http://SEU_BACKEND/clientes/ \
-  -H "Authorization: Bearer TOKEN_DA_BARBEARIA" \
-  -H "X-Barbearia-Id: 12"
+  -H "Authorization: Bearer TOKEN_DO_ESTABELECIMENTO" \
+  -H "X-Estabelecimento-Id: 12"
 ```
 
 Regras:
 
 - Se faltar token: `401`.
-- Se o `X-Barbearia-Id` nao bater com o tenant do token: `403`.
+- Se o `X-Estabelecimento-Id` nao bater com o tenant do token: `403`.
 - Se tenant nao existir: `404`.
 
 Observacao importante:
@@ -153,7 +159,7 @@ No recebimento em `POST /webhooks/megaapi`, o backend:
 1. Valida autenticacao do webhook (`X-Webhook-Token` ou assinatura HMAC).
 2. Recebe o `instance_key`.
 3. Resolve tenant no banco.
-4. Para saudacoes/mensagens simples, responde com link publico (`https://app.virtualbarber.shop/{slug}`).
+4. Para saudacoes/mensagens simples, responde com link publico (`https://hagendei.com/{slug}`).
 5. Para demais mensagens, pode usar fallback para chatbot interno.
 
 Resolucao de tenant:
@@ -167,10 +173,10 @@ Nao existe mais fallback para tenant fixo em `.env`.
 ## 10) Fluxo publico de agendamento (modelo moderno)
 
 1. Cliente envia "oi" no WhatsApp.
-2. `POST /webhook` responde com link publico da barbearia (`/agendar/{barbearia_id}`) na primeira interacao ativa.
+2. `POST /webhook` responde com link publico do estabelecimento (`/agendar/{estabelecimento_id}`) na primeira interacao ativa.
 3. Frontend consulta endpoints publicos para listar barbeiros, servicos e horarios:
-   - `GET /public/barbeiros?barbearia_id=...`
-   - `GET /public/servicos?barbearia_id=...`
+   - `GET /public/barbeiros?estabelecimento_id=...`
+   - `GET /public/servicos?estabelecimento_id=...`
    - `GET /public/horarios-disponiveis?...`
 4. Frontend confirma em `POST /public/agendamentos`.
 5. Backend grava no tenant correto, envia confirmacao por WhatsApp e agenda lembretes de 24h e 2h.
@@ -188,13 +194,13 @@ Observacao operacional:
 
 ```sql
 SELECT id, nome, mega_instance_key, whatsapp_number
-FROM barbearias
+FROM estabelecimentos
 ORDER BY id DESC;
 ```
 
 Confirme:
 
-- `mega_instance_key` da barbearia esta igual ao da plataforma WhatsApp.
+- `mega_instance_key` do estabelecimento esta igual ao da plataforma WhatsApp.
 - `whatsapp_number` esta no formato esperado (recomendado E.164 so digitos, ex: `5582999991111`).
 
 ## 7.2 Enviar webhook de teste com a instance certa
@@ -215,18 +221,18 @@ curl -X POST http://SEU_BACKEND/webhooks/megaapi \
 Esperado:
 
 - Resposta `{"status":"ok"}`.
-- Cliente/agendamento (quando houver fluxo) vinculados ao `barbearia_id` da barbearia certa.
+- Cliente/agendamento (quando houver fluxo) vinculados ao `estabelecimento_id` do estabelecimento certo.
 
 ## 7.3 Conferir no banco se caiu no tenant correto
 
 ```sql
-SELECT id, telefone, nome, barbearia_id
+SELECT id, telefone, nome, estabelecimento_id
 FROM clientes
 WHERE telefone = '5582988887777'
 ORDER BY id DESC;
 ```
 
-O `barbearia_id` deve ser exatamente o tenant da barbearia dona da `instance_key`.
+O `estabelecimento_id` deve ser exatamente o tenant do estabelecimento dono da `instance_key`.
 
 ## 7.4 Teste negativo (instance errada)
 
@@ -240,14 +246,14 @@ Esperado:
 ## 8) Troubleshooting rapido
 
 - `401 Autenticacao obrigatoria`: faltou `Authorization: Bearer`.
-- `403 Tenant do token difere do tenant da requisicao`: header `X-Barbearia-Id` nao bate com token.
+- `403 Tenant do token difere do tenant da requisicao`: header `X-Estabelecimento-Id` nao bate com token.
 - `401 Assinatura do webhook invalida`: faltou `X-Webhook-Token` valido (ou assinatura HMAC valida).
-- `status ignored` no webhook: `instance_key`/`whatsapp_number` nao mapeados para nenhuma barbearia.
+- `status ignored` no webhook: `instance_key`/`whatsapp_number` nao mapeados para nenhum estabelecimento.
 
 ## 9) Checklist de deploy (staging e prod)
 
 1. Atualizar `.env` com `JWT_SECRET`, `ADMIN_USUARIO`, `ADMIN_SENHA`.
 2. Reiniciar backend.
 3. Fazer login novamente no frontend (tokens antigos podem nao valer).
-4. Validar cadastro da barbearia com `mega_instance_key` e `whatsapp_number`.
-5. Rodar webhook de teste e conferir `barbearia_id` no banco.
+4. Validar cadastro do estabelecimento com `mega_instance_key` e `whatsapp_number`.
+5. Rodar webhook de teste e conferir `estabelecimento_id` no banco.
